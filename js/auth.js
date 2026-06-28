@@ -19,8 +19,10 @@ async function handleAuthSubmit(e) {
     });
     const data = await res.json();
     if (res.ok) {
-      localStorage.setItem('token', data.token);
-      state.token = data.token;
+      setCookie('access_token', data.access_token, 1);
+      setCookie('refresh_token', data.refresh_token, 7);
+      state.token = data.access_token;
+      state.refreshToken = data.refresh_token;
       showApp();
     } else {
       showAuthError(data.detail || 'Authentication failed');
@@ -46,8 +48,10 @@ function showAuthError(msg) {
 }
 
 function logout() {
-  localStorage.removeItem('token');
+  eraseCookie('access_token');
+  eraseCookie('refresh_token');
   state.token = '';
+  state.refreshToken = '';
   state.user = null;
   state.activeOwner = null;
   showAuth();

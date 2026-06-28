@@ -1,6 +1,4 @@
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
-  ? 'http://localhost:8000/api'
-  : (localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api');
+const API_BASE = window.API_BASE;
 
 async function fetchUserData() {
   try {
@@ -35,7 +33,7 @@ async function fetchUserData() {
 
 async function fetchAllData() {
   document.getElementById('loading-overlay').classList.remove('hidden');
-  const ownerQuery = state.activeOwner ? `?owner_email=${encodeURIComponent(state.activeOwner.email)}` : '';
+  const ownerQuery = state.activeOwner ? `?owner_email=${encodeURIComponent(state.activeOwner.owner_email)}` : '';
   const headers = { 'Authorization': `Bearer ${state.token}` };
 
   try {

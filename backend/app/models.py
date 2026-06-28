@@ -84,3 +84,7 @@ class SettingsUpdate(BaseModel):
     theme: Optional[str] = None
     language: Optional[str] = None
     timezone: Optional[str] = None
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str
+

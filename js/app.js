@@ -1,6 +1,121 @@
+// API Base URL config
+window.API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+  ? 'http://localhost:8000/api'
+  : (localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api');
+const API_BASE = window.API_BASE;
+
+// Cookie helper functions
+function setCookie(name, value, days) {
+  let expires = "";
+  if (days) {
+    const date = new Date();
+    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie = name + "=" + (value || "") + expires + "; path=/; SameSite=Lax; Secure";
+}
+
+function getCookie(name) {
+  const nameEQ = name + "=";
+  const ca = document.cookie.split(';');
+  for (let i = 0; i < ca.length; i++) {
+    let c = ca[i];
+    while (c.charAt(0) == ' ') c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
+function eraseCookie(name) {
+  document.cookie = name + '=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT; SameSite=Lax; Secure';
+}
+
+// Global API Interceptor & Token Refresh
+const originalFetch = window.fetch;
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+function onTokenRefreshed(token) {
+  refreshSubscribers.forEach(cb => cb(token));
+  refreshSubscribers = [];
+}
+
+function addRefreshSubscriber(cb) {
+  refreshSubscribers.push(cb);
+}
+
+async function attemptTokenRefresh() {
+  if (isRefreshing) {
+    return new Promise(resolve => {
+      addRefreshSubscriber(token => {
+        resolve(!!token);
+      });
+    });
+  }
+
+  isRefreshing = true;
+
+  try {
+    const res = await originalFetch(`${API_BASE}/auth/refresh`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ refresh_token: state.refreshToken })
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      setCookie('access_token', data.access_token, 1);
+      setCookie('refresh_token', data.refresh_token, 7);
+      state.token = data.access_token;
+      state.refreshToken = data.refresh_token;
+      onTokenRefreshed(data.access_token);
+      isRefreshing = false;
+      return true;
+    } else {
+      onTokenRefreshed(null);
+      isRefreshing = false;
+      logout();
+      return false;
+    }
+  } catch (err) {
+    console.error('Error refreshing token:', err);
+    onTokenRefreshed(null);
+    isRefreshing = false;
+    return false;
+  }
+}
+
+window.fetch = async function (url, options = {}) {
+  if (state && state.token) {
+    if (!options.headers) {
+      options.headers = {};
+    }
+    if (!options.headers['Authorization']) {
+      options.headers['Authorization'] = `Bearer ${state.token}`;
+    }
+  }
+
+  let response = await originalFetch(url, options);
+
+  if (response.status === 401 && state && state.refreshToken && !url.includes('/auth/refresh') && !url.includes('/auth/register') && !url.includes('/auth/login')) {
+    const refreshed = await attemptTokenRefresh();
+    if (refreshed) {
+      if (options.headers) {
+        options.headers['Authorization'] = `Bearer ${state.token}`;
+      }
+      response = await originalFetch(url, options);
+    }
+  }
+
+  return response;
+};
+
 // State management
 const state = {
-  token: localStorage.getItem('token') || '',
+  token: getCookie('access_token') || '',
+  refreshToken: getCookie('refresh_token') || '',
   user: null,
   activeOwner: null,
   expenses: [],
@@ -108,6 +223,14 @@ function switchTab(tabId) {
     ? `Viewing ${state.activeOwner.owner_name}'s Tracker <span class="text-xs px-2 py-0.5 bg-rose-500/20 border border-rose-500/30 text-rose-400 font-medium rounded-full ml-2">Read Only</span>`
     : title;
 
+  // Auto-close sidebar on mobile after choosing a tab
+  const sidebar = document.querySelector('aside');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 768) {
+    sidebar.classList.add('-translate-x-full');
+    if (backdrop) backdrop.classList.add('hidden');
+  }
+
   renderTabContent();
 }
 
@@ -169,14 +292,23 @@ async function clearNotifications() {
 }
 
 // Shared view activation
-function viewSharedTracker(id) {
+async function viewSharedTracker(id) {
   const tracker = state.sharedTrackers.find(t => t.id === id);
   if (tracker) {
     state.activeOwner = tracker;
     document.getElementById('shared-badge').classList.remove('hidden');
     document.getElementById('header-add-expense-btn').classList.add('hidden');
+    await fetchAllData();
     switchTab('dashboard');
   }
+}
+
+async function exitSharedView() {
+  state.activeOwner = null;
+  document.getElementById('shared-badge').classList.add('hidden');
+  document.getElementById('header-add-expense-btn').classList.remove('hidden');
+  await fetchAllData();
+  switchTab('dashboard');
 }
 
 // EXPENSE SUBMISSIONS
@@ -517,7 +649,7 @@ async function runReport() {
     document.getElementById('report-end-date').value = end;
   }
 
-  const ownerQuery = state.activeOwner ? `&owner_email=${encodeURIComponent(state.activeOwner.email)}` : '';
+  const ownerQuery = state.activeOwner ? `&owner_email=${encodeURIComponent(state.activeOwner.owner_email)}` : '';
   
   try {
     const res = await fetch(`${API_BASE}/reports?start_date=${start}&end_date=${end}${ownerQuery}`, {
@@ -592,4 +724,159 @@ function clearExpensesFilters() {
   document.getElementById('filter-max-amount').value = '';
   renderExpensesList();
 }
+
+async function showAddPaymentMethodPrompt() {
+  const name = prompt("Enter new payment method name (e.g. UPI-KVB, UPI SBI):");
+  if (!name) return;
+  const trimmed = name.trim();
+  if (!trimmed) return;
+
+  try {
+    const headers = {
+      'Authorization': `Bearer ${state.token}`
+    };
+    const res = await fetch(`${API_BASE}/payment-methods?name=${encodeURIComponent(trimmed)}`, {
+      method: 'POST',
+      headers
+    });
+    if (res.ok) {
+      await fetchAllData();
+      document.getElementById('expense-payment').value = trimmed;
+    } else {
+      const err = await res.json();
+      alert(err.detail || "Failed to add payment method");
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Connection error occurred");
+  }
+}
+
+async function showAddCategoryPrompt() {
+  const name = prompt("Enter new category name:");
+  if (!name) return;
+  const trimmedName = name.trim();
+  if (!trimmedName) return;
+
+  const color = prompt("Enter category color (e.g. #3b82f6 or name):", "#3b82f6");
+  const trimmedColor = (color || "#3b82f6").trim();
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.token}`
+    };
+    const res = await fetch(`${API_BASE}/categories`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ name: trimmedName, color: trimmedColor })
+    });
+    if (res.ok) {
+      await fetchAllData();
+      document.getElementById('expense-category').value = trimmedName;
+    } else {
+      const err = await res.json();
+      alert(err.detail || "Failed to add category");
+    }
+  } catch (error) {
+    console.error(error);
+    alert("Connection error occurred");
+  }
+}
+
+async function quickAddGoalMoney(id) {
+  if (state.activeOwner) return;
+  const g = state.savingsGoals.find(item => item.id === id);
+  if (!g) return;
+
+  const input = prompt(`Add money to "${g.title}" (Current saved: ${state.settings.currency} ${g.saved_amount.toLocaleString()})\nEnter amount to add:`);
+  if (!input) return;
+  
+  const amount = parseFloat(input);
+  if (isNaN(amount) || amount <= 0) {
+    alert("Please enter a valid positive number.");
+    return;
+  }
+
+  const oldSaved = g.saved_amount;
+  const newSaved = oldSaved + amount;
+  
+  // Optimistic UI Update: update state and render immediately!
+  g.saved_amount = newSaved;
+  renderSavingsGoals();
+
+  if (newSaved >= g.target_amount && oldSaved < g.target_amount) {
+    confetti({ particleCount: 100, spread: 80 });
+  }
+
+  const payload = {
+    title: g.title,
+    target_amount: g.target_amount,
+    saved_amount: newSaved
+  };
+
+  try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${state.token}`
+    };
+    const res = await fetch(`${API_BASE}/savings/${id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify(payload)
+    });
+
+    if (!res.ok) {
+      g.saved_amount = oldSaved;
+      renderSavingsGoals();
+      alert("Failed to save to database. Restored previous value.");
+    } else {
+      const updatedGoal = await res.json();
+      g.saved_amount = updatedGoal.saved_amount;
+      g.target_amount = updatedGoal.target_amount;
+      g.title = updatedGoal.title;
+      renderSavingsGoals();
+    }
+  } catch (err) {
+    console.error(err);
+    g.saved_amount = oldSaved;
+    renderSavingsGoals();
+    alert("Connection error. Saved value restored.");
+  }
+}
+
+function toggleMobileSidebar() {
+  const sidebar = document.querySelector('aside');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  if (sidebar.classList.contains('-translate-x-full')) {
+    sidebar.classList.remove('-translate-x-full');
+    backdrop.classList.remove('hidden');
+  } else {
+    sidebar.classList.add('-translate-x-full');
+    backdrop.classList.add('hidden');
+  }
+}
+
+// Close notifications dropdown and mobile sidebar when clicking outside
+document.addEventListener('click', function(event) {
+  // Notifications Dropdown
+  const dropdown = document.getElementById('notifications-dropdown');
+  const bellBtn = document.getElementById('bell-btn');
+  if (dropdown && !dropdown.classList.contains('hidden')) {
+    if (!dropdown.contains(event.target) && (!bellBtn || !bellBtn.contains(event.target))) {
+      dropdown.classList.add('hidden');
+    }
+  }
+
+  // Mobile Sidebar
+  const sidebar = document.querySelector('aside');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const menuBtn = document.getElementById('mobile-menu-btn');
+  if (sidebar && !sidebar.classList.contains('-translate-x-full') && window.innerWidth < 768) {
+    if (!sidebar.contains(event.target) && (!menuBtn || !menuBtn.contains(event.target)) && (!backdrop || !backdrop.contains(event.target))) {
+      sidebar.classList.add('-translate-x-full');
+      if (backdrop) backdrop.classList.add('hidden');
+    }
+  }
+});
 

@@ -133,8 +133,11 @@
   <!-- ================= APP LAYOUT SCREEN ================= -->
   <div id="app-screen" class="hidden min-h-screen flex bg-slate-950 text-slate-100">
     
+    <!-- Sidebar Mobile Backdrop -->
+    <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-black/60 z-30 md:hidden"></div>
+
     <!-- SIDEBAR -->
-    <aside class="w-64 glass border-r border-slate-800/80 flex flex-col shrink-0">
+    <aside class="w-64 glass border-r border-slate-800/80 flex flex-col shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 ease-in-out">
       
       <!-- Logo Header -->
       <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-800/80">
@@ -143,7 +146,10 @@
         </div>
         <div>
           <span class="font-extrabold text-white tracking-wide text-lg">MyMoney</span>
-          <span id="shared-badge" class="hidden block text-[10px] text-rose-400 font-bold uppercase tracking-wider">Shared View</span>
+          <span id="shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1">
+            <span>Shared View</span>
+            <i data-lucide="x" class="w-2.5 h-2.5"></i>
+          </span>
         </div>
       </div>
 
@@ -155,7 +161,7 @@
           </div>
           <div class="overflow-hidden">
             <h4 id="user-name-display" class="text-sm font-semibold text-white truncate">User Name</h4>
-            <p id="user-email-display" class="text-xs text-slate-400 truncate">user@example.com</p>
+            <p id="user-email-display" class="hidden text-xs text-slate-400 truncate">user@example.com</p>
           </div>
         </div>
       </div>
@@ -197,7 +203,7 @@
           <span>Audit Log</span>
         </button>
 
-        <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+        <button onclick="switchTab('settings')" id="nav-settings" style="display: none;" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
           <i data-lucide="settings" class="w-4 h-4"></i>
           <span>Settings</span>
         </button>
@@ -224,12 +230,16 @@
     <main class="flex-1 flex flex-col min-w-0">
       
       <!-- Top header bar -->
-      <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
-        <div class="flex items-center gap-4">
-          <h2 id="page-title" class="text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
+      <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-4 sm:px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
+        <div class="flex items-center gap-3 sm:gap-4">
+          <!-- Mobile Menu Button -->
+          <button id="mobile-menu-btn" onclick="toggleMobileSidebar()" class="p-2 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white md:hidden">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
+          <h2 id="page-title" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
         </div>
 
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3 sm:gap-4">
           <!-- Sync / Offline indicator -->
           <div id="sync-status" class="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium">
             <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
@@ -238,7 +248,7 @@
 
           <!-- Notification Bell -->
           <div class="relative">
-            <button onclick="toggleNotifications()" class="p-2 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white relative">
+            <button id="bell-btn" onclick="toggleNotifications()" class="p-2 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white relative">
               <i data-lucide="bell" class="w-5 h-5"></i>
               <span id="bell-dot" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-brand-500 rounded-full ring-2 ring-slate-950"></span>
             </button>
@@ -264,7 +274,7 @@
       </header>
 
       <!-- SCROLLABLE TAB CONTAINER -->
-      <div id="page-content" class="flex-grow p-6 overflow-y-auto relative">
+      <div id="page-content" class="flex-grow p-4 sm:p-6 overflow-y-auto relative">
         
         <!-- Loading overlay -->
         <div id="loading-overlay" class="hidden absolute inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50">
@@ -656,11 +666,21 @@
         <div class="grid grid-cols-2 gap-4">
           <div>
             <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
-            <select id="expense-category" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white"></select>
+            <div class="flex gap-2">
+              <select id="expense-category" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white"></select>
+              <button type="button" onclick="showAddCategoryPrompt()" title="Add Custom Category" class="px-2.5 py-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
           </div>
           <div>
             <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Payment Method</label>
-            <select id="expense-payment" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white"></select>
+            <div class="flex gap-2">
+              <select id="expense-payment" class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white"></select>
+              <button type="button" onclick="showAddPaymentMethodPrompt()" title="Add Custom Payment Method" class="px-2.5 py-2 bg-slate-900 border border-slate-800 text-slate-400 hover:text-white rounded-xl text-xs font-semibold flex items-center justify-center">
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
           </div>
         </div>
         <div class="grid grid-cols-2 gap-4">

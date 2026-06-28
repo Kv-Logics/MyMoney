@@ -53,8 +53,8 @@ function renderDashboard() {
   const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const todayTotal = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
 
-  document.getElementById('stat-month-spending').innerText = `${state.settings.currency}${monthTotal.toLocaleString()}`;
-  document.getElementById('stat-today-spending').innerText = `${state.settings.currency}${todayTotal.toLocaleString()}`;
+  document.getElementById('stat-month-spending').innerText = `${state.settings.currency} ${monthTotal.toLocaleString()}`;
+  document.getElementById('stat-today-spending').innerText = `${state.settings.currency} ${todayTotal.toLocaleString()}`;
 
   const overallB = state.budgets.find(b => b.category === 'Overall');
   const overallBarContainer = document.getElementById('overall-budget-progress-container');
@@ -64,7 +64,7 @@ function renderDashboard() {
     overallBarContainer.classList.remove('hidden');
     setBudgetBtn.classList.add('hidden');
     const pct = Math.min(100, (monthTotal / overallB.amount) * 100);
-    document.getElementById('stat-remaining-budget').innerText = `${state.settings.currency}${Math.max(0, overallB.amount - monthTotal).toLocaleString()}`;
+    document.getElementById('stat-remaining-budget').innerText = `${state.settings.currency} ${Math.max(0, overallB.amount - monthTotal).toLocaleString()}`;
     
     const bar = document.getElementById('overall-budget-progress-bar');
     bar.style.width = `${pct}%`;
@@ -96,7 +96,7 @@ function renderDashboard() {
   } else {
     pieChartView.classList.remove('hidden');
     pieEmptyState.classList.add('hidden');
-    document.getElementById('donut-total').innerText = `${state.settings.currency}${monthTotal.toLocaleString()}`;
+    document.getElementById('donut-total').innerText = `${state.settings.currency} ${monthTotal.toLocaleString()}`;
     
     const donut = document.getElementById('svg-donut');
     donut.innerHTML = `<circle cx="50" cy="50" r="40" fill="transparent" stroke="#1e293b" stroke-width="8" />`;
@@ -147,7 +147,7 @@ function renderDashboard() {
     trendBars.innerHTML += `
       <div class="flex-1 flex flex-col items-center group relative h-full justify-end">
         <div class="absolute bottom-full mb-2 bg-slate-900 border border-slate-800 px-2 py-1 rounded text-[10px] text-white opacity-0 group-hover:opacity-100 transition-opacity z-10 pointer-events-none whitespace-nowrap">
-          ${state.settings.currency}${d.amount.toLocaleString()}
+          ${state.settings.currency} ${d.amount.toLocaleString()}
         </div>
         <div class="w-full bg-indigo-500/20 hover:bg-indigo-500/40 border-t border-indigo-400/30 rounded-t transition-all duration-300 cursor-pointer" style="height: ${Math.max(4, hPct)}%"></div>
         <span class="text-[10px] text-slate-400 mt-2">${d.day}</span>
@@ -169,7 +169,7 @@ function renderDashboard() {
         </td>
         <td class="py-3 text-slate-400 text-xs">${escapeHTML(e.date)}</td>
         <td class="py-3 text-slate-400 text-xs">${escapeHTML(e.payment_method)}</td>
-        <td class="py-3 text-right font-bold text-white">${state.settings.currency}${e.amount.toLocaleString()}</td>
+        <td class="py-3 text-right font-bold text-white">${state.settings.currency} ${e.amount.toLocaleString()}</td>
       </tr>
     `;
   });
@@ -256,7 +256,7 @@ function renderExpensesList() {
         </td>
         <td class="py-4 text-slate-400 text-xs truncate max-w-[120px]">${escapeHTML(e.location) || '-'}</td>
         <td class="py-4">${receiptLink}</td>
-        <td class="py-4 text-right font-extrabold text-white text-base">${state.settings.currency}${e.amount.toLocaleString()}</td>
+        <td class="py-4 text-right font-extrabold text-white text-base">${state.settings.currency} ${e.amount.toLocaleString()}</td>
         ${actionsTd}
       </tr>
     `;
@@ -331,8 +331,8 @@ function renderBudgets() {
             <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Monthly Limit</span>
           </div>
           <div class="text-right">
-            <p class="text-sm font-extrabold text-white">${limit > 0 ? `${state.settings.currency}${limit.toLocaleString()}` : 'Not Set'}</p>
-            <p class="text-[10px] text-slate-400">Spent: ${state.settings.currency}${spent.toLocaleString()}</p>
+            <p class="text-sm font-extrabold text-white">${limit > 0 ? `${state.settings.currency} ${limit.toLocaleString()}` : 'Not Set'}</p>
+            <p class="text-[10px] text-slate-400">Spent: ${state.settings.currency} ${spent.toLocaleString()}</p>
           </div>
         </div>
         ${progressHtml}
@@ -355,6 +355,9 @@ function renderSavingsGoals() {
     
     const actionHtml = state.activeOwner ? '' : `
       <div class="flex items-center justify-end gap-2 border-t border-slate-900/60 pt-3">
+        <button onclick="quickAddGoalMoney('${g.id}')" class="text-xs text-emerald-400 hover:text-emerald-300 flex items-center gap-1 font-semibold mr-auto">
+          <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i> Add Money
+        </button>
         <button onclick="editGoal('${g.id}')" class="text-xs text-slate-400 hover:text-white flex items-center gap-1 font-semibold">
           <i data-lucide="edit" class="w-3 h-3"></i> Update
         </button>
@@ -371,8 +374,8 @@ function renderSavingsGoals() {
         <div>
           <h4 class="font-bold text-white text-base truncate">${escapeHTML(g.title)}</h4>
           <div class="flex items-baseline gap-1 mt-2">
-            <span class="text-2xl font-black text-white">${state.settings.currency}${g.saved_amount.toLocaleString()}</span>
-            <span class="text-xs text-slate-400">of ${state.settings.currency}${g.target_amount.toLocaleString()}</span>
+            <span class="text-2xl font-black text-white">${state.settings.currency} ${g.saved_amount.toLocaleString()}</span>
+            <span class="text-xs text-slate-400">of ${state.settings.currency} ${g.target_amount.toLocaleString()}</span>
           </div>
         </div>
         <div class="space-y-1">

@@ -13,6 +13,7 @@ from app.auth import (
     hash_password,
     verify_password,
     create_access_token,
+    create_refresh_token,
     get_current_user
 )
 from app.models import (
@@ -27,7 +28,8 @@ from app.models import (
     InvitationCreate,
     SavingsGoalCreate,
     SavingsGoalUpdate,
-    SettingsUpdate
+    SettingsUpdate,
+    RefreshTokenRequest
 )
 
 app = FastAPI(title="MyMoney - Expense Tracker API")
@@ -136,8 +138,17 @@ def register(user_data: UserRegister):
         "payment_methods": DEFAULT_PAYMENT_METHODS
     })
     
-    token = create_access_token({"email": user_data.email})
-    return {"token": token, "user": serialize_doc(new_user)}
+    # Import JWT config inside to avoid circular imports or missing definitions
+    from app.auth import JWT_SECRET, JWT_ALGORITHM
+    import jwt
+
+    access_token = create_access_token({"email": user_data.email})
+    refresh_token = create_refresh_token({"email": user_data.email})
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": serialize_doc(new_user)
+    }
 
 @app.post("/api/auth/login")
 def login(credentials: UserLogin):
@@ -146,8 +157,41 @@ def login(credentials: UserLogin):
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
-    token = create_access_token({"email": user["email"]})
-    return {"token": token, "user": serialize_doc(user)}
+    access_token = create_access_token({"email": user["email"]})
+    refresh_token = create_refresh_token({"email": user["email"]})
+    return {
+        "access_token": access_token,
+        "refresh_token": refresh_token,
+        "user": serialize_doc(user)
+    }
+
+@app.post("/api/auth/refresh")
+def refresh(payload: RefreshTokenRequest):
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate refresh token",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        from app.auth import JWT_SECRET, JWT_ALGORITHM
+        import jwt
+        decoded = jwt.decode(payload.refresh_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        if decoded.get("type") != "refresh":
+            raise credentials_exception
+        email: str = decoded.get("email")
+        if email is None:
+            raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+        
+    users_col = get_collection("users")
+    user = users_col.find_one({"email": email})
+    if not user:
+        raise credentials_exception
+        
+    access_token = create_access_token({"email": email})
+    refresh_token = create_refresh_token({"email": email})
+    return {"access_token": access_token, "refresh_token": refresh_token}
 
 @app.get("/api/auth/me", response_model=UserResponse)
 def get_me(current_user: dict = Depends(get_current_user)):
