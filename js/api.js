@@ -1,4 +1,3 @@
-const API_BASE = window.API_BASE;
 
 async function fetchUserData() {
   try {
