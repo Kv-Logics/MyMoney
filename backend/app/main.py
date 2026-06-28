@@ -87,6 +87,10 @@ async def global_exception_handler(request: Request, exc: Exception):
         content={"detail": "An unexpected error occurred. Please try again later."}
     )
 
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "MyMoney - Expense Tracker API is running"}
+
 # --- AUTH ENDPOINTS ---
 
 @app.post("/api/auth/register")

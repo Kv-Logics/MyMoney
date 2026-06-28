@@ -33,7 +33,15 @@ async function handleAuthSubmit(e) {
 function showAuthError(msg) {
   const authErrorDiv = document.getElementById('auth-error');
   const authErrorMsg = document.getElementById('auth-error-msg');
-  authErrorMsg.innerText = msg;
+  if (typeof msg === 'object') {
+    if (Array.isArray(msg)) {
+      authErrorMsg.innerText = msg.map(m => m.msg || JSON.stringify(m)).join(', ');
+    } else {
+      authErrorMsg.innerText = msg.message || msg.detail || JSON.stringify(msg);
+    }
+  } else {
+    authErrorMsg.innerText = msg;
+  }
   authErrorDiv.classList.remove('hidden');
 }
 
