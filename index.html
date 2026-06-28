@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#020617">
+  <title>MyMoney - Real-time Shared Family Expense Tracker</title>
+  <meta name="description" content="Track shared family or roommate expenses in real-time with offline support, category budgets, dynamic analytics, and audit logging.">
+  <link rel="canonical" href="https://mymoney-tracker.vercel.app">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="MyMoney - Real-time Shared Family Expense Tracker">
+  <meta property="og:description" content="Track shared family or roommate expenses in real-time with offline support, category budgets, dynamic analytics, and audit logging.">
+  <meta property="og:url" content="https://mymoney-tracker.vercel.app">
+  <meta property="og:image" content="https://mymoney-tracker.vercel.app/og-image.png">
+  
+  <!-- Twitter -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="MyMoney - Real-time Shared Family Expense Tracker">
+  <meta name="twitter:description" content="Track shared family or roommate expenses in real-time with offline support, category budgets, dynamic analytics, and audit logging.">
+  <meta name="twitter:image" content="https://mymoney-tracker.vercel.app/og-image.png">
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Canvas Confetti -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <!-- Import style.css -->
+  <link rel="stylesheet" href="css/style.css">
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#f5f3ff',
+              100: '#ede9fe',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen overflow-x-hidden">
+
+  <!-- ================= AUTH SCREEN ================= -->
+  <div id="auth-screen" class="min-h-screen flex items-center justify-center bg-slate-950 px-4 relative overflow-hidden">
+    <div class="absolute top-10 left-10 w-72 h-72 bg-indigo-600/10 rounded-full blur-3xl"></div>
+    <div class="absolute bottom-10 right-10 w-96 h-96 bg-violet-600/10 rounded-full blur-3xl"></div>
+
+    <div class="w-full max-w-md p-8 glass rounded-2xl border border-slate-800 shadow-2xl relative z-10">
+      <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center p-3 bg-brand-500/10 rounded-xl mb-3 text-brand-500">
+          <i data-lucide="wallet" class="w-8 h-8"></i>
+        </div>
+        <h1 class="text-2xl font-extrabold tracking-tight text-white">MyMoney</h1>
+        <p class="text-slate-400 text-sm mt-1">Real-time shared personal finance tracker</p>
+      </div>
+
+      <div id="auth-error" class="hidden mb-4 p-3 bg-rose-500/10 border border-rose-500/20 text-rose-400 rounded-lg text-sm flex items-center gap-2">
+        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+        <span id="auth-error-msg">Authentication error</span>
+      </div>
+
+      <form id="auth-form" class="space-y-4">
+        <div id="register-fields" class="hidden">
+          <label for="auth-name" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Full Name</label>
+          <input
+            type="text"
+            id="auth-name"
+            placeholder="John Doe"
+            class="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-sm text-white"
+          />
+        </div>
+
+        <div>
+          <label for="auth-email" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Email Address</label>
+          <input
+            type="email"
+            id="auth-email"
+            required
+            placeholder="you@example.com"
+            class="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-sm text-white"
+          />
+        </div>
+
+        <div>
+          <label for="auth-password" class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Password</label>
+          <input
+            type="password"
+            id="auth-password"
+            required
+            placeholder="••••••••"
+            class="w-full px-4 py-3 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-sm text-white"
+          />
+        </div>
+
+        <button
+          type="submit"
+          id="auth-btn"
+          class="w-full py-3 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl transition-all shadow-lg shadow-brand-500/20 active:scale-[0.98] text-sm mt-6"
+        >
+          Sign In
+        </button>
+      </form>
+
+      <div class="mt-6 text-center text-sm text-slate-400">
+        <span id="auth-switch-text">New to MyMoney?</span>
+        <button id="auth-switch-btn" class="text-brand-500 hover:underline font-semibold focus:outline-none ml-1">
+          Register
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= APP LAYOUT SCREEN ================= -->
+  <div id="app-screen" class="hidden min-h-screen flex bg-slate-950 text-slate-100">
+    
+    <!-- SIDEBAR -->
+    <aside class="w-64 glass border-r border-slate-800/80 flex flex-col shrink-0">
+      
+      <!-- Logo Header -->
+      <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-800/80">
+        <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500">
+          <i data-lucide="wallet" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <span class="font-extrabold text-white tracking-wide text-lg">MyMoney</span>
+          <span id="shared-badge" class="hidden block text-[10px] text-rose-400 font-bold uppercase tracking-wider">Shared View</span>
+        </div>
+      </div>
+
+      <!-- User Profile Card -->
+      <div class="p-4 border-b border-slate-800/80">
+        <div class="flex items-center gap-3">
+          <div id="user-avatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center font-bold text-white shadow-md">
+            U
+          </div>
+          <div class="overflow-hidden">
+            <h4 id="user-name-display" class="text-sm font-semibold text-white truncate">User Name</h4>
+            <p id="user-email-display" class="text-xs text-slate-400 truncate">user@example.com</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all bg-brand-500 text-white shadow-lg shadow-brand-500/15">
+          <i data-lucide="trending-up" class="w-4 h-4"></i>
+          <span>Dashboard</span>
+        </button>
+
+        <button onclick="switchTab('expenses')" id="nav-expenses" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+          <span>Expenses</span>
+        </button>
+
+        <button onclick="switchTab('budgets')" id="nav-budgets" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+          <span>Budgets</span>
+        </button>
+
+        <button onclick="switchTab('savings')" id="nav-savings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="award" class="w-4 h-4"></i>
+          <span>Savings Goals</span>
+        </button>
+
+        <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="file-text" class="w-4 h-4"></i>
+          <span>Reports</span>
+        </button>
+
+        <button onclick="switchTab('sharing')" id="nav-sharing" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="users" class="w-4 h-4"></i>
+          <span>Family Sharing</span>
+        </button>
+
+        <button onclick="switchTab('audit-log')" id="nav-audit-log" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="activity" class="w-4 h-4"></i>
+          <span>Audit Log</span>
+        </button>
+
+        <button onclick="switchTab('settings')" id="nav-settings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <!-- Shared Trackers available list -->
+      <div id="shared-list-section" class="hidden px-4 py-2 border-t border-slate-800/80">
+        <span class="block text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-2">Shared With Me</span>
+        <div id="shared-trackers-container" class="space-y-1">
+          <!-- Dynamic tracker list -->
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <div class="p-4 border-t border-slate-800/80">
+        <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-2 text-rose-400 hover:bg-rose-500/10 rounded-xl text-sm font-medium transition-colors">
+          <i data-lucide="log-out" class="w-4 h-4"></i>
+          <span>Logout</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- MAIN APP SCREEN BODY -->
+    <main class="flex-1 flex flex-col min-w-0">
+      
+      <!-- Top header bar -->
+      <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
+        <div class="flex items-center gap-4">
+          <h2 id="page-title" class="text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
+        </div>
+
+        <div class="flex items-center gap-4">
+          <!-- Sync / Offline indicator -->
+          <div id="sync-status" class="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium">
+            <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+            <span>Synced</span>
+          </div>
+
+          <!-- Notification Bell -->
+          <div class="relative">
+            <button onclick="toggleNotifications()" class="p-2 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white relative">
+              <i data-lucide="bell" class="w-5 h-5"></i>
+              <span id="bell-dot" class="hidden absolute top-1 right-1 w-2.5 h-2.5 bg-brand-500 rounded-full ring-2 ring-slate-950"></span>
+            </button>
+
+            <!-- Notifications Dropdown Box -->
+            <div id="notifications-dropdown" class="hidden absolute right-0 mt-2 w-80 glass border border-slate-800 rounded-2xl shadow-xl py-2 z-50">
+              <div class="px-4 py-2 border-b border-slate-800/80 flex items-center justify-between">
+                <span class="font-bold text-sm text-white">Notifications</span>
+                <button onclick="clearNotifications()" class="text-xs text-slate-400 hover:text-white">Clear All</button>
+              </div>
+              <div id="notifications-container" class="max-h-64 overflow-y-auto">
+                <div class="px-4 py-6 text-center text-xs text-slate-400">No notifications</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Add Expense Button -->
+          <button id="header-add-expense-btn" onclick="openExpenseModal()" class="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 active:scale-[0.97] transition-all text-white font-medium rounded-xl text-xs shadow-md shadow-brand-500/10">
+            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+            <span>Add Expense</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- SCROLLABLE TAB CONTAINER -->
+      <div id="page-content" class="flex-grow p-6 overflow-y-auto relative">
+        
+        <!-- Loading overlay -->
+        <div id="loading-overlay" class="hidden absolute inset-0 bg-slate-950/40 backdrop-blur-sm flex items-center justify-center z-50">
+          <div class="flex flex-col items-center gap-2">
+            <i data-lucide="refresh-cw" class="animate-spin text-brand-500 w-8 h-8"></i>
+            <span class="text-sm font-semibold text-slate-400">Syncing data...</span>
+          </div>
+        </div>
+
+        <!-- ================= TAB 1: DASHBOARD ================= -->
+        <div id="tab-dashboard" class="tab-pane space-y-6">
+          
+          <!-- Summary grid -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <!-- Spend Month -->
+            <div class="glass rounded-2xl p-6 relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-brand-500/5 rounded-full blur-xl"></div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Month Spending</span>
+              <h3 id="stat-month-spending" class="text-3xl font-extrabold text-white mt-2">₹0</h3>
+              <div class="flex items-center gap-1 text-[11px] text-slate-400 mt-2">
+                <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+                <span>Current Month</span>
+              </div>
+            </div>
+
+            <!-- Spend Today -->
+            <div class="glass rounded-2xl p-6 relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-xl"></div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Today Spending</span>
+              <h3 id="stat-today-spending" class="text-3xl font-extrabold text-white mt-2">₹0</h3>
+              <div class="flex items-center gap-1 text-[11px] text-slate-400 mt-2">
+                <i data-lucide="info" class="w-3.5 h-3.5"></i>
+                <span>Updated just now</span>
+              </div>
+            </div>
+
+            <!-- Budget Remaining -->
+            <div class="glass rounded-2xl p-6 relative overflow-hidden">
+              <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-xl"></div>
+              <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Remaining Budget</span>
+              <h3 id="stat-remaining-budget" class="text-3xl font-extrabold text-white mt-2">Not Set</h3>
+              <div id="overall-budget-progress-container" class="hidden w-full bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+                <div id="overall-budget-progress-bar" class="h-full rounded-full transition-all duration-500 bg-emerald-500" style="width: 0%"></div>
+              </div>
+              <button id="set-budget-link-btn" onclick="openBudgetModal('Overall')" class="text-xs text-brand-500 hover:underline mt-2 font-semibold flex items-center gap-1">
+                <i data-lucide="plus-circle" class="w-3 h-3"></i> Set Monthly Budget Limit
+              </button>
+            </div>
+          </div>
+
+          <!-- Charts -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Category distribution dynamic SVG Pie -->
+            <div class="glass rounded-2xl p-6">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                <i data-lucide="pie-chart" class="w-4 h-4 text-brand-500"></i>
+                <span>Category Breakdown</span>
+              </h3>
+              <div id="pie-chart-view" class="flex flex-col sm:flex-row items-center justify-around gap-6">
+                <!-- SVG donut -->
+                <div class="relative w-44 h-44 shrink-0 flex items-center justify-center">
+                  <svg id="svg-donut" class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#1e293b" stroke-width="8" />
+                  </svg>
+                  <div class="absolute text-center">
+                    <span class="text-[10px] uppercase font-semibold text-slate-400">Total Spent</span>
+                    <span id="donut-total" class="block text-lg font-bold text-white">₹0</span>
+                  </div>
+                </div>
+                <!-- Legend list -->
+                <div id="pie-legend" class="space-y-2 flex-1 max-w-[200px]"></div>
+              </div>
+              <div id="pie-empty-state" class="hidden h-44 flex items-center justify-center text-sm text-slate-400">
+                No monthly expenses logged
+              </div>
+            </div>
+
+            <!-- Spending trend flexbox Bar Chart -->
+            <div class="glass rounded-2xl p-6">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-6 flex items-center gap-2">
+                <i data-lucide="trending-up" class="w-4 h-4 text-brand-500"></i>
+                <span>Weekly Spending Trend</span>
+              </h3>
+              <div class="h-44 flex items-end justify-between px-2 gap-4" id="weekly-trend-bars"></div>
+            </div>
+          </div>
+
+          <!-- Recent transactions -->
+          <div class="glass rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Recent Transactions</h3>
+              <button onclick="switchTab('expenses')" class="text-xs text-brand-500 hover:underline font-semibold">View All</button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400 text-xs">
+                    <th class="pb-3">Title/Category</th>
+                    <th class="pb-3">Date</th>
+                    <th class="pb-3">Payment</th>
+                    <th class="pb-3 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="recent-expenses-tbody" class="divide-y divide-slate-900/60"></tbody>
+              </table>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- ================= TAB 2: EXPENSES ================= -->
+        <div id="tab-expenses" class="tab-pane hidden space-y-6">
+          <div class="glass rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-brand-500"></i>
+                <span>Search & Filters</span>
+              </h3>
+              <button onclick="clearExpensesFilters()" class="text-xs text-slate-400 hover:text-white">Clear Filters</button>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Search Keywords</label>
+                <input type="text" id="filter-search" oninput="renderExpensesList()" placeholder="Title, Notes..." class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
+                <select id="filter-category" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                  <option value="">All Categories</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Payment Method</label>
+                <select id="filter-payment" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                  <option value="">All Payments</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Sort By</label>
+                <select id="filter-sort" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                  <option value="date_desc">Latest first</option>
+                  <option value="date_asc">Oldest first</option>
+                  <option value="amount_desc">Highest amount</option>
+                  <option value="amount_asc">Lowest amount</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Start Date</label>
+                <input type="date" id="filter-start-date" onchange="renderExpensesList()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">End Date</label>
+                <input type="date" id="filter-end-date" onchange="renderExpensesList()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Min Amount</label>
+                <input type="number" id="filter-min-amount" oninput="renderExpensesList()" placeholder="Min" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              </div>
+              <div>
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Max Amount</label>
+                <input type="number" id="filter-max-amount" oninput="renderExpensesList()" placeholder="Max" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction rows -->
+          <div class="glass rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-4">
+              <span id="expenses-count-text" class="text-xs text-slate-400 font-semibold uppercase">Showing 0 Transactions</span>
+              <button onclick="downloadCSVReport(null)" class="flex items-center gap-1 px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 transition-all">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>CSV Export</span>
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400 text-xs">
+                    <th class="pb-3">Title/Description</th>
+                    <th class="pb-3">Category</th>
+                    <th class="pb-3">Payment Method</th>
+                    <th class="pb-3">Date/Time</th>
+                    <th class="pb-3">Location</th>
+                    <th class="pb-3">Receipt</th>
+                    <th class="pb-3 text-right">Amount</th>
+                    <th class="pb-3 text-right action-header">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="expenses-list-tbody" class="divide-y divide-slate-900/60"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB 3: BUDGETS ================= -->
+        <div id="tab-budgets" class="tab-pane hidden space-y-6">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-slate-400">Configure and track monthly thresholds for your spending categories</p>
+            <button id="add-budget-btn" onclick="openBudgetModal()" class="flex items-center gap-1 px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-xl text-xs font-semibold text-white transition-all">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Set Category Budget</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="budgets-list-container"></div>
+        </div>
+
+        <!-- ================= TAB 4: SAVINGS GOALS ================= -->
+        <div id="tab-savings" class="tab-pane hidden space-y-6">
+          <div class="flex items-center justify-between">
+            <p class="text-sm text-slate-400">Create target milestones and track progress over time</p>
+            <button id="add-savings-btn" onclick="openGoalModal()" class="flex items-center gap-1 px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-xl text-xs font-semibold text-white transition-all">
+              <i data-lucide="plus-circle" class="w-4 h-4"></i>
+              <span>Create Savings Goal</span>
+            </button>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="savings-list-container"></div>
+        </div>
+
+        <!-- ================= TAB 5: REPORTS ================= -->
+        <div id="tab-reports" class="tab-pane hidden space-y-6">
+          <div class="glass rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4">Select Date Range</h3>
+            <div class="flex flex-col sm:flex-row items-end gap-4">
+              <div class="flex-1">
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Start Date</label>
+                <input type="date" id="report-start-date" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              </div>
+              <div class="flex-1">
+                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">End Date</label>
+                <input type="date" id="report-end-date" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              </div>
+              <button onclick="runReport()" class="px-5 py-2.5 bg-indigo-500 hover:bg-indigo-600 rounded-xl text-xs font-bold text-white transition-colors">
+                Run Report
+              </button>
+              <button onclick="downloadReportCSV()" class="flex items-center gap-1.5 px-6 py-3 bg-brand-500 hover:bg-brand-600 rounded-xl text-xs font-bold text-white transition-all">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Download CSV Report</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Report summary stats -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="glass rounded-2xl p-6">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Total Period Expense</span>
+              <h3 id="report-total" class="text-2xl font-black text-white mt-1">₹0</h3>
+            </div>
+            <div class="glass rounded-2xl p-6">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Daily Average Expense</span>
+              <h3 id="report-avg" class="text-2xl font-black text-white mt-1">₹0</h3>
+            </div>
+            <div class="glass rounded-2xl p-6">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Highest Spending Category</span>
+              <h3 id="report-highest" class="text-2xl font-black text-white mt-1 truncate">None</h3>
+            </div>
+            <div class="glass rounded-2xl p-6">
+              <span class="text-[10px] text-slate-400 uppercase font-semibold">Lowest Spending Category</span>
+              <h3 id="report-lowest" class="text-2xl font-black text-white mt-1 truncate">None</h3>
+            </div>
+          </div>
+
+          <!-- Report list -->
+          <div class="glass rounded-2xl p-6">
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4" id="report-log-title">Expenses Log (0 entries)</h3>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400 text-xs">
+                    <th class="pb-3">Date</th>
+                    <th class="pb-3">Title</th>
+                    <th class="pb-3">Category</th>
+                    <th class="pb-3">Payment</th>
+                    <th class="pb-3 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody id="report-tbody" class="divide-y divide-slate-900/60"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB 6: SHARING ================= -->
+        <div id="tab-sharing" class="tab-pane hidden space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Share invitation form -->
+            <div class="glass rounded-2xl p-6 space-y-4">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                <i data-lucide="user-plus" class="w-4.5 h-4.5 text-brand-500"></i>
+                <span>Invite Family Member / Roommate</span>
+              </h3>
+              <div id="sharing-msg" class="hidden p-3 rounded-xl text-xs"></div>
+              <form id="sharing-form" class="space-y-4">
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Email Address</label>
+                  <input type="email" id="share-email" required placeholder="family@example.com" class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Permission Level</label>
+                  <select id="share-permission" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                    <option value="view">View Only (Real time dashboard)</option>
+                  </select>
+                </div>
+                <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl text-xs transition-colors">
+                  Grant Shared Access
+                </button>
+              </form>
+            </div>
+
+            <!-- List active sharing -->
+            <div class="glass rounded-2xl p-6 space-y-4">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">Active Viewers</h3>
+              <div id="sharing-list-container" class="divide-y divide-slate-900/60"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ================= TAB 7: AUDIT LOG ================= -->
+        <div id="tab-audit-log" class="tab-pane hidden glass rounded-2xl p-6">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-1">Family Audit Log</h3>
+          <p class="text-xs text-slate-400 mb-6">Logs creations, edits, and deletions for tracking transparency</p>
+          <div class="relative border-l border-slate-800 pl-4 space-y-6" id="audit-log-container"></div>
+        </div>
+
+        <!-- ================= TAB 8: SETTINGS ================= -->
+        <div id="tab-settings" class="tab-pane hidden glass rounded-2xl p-6 max-w-xl space-y-6">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">Configuration Settings</h3>
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Currency Symbol</label>
+              <select id="settings-currency" onchange="saveSettings()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                <option value="₹">Indian Rupee (₹)</option>
+                <option value="$">US Dollar ($)</option>
+                <option value="€">Euro (€)</option>
+                <option value="£">Pound (£)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Theme Preferences</label>
+              <select id="settings-theme" onchange="saveSettings()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                <option value="dark">Dark Theme (Standard)</option>
+                <option value="light">Light Theme (Legacy)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Default Time Zone</label>
+              <select id="settings-timezone" onchange="saveSettings()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                <option value="UTC">UTC (Universal Time)</option>
+                <option value="IST">IST (Indian Standard Time)</option>
+                <option value="EST">EST (Eastern Standard Time)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Production API Base URL</label>
+              <input type="text" id="settings-api-base" onchange="saveApiBase()" placeholder="https://mymoney-backend.onrender.com/api" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+  </div>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- 1. Expense add/edit modal dialog -->
+  <div id="modal-expense" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="w-full max-w-lg glass border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+        <h3 id="modal-expense-title" class="font-bold text-white text-base">Record Expense Entry</h3>
+        <button onclick="closeExpenseModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="expense-form" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <input type="hidden" id="expense-id">
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Amount</label>
+            <input type="number" step="0.01" required id="expense-amount" placeholder="250.00" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Title</label>
+            <input type="text" required id="expense-title" placeholder="Uber / Dinner / Rent" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
+            <select id="expense-category" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white"></select>
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Payment Method</label>
+            <select id="expense-payment" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white"></select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Date</label>
+            <input type="date" required id="expense-date" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Time</label>
+            <input type="time" id="expense-time" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+          </div>
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Location (Optional)</label>
+          <input type="text" id="expense-location" placeholder="Store or City" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Description / Notes</label>
+          <textarea id="expense-desc" rows="2" placeholder="Description details" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white resize-none"></textarea>
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Receipt Image</label>
+          <div class="flex items-center gap-3">
+            <input type="file" id="expense-receipt-input" accept="image/*" class="hidden" onchange="handleReceiptUpload(event)">
+            <label for="expense-receipt-input" class="px-4 py-2 bg-slate-900 border border-slate-800 hover:bg-slate-800 rounded-xl text-xs font-semibold text-slate-300 cursor-pointer transition-colors">
+              Choose Image File
+            </label>
+            <span id="expense-receipt-badge" class="hidden text-[10px] text-emerald-400 font-semibold flex items-center gap-0.5">
+              ✓ Attached
+            </span>
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl text-xs transition-colors shadow shadow-brand-500/10 active:scale-[0.98]">
+          Confirm Entry
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Budget Edit Modal -->
+  <div id="modal-budget" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="w-full max-w-sm glass border border-slate-800 rounded-2xl shadow-2xl">
+      <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+        <h3 class="font-bold text-white text-base">Configure Budget Limit</h3>
+        <button onclick="closeBudgetModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="budget-form" class="p-6 space-y-4">
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
+          <select id="budget-category" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+            <option value="Overall">Overall Budget</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Limit Amount</label>
+          <input type="number" required id="budget-amount" placeholder="20000" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl text-xs transition-colors">
+          Update Limit
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Goal Modal -->
+  <div id="modal-goal" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="w-full max-w-sm glass border border-slate-800 rounded-2xl shadow-2xl">
+      <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+        <h3 id="modal-goal-title" class="font-bold text-white text-base">Create Savings Goal</h3>
+        <button onclick="closeGoalModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="goal-form" class="p-6 space-y-4">
+        <input type="hidden" id="goal-id">
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Goal Item / Title</label>
+          <input type="text" required id="goal-title" placeholder="New Bike / Trip..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+        </div>
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Target Cost</label>
+            <input type="number" required id="goal-target" placeholder="150000" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Saved Amount</label>
+            <input type="number" id="goal-saved" placeholder="42000" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+          </div>
+        </div>
+        <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl text-xs transition-colors">
+          Confirm Details
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modular Scripts -->
+  <script src="js/app.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/ui.js"></script>
+</body>
+</html>
