@@ -133,11 +133,8 @@
   <!-- ================= APP LAYOUT SCREEN ================= -->
   <div id="app-screen" class="hidden min-h-screen flex bg-slate-950 text-slate-100">
     
-    <!-- Sidebar Mobile Backdrop -->
-    <div id="sidebar-backdrop" onclick="toggleMobileSidebar()" class="hidden fixed inset-0 bg-black/60 z-30 md:hidden"></div>
-
     <!-- SIDEBAR -->
-    <aside class="w-64 glass border-r border-slate-800/80 flex flex-col shrink-0 fixed inset-y-0 left-0 z-40 transform -translate-x-full md:translate-x-0 md:static transition-transform duration-300 ease-in-out">
+    <aside class="w-64 glass border-r border-slate-800/80 flex flex-col shrink-0">
       
       <!-- Logo Header -->
       <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-800/80">
@@ -224,19 +221,19 @@
           <span>Logout</span>
         </button>
       </div>
+      <!-- Footer / Credits -->
+      <div class="px-6 py-4 border-t border-slate-800/50 text-[10px] text-slate-500 text-center flex flex-col gap-1 shrink-0">
+        <span>Developed by <a href="https://github.com/Kv-Logics/MyMoney" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:underline">Kv-Logics</a></span>
+      </div>
     </aside>
 
     <!-- MAIN APP SCREEN BODY -->
     <main class="flex-1 flex flex-col min-w-0">
       
       <!-- Top header bar -->
-      <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-4 sm:px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
-        <div class="flex items-center gap-3 sm:gap-4">
-          <!-- Mobile Menu Button -->
-          <button id="mobile-menu-btn" onclick="toggleMobileSidebar()" class="p-2 hover:bg-slate-900 rounded-lg text-slate-400 hover:text-white md:hidden">
-            <i data-lucide="menu" class="w-5 h-5"></i>
-          </button>
-          <h2 id="page-title" class="text-base sm:text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
+      <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
+        <div class="flex items-center gap-4">
+          <h2 id="page-title" class="text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
         </div>
 
         <div class="flex items-center gap-3 sm:gap-4">
@@ -783,6 +780,7 @@
   <script src="js/app.js"></script>
   <script src="js/api.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/components/dashboard.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>
