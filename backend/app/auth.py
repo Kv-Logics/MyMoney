@@ -59,4 +59,5 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
         
     # Convert ObjectId to string for JSON serialization
     user["_id"] = str(user["_id"])
+    user["id"] = user["_id"]
     return user
