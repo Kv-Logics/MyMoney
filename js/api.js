@@ -1,6 +1,6 @@
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8000/api'
-  : (localStorage.getItem('api_base') || 'https://mymoney-backend.onrender.com/api');
+  : (localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api');
 
 async function fetchUserData() {
   try {
@@ -23,13 +23,13 @@ async function fetchUserData() {
       document.getElementById('settings-currency').value = state.settings.currency;
       document.getElementById('settings-theme').value = state.settings.theme;
       document.getElementById('settings-timezone').value = state.settings.timezone;
-      document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-backend.onrender.com/api';
+      document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api';
     } else {
       logout();
     }
   } catch (err) {
     console.warn('Backend server unreachable. Using cached offline mode.');
-    document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-backend.onrender.com/api';
+    document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api';
   }
 }
 
