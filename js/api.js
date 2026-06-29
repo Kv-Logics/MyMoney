@@ -19,16 +19,26 @@ async function fetchUserData() {
       
       applyTheme();
       
-      document.getElementById('settings-currency').value = state.settings.currency;
-      document.getElementById('settings-theme').value = state.settings.theme;
-      document.getElementById('settings-timezone').value = state.settings.timezone;
-      document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api';
+      if (document.getElementById('settings-currency')) {
+        document.getElementById('settings-currency').value = state.settings.currency;
+      }
+      if (document.getElementById('settings-theme')) {
+        document.getElementById('settings-theme').value = state.settings.theme;
+      }
+      if (document.getElementById('settings-timezone')) {
+        document.getElementById('settings-timezone').value = state.settings.timezone;
+      }
+      if (document.getElementById('settings-api-base')) {
+        document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api';
+      }
     } else {
       logout();
     }
   } catch (err) {
     console.warn('Backend server unreachable. Using cached offline mode.');
-    document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api';
+    if (document.getElementById('settings-api-base')) {
+      document.getElementById('settings-api-base').value = localStorage.getItem('api_base') || 'https://mymoney-jd0n.onrender.com/api';
+    }
   }
 }
 

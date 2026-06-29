@@ -73,9 +73,12 @@ async function showApp() {
 }
 
 async function saveSettings() {
-  const currency = document.getElementById('settings-currency').value;
-  const theme = document.getElementById('settings-theme').value;
-  const timezone = document.getElementById('settings-timezone').value;
+  const currencyEl = document.getElementById('settings-currency');
+  const timezoneEl = document.getElementById('settings-timezone');
+
+  const currency = currencyEl ? currencyEl.value : (state.settings?.currency || '₹');
+  const theme = state.settings?.theme || 'dark';
+  const timezone = timezoneEl ? timezoneEl.value : (state.settings?.timezone || 'UTC');
 
   state.settings = { currency, theme, timezone, language: 'en' };
   applyTheme();

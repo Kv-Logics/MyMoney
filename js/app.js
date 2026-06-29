@@ -311,10 +311,37 @@ document.addEventListener('click', function(event) {
 
 function applyTheme() {
   const theme = state.settings?.theme || 'dark';
+  const icon = document.getElementById('theme-toggle-icon');
+  
   if (theme === 'light') {
     document.documentElement.classList.remove('dark');
+    if (icon) {
+      icon.setAttribute('data-lucide', 'moon');
+    }
   } else {
     document.documentElement.classList.add('dark');
+    if (icon) {
+      icon.setAttribute('data-lucide', 'sun');
+    }
+  }
+  if (window.lucide) {
+    window.lucide.createIcons();
+  }
+}
+
+async function toggleThemeGlobal() {
+  const currentTheme = state.settings?.theme || 'dark';
+  const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+  
+  if (!state.settings) {
+    state.settings = { currency: '₹', theme: 'dark', timezone: 'UTC', language: 'en' };
+  }
+  
+  state.settings.theme = newTheme;
+  applyTheme();
+  
+  if (typeof saveSettings === 'function' && state.token) {
+    await saveSettings();
   }
 }
 

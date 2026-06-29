@@ -60,6 +60,11 @@
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen overflow-x-hidden">
 
+  <!-- Floating Theme Toggle Button -->
+  <button id="theme-toggle-btn" onclick="toggleThemeGlobal()" class="fixed top-4 right-4 z-[90] p-2.5 bg-slate-900/80 border border-slate-800/80 hover:bg-slate-800 rounded-full text-slate-400 hover:text-white transition-all shadow-lg">
+    <i data-lucide="sun" id="theme-toggle-icon" class="w-4 h-4"></i>
+  </button>
+
   <!-- Server Wake-Up / Loading Screen -->
   <div id="server-wakeup-overlay" class="fixed inset-0 z-[100] bg-slate-950 flex flex-col items-center justify-center p-6 space-y-6">
     <div class="relative w-24 h-24 flex items-center justify-center">
@@ -712,23 +717,12 @@
               </select>
             </div>
             <div>
-              <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Theme Preferences</label>
-              <select id="settings-theme" onchange="saveSettings()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
-                <option value="dark">Dark Theme (Standard)</option>
-                <option value="light">Light Theme (Legacy)</option>
-              </select>
-            </div>
-            <div>
               <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Default Time Zone</label>
               <select id="settings-timezone" onchange="saveSettings()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
                 <option value="UTC">UTC (Universal Time)</option>
                 <option value="IST">IST (Indian Standard Time)</option>
                 <option value="EST">EST (Eastern Standard Time)</option>
               </select>
-            </div>
-            <div>
-              <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Production API Base URL</label>
-              <input type="text" id="settings-api-base" onchange="saveApiBase()" placeholder="https://mymoney-backend.onrender.com/api" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
             </div>
           </div>
         </div>
