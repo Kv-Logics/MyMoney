@@ -160,3 +160,28 @@ html:not(.dark) ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
 
+/* Expandable sidebar on mobile/narrow screens */
+@media (max-width: 767px) {
+  aside.expanded {
+    width: 16rem !important; /* 256px, same as md:w-64 */
+    z-index: 40;
+    position: absolute;
+    left: 0;
+    top: 0;
+    box-shadow: 10px 0 30px rgba(0, 0, 0, 0.25);
+  }
+  aside.expanded .hidden.md\:inline {
+    display: inline !important;
+  }
+  aside.expanded .hidden.md\:block {
+    display: block !important;
+  }
+  aside.expanded .nav-btn {
+    justify-content: flex-start !important;
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+    gap: 0.75rem !important;
+  }
+}
+
+

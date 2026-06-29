@@ -224,6 +224,14 @@ function setupEventListeners() {
 function switchTab(tabId) {
   state.currentTab = tabId;
   
+  // Collapse sidebar if expanded on mobile
+  const aside = document.querySelector('aside');
+  if (aside && aside.classList.contains('expanded')) {
+    aside.classList.remove('expanded');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    if (icon) icon.style.transform = 'rotate(0deg)';
+  }
+
   document.querySelectorAll('.tab-pane').forEach(el => el.classList.add('hidden'));
   const targetTab = document.getElementById(`tab-${tabId}`);
   if (targetTab) targetTab.classList.remove('hidden');
@@ -309,3 +317,17 @@ function applyTheme() {
     document.documentElement.classList.add('dark');
   }
 }
+
+function toggleSidebar() {
+  const aside = document.querySelector('aside');
+  const icon = document.getElementById('sidebar-toggle-icon');
+  
+  if (aside.classList.contains('expanded')) {
+    aside.classList.remove('expanded');
+    if (icon) icon.style.transform = 'rotate(0deg)';
+  } else {
+    aside.classList.add('expanded');
+    if (icon) icon.style.transform = 'rotate(180deg)';
+  }
+}
+

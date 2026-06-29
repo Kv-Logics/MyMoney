@@ -137,17 +137,23 @@
     <aside class="w-16 md:w-64 h-full glass border-r border-slate-800/80 flex flex-col shrink-0 transition-all duration-200">
       
       <!-- Logo Header -->
-      <div class="h-16 flex items-center justify-center md:justify-start gap-3 px-4 md:px-6 border-b border-slate-800/80">
-        <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500 shrink-0">
-          <i data-lucide="wallet" class="w-5 h-5"></i>
+      <div class="h-16 flex items-center justify-between md:justify-start gap-3 px-4 md:px-6 border-b border-slate-800/80">
+        <div class="flex items-center gap-3">
+          <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500 shrink-0">
+            <i data-lucide="wallet" class="w-5 h-5"></i>
+          </div>
+          <div class="hidden md:block overflow-hidden">
+            <span class="font-extrabold text-white tracking-wide text-lg">MyMoney</span>
+            <span id="shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1">
+              <span>Shared View</span>
+              <i data-lucide="x" class="w-2.5 h-2.5"></i>
+            </span>
+          </div>
         </div>
-        <div class="hidden md:block overflow-hidden">
-          <span class="font-extrabold text-white tracking-wide text-lg">MyMoney</span>
-          <span id="shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1">
-            <span>Shared View</span>
-            <i data-lucide="x" class="w-2.5 h-2.5"></i>
-          </span>
-        </div>
+        <!-- Sidebar Toggle Button on Mobile -->
+        <button id="sidebar-toggle-btn" onclick="toggleSidebar()" class="p-1 hover:bg-slate-900/60 rounded-lg text-slate-400 hover:text-white transition-all shrink-0 md:hidden flex items-center justify-center">
+          <i data-lucide="chevron-right" class="w-4 h-4 transition-transform duration-200" id="sidebar-toggle-icon"></i>
+        </button>
       </div>
 
       <!-- User Profile Card -->
@@ -394,56 +400,60 @@
         <!-- ================= TAB 2: EXPENSES ================= -->
         <div id="tab-expenses" class="tab-pane hidden space-y-6">
           <div class="glass rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div onclick="toggleExpensesFilters()" class="flex items-center justify-between border-b border-slate-800 pb-3 cursor-pointer select-none">
               <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
                 <i data-lucide="filter" class="w-4 h-4 text-brand-500"></i>
                 <span>Search & Filters</span>
+                <i data-lucide="chevron-down" class="w-3.5 h-3.5 transition-transform duration-200" id="filter-chevron-icon"></i>
               </h3>
-              <button onclick="clearExpensesFilters()" class="text-xs text-slate-400 hover:text-white">Clear Filters</button>
+              <button onclick="event.stopPropagation(); clearExpensesFilters()" class="text-xs text-slate-400 hover:text-white">Clear Filters</button>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Search Keywords</label>
-                <input type="text" id="filter-search" oninput="renderExpensesList()" placeholder="Title, Notes..." class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+            
+            <div id="expenses-filters-content" class="hidden space-y-4">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Search Keywords</label>
+                  <input type="text" id="filter-search" oninput="renderExpensesList()" placeholder="Title, Notes..." class="w-full px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
+                  <select id="filter-category" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                    <option value="">All Categories</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Payment Method</label>
+                  <select id="filter-payment" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                    <option value="">All Payments</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Sort By</label>
+                  <select id="filter-sort" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
+                    <option value="date_desc">Latest first</option>
+                    <option value="date_asc">Oldest first</option>
+                    <option value="amount_desc">Highest amount</option>
+                    <option value="amount_asc">Lowest amount</option>
+                  </select>
+                </div>
               </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
-                <select id="filter-category" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
-                  <option value="">All Categories</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Payment Method</label>
-                <select id="filter-payment" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
-                  <option value="">All Payments</option>
-                </select>
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Sort By</label>
-                <select id="filter-sort" onchange="renderExpensesList()" class="w-full px-3 py-2.5 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none focus:border-brand-500 text-xs text-white">
-                  <option value="date_desc">Latest first</option>
-                  <option value="date_asc">Oldest first</option>
-                  <option value="amount_desc">Highest amount</option>
-                  <option value="amount_asc">Lowest amount</option>
-                </select>
-              </div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Start Date</label>
-                <input type="date" id="filter-start-date" onchange="renderExpensesList()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">End Date</label>
-                <input type="date" id="filter-end-date" onchange="renderExpensesList()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Min Amount</label>
-                <input type="number" id="filter-min-amount" oninput="renderExpensesList()" placeholder="Min" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
-              </div>
-              <div>
-                <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Max Amount</label>
-                <input type="number" id="filter-max-amount" oninput="renderExpensesList()" placeholder="Max" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              <div class="grid grid-cols-1 md:grid-cols-4 gap-4 pt-2">
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Start Date</label>
+                  <input type="date" id="filter-start-date" onchange="renderExpensesList()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">End Date</label>
+                  <input type="date" id="filter-end-date" onchange="renderExpensesList()" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Min Amount</label>
+                  <input type="number" id="filter-min-amount" oninput="renderExpensesList()" placeholder="Min" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                </div>
+                <div>
+                  <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Max Amount</label>
+                  <input type="number" id="filter-max-amount" oninput="renderExpensesList()" placeholder="Max" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+                </div>
               </div>
             </div>
           </div>
@@ -846,6 +856,8 @@
         </button>
       </form>
     </div>
+  </div>
+
   <!-- 4. Task Modal -->
   <div id="modal-task" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
     <div class="w-full max-w-md glass border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">

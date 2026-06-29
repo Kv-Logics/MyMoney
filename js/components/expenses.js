@@ -161,12 +161,47 @@ function clearExpensesFilters() {
   document.getElementById('filter-category').value = '';
   document.getElementById('filter-payment').value = '';
   document.getElementById('filter-sort').value = 'date_desc';
-  document.getElementById('filter-start-date').value = '';
-  document.getElementById('filter-end-date').value = '';
   document.getElementById('filter-min-amount').value = '';
   document.getElementById('filter-max-amount').value = '';
+  
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  document.getElementById('filter-start-date').value = `${year}-${month}-01`;
+  
+  const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+  document.getElementById('filter-end-date').value = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+  
   renderExpensesList();
 }
+
+function toggleExpensesFilters() {
+  const content = document.getElementById('expenses-filters-content');
+  const chevron = document.getElementById('filter-chevron-icon');
+  if (content.classList.contains('hidden')) {
+    content.classList.remove('hidden');
+    if (chevron) chevron.style.transform = 'rotate(180deg)';
+  } else {
+    content.classList.add('hidden');
+    if (chevron) chevron.style.transform = 'rotate(0deg)';
+  }
+}
+
+// Initialize expense filter inputs to current month
+window.addEventListener('DOMContentLoaded', () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  
+  const startInput = document.getElementById('filter-start-date');
+  if (startInput) startInput.value = `${year}-${month}-01`;
+  
+  const endInput = document.getElementById('filter-end-date');
+  if (endInput) {
+    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+    endInput.value = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+  }
+});
 
 async function showAddPaymentMethodPrompt() {
   const name = prompt("Enter new payment method name (e.g. UPI-KVB, UPI SBI):");
