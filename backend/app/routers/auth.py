@@ -12,6 +12,7 @@ from app.auth import (
 from app.models import (
     UserRegister,
     UserLogin,
+    AdminSetPasswordRequest,
     UserResponse,
     SettingsUpdate,
     RefreshTokenRequest
@@ -120,3 +121,40 @@ def update_settings(settings: SettingsUpdate, current_user: dict = Depends(get_c
     users_col.update_one({"_id": ObjectId(current_user["id"])}, {"$set": update_data})
     updated_user = users_col.find_one({"_id": ObjectId(current_user["id"])})
     return serialize_doc(updated_user)
+
+@router.post("/admin/set-password")
+def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = Depends(get_current_user)):
+    if current_user.get("email") != "a.keerthivasan7676@gmail.com":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the system administrator can perform this action."
+        )
+    
+    users_col = get_collection("users")
+    target_email = payload.email.strip().lower()
+    hashed = hash_password(payload.password)
+    
+    existing_user = users_col.find_one({"email": target_email})
+    if existing_user:
+        users_col.update_one({"_id": existing_user["_id"]}, {"$set": {"password": hashed}})
+        return {"message": f"Password updated successfully for existing user {target_email}."}
+    else:
+        new_user = {
+            "name": target_email.split('@')[0],
+            "email": target_email,
+            "password": hashed,
+            "currency": "INR",
+            "theme": "light",
+            "language": "en",
+            "timezone": "UTC",
+            "created_at": datetime.utcnow()
+        }
+        result = users_col.insert_one(new_user)
+        
+        # Initialize default settings
+        settings_col = get_collection("settings")
+        settings_col.insert_one({
+            "user_id": str(result.inserted_id),
+            "payment_methods": DEFAULT_PAYMENT_METHODS
+        })
+        return {"message": f"New user {target_email} registered and password set successfully."}

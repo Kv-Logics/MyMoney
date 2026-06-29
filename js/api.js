@@ -10,9 +10,18 @@ async function fetchUserData() {
       document.getElementById('user-email-display').innerText = state.user.email;
       document.getElementById('user-avatar').innerText = state.user.name[0].toUpperCase();
       
+      const adminPanel = document.getElementById('settings-admin-panel');
+      if (adminPanel) {
+        if (state.user.email === 'a.keerthivasan7676@gmail.com') {
+          adminPanel.classList.remove('hidden');
+        } else {
+          adminPanel.classList.add('hidden');
+        }
+      }
+      
       state.settings = {
         currency: state.user.currency || '₹',
-        theme: state.user.theme || 'dark',
+        theme: state.user.theme || 'light',
         language: state.user.language || 'en',
         timezone: state.user.timezone || 'UTC'
       };

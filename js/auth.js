@@ -160,3 +160,45 @@ function saveApiBase() {
   }
 }
 
+async function adminSetUserPassword() {
+  const emailEl = document.getElementById('admin-user-email');
+  const passwordEl = document.getElementById('admin-user-password');
+  
+  if (!emailEl || !passwordEl) return;
+  
+  const email = emailEl.value.trim();
+  const password = passwordEl.value.trim();
+  
+  if (!email || !password) {
+    alert("Please fill in both Email and Password fields.");
+    return;
+  }
+  
+  if (state.isOffline) {
+    alert("You must be online to update user credentials.");
+    return;
+  }
+  
+  try {
+    const res = await fetch(`${API_BASE}/auth/admin/set-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+      alert(data.message || "User password updated successfully!");
+      emailEl.value = '';
+      passwordEl.value = '';
+    } else {
+      alert("Error: " + (data.detail || "Failed to set user password."));
+    }
+  } catch (err) {
+    alert("Cannot reach server to process administrator action.");
+  }
+}
+

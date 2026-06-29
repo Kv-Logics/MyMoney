@@ -12,6 +12,10 @@ class UserLogin(BaseModel):
     email: EmailStr
     password: str
 
+class AdminSetPasswordRequest(BaseModel):
+    email: EmailStr
+    password: str = Field(..., min_length=1)
+
 class UserResponse(BaseModel):
     id: str
     name: str
