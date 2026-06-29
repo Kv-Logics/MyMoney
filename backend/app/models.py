@@ -94,6 +94,7 @@ class ChecklistItem(BaseModel):
     id: str
     text: str
     completed: bool = False
+    due_date: Optional[str] = None  # YYYY-MM-DD
 
 class TaskCreate(BaseModel):
     title: str = Field(..., min_length=1)
@@ -107,6 +108,7 @@ class TaskCreate(BaseModel):
     recurrence: str = "none"  # none, daily, weekly, monthly, yearly
     progress: float = 0.0
     notes: Optional[str] = ""
+    start_date: Optional[str] = ""  # YYYY-MM-DD
 
 class TaskUpdate(BaseModel):
     title: Optional[str] = None
@@ -120,5 +122,6 @@ class TaskUpdate(BaseModel):
     recurrence: Optional[str] = None
     progress: Optional[float] = None
     notes: Optional[str] = None
+    start_date: Optional[str] = None  # YYYY-MM-DD
 
 

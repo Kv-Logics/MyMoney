@@ -17,6 +17,7 @@ function openTaskModal(editingId = null) {
   document.getElementById('task-due-time').value = '';
   document.getElementById('task-notes').value = '';
   document.getElementById('checklist-item-input').value = '';
+  document.getElementById('checklist-item-date').value = '';
   
   taskChecklistDraft = [];
 
@@ -50,12 +51,18 @@ function addChecklistItemToDraft() {
   const text = input.value.trim();
   if (!text) return;
 
+  const dateInput = document.getElementById('checklist-item-date');
+  const itemDate = dateInput ? dateInput.value : '';
+
   taskChecklistDraft.push({
     id: 'item_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
     text: text,
-    completed: false
+    completed: false,
+    due_date: itemDate || null
   });
+  
   input.value = '';
+  if (dateInput) dateInput.value = '';
   renderDraftChecklist();
 }
 
@@ -72,10 +79,14 @@ function renderDraftChecklist() {
   counter.innerText = `${taskChecklistDraft.length} items`;
 
   taskChecklistDraft.forEach((item) => {
+    const dateBadge = item.due_date ? `<span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 shrink-0">${item.due_date}</span>` : '';
     container.innerHTML += `
       <div class="flex items-center justify-between bg-slate-900/50 border border-slate-800/40 rounded-lg p-2 text-xs">
-        <span class="text-slate-300 truncate pr-2">${escapeHTML(item.text)}</span>
-        <button type="button" onclick="removeChecklistItemFromDraft('${item.id}')" class="text-rose-400 hover:text-rose-300 p-0.5">
+        <div class="flex items-center min-w-0 flex-1">
+          <span class="text-slate-300 truncate">${escapeHTML(item.text)}</span>
+          ${dateBadge}
+        </div>
+        <button type="button" onclick="removeChecklistItemFromDraft('${item.id}')" class="text-rose-400 hover:text-rose-300 p-0.5 shrink-0 ml-2">
           <i data-lucide="trash" class="w-3.5 h-3.5"></i>
         </button>
       </div>
@@ -276,12 +287,18 @@ function renderTasks() {
         const checkedAttr = item.completed ? 'checked' : '';
         const disabledAttr = state.activeOwner ? 'disabled' : '';
         const textClass = item.completed ? 'line-through text-slate-500' : 'text-slate-300';
+        const itemDateHtml = item.due_date 
+          ? `<span class="text-[9px] text-slate-500 font-semibold ml-auto pl-2 shrink-0">${item.due_date}</span>` 
+          : '';
         checklistHtml += `
-          <label class="flex items-center gap-2 text-[11px] cursor-pointer">
-            <input type="checkbox" ${checkedAttr} ${disabledAttr} 
-              onchange="toggleTaskChecklistItem('${task.id}', '${item.id}', this.checked)" 
-              class="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-brand-500 focus:ring-0 focus:ring-offset-0">
-            <span class="${textClass} truncate">${escapeHTML(item.text)}</span>
+          <label class="flex items-center justify-between gap-2 text-[11px] cursor-pointer w-full">
+            <div class="flex items-center gap-2 min-w-0">
+              <input type="checkbox" ${checkedAttr} ${disabledAttr} 
+                onchange="toggleTaskChecklistItem('${task.id}', '${item.id}', this.checked)" 
+                class="w-3.5 h-3.5 rounded border-slate-800 bg-slate-900 text-brand-500 focus:ring-0 focus:ring-offset-0 shrink-0">
+              <span class="${textClass} truncate">${escapeHTML(item.text)}</span>
+            </div>
+            ${itemDateHtml}
           </label>
         `;
       });
@@ -303,6 +320,10 @@ function renderTasks() {
       </div>
     `;
 
+    const dateRange = (task.start_date && task.start_date !== task.due_date)
+      ? `${task.start_date} - ${task.due_date}`
+      : task.due_date;
+
     container.innerHTML += `
       <div class="glass rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between space-y-3">
         <div>
@@ -317,7 +338,7 @@ function renderTasks() {
           
           <div class="flex items-center justify-between text-[10px] text-slate-400 mt-3 font-semibold">
             <span class="flex items-center gap-1"><i data-lucide="folder" class="w-3 h-3 text-slate-500"></i> ${escapeHTML(task.category)}</span>
-            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i> ${escapeHTML(task.due_date)}</span>
+            <span class="flex items-center gap-1"><i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i> ${escapeHTML(dateRange)}</span>
           </div>
 
           <!-- Progress bar -->

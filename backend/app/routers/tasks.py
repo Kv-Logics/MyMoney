@@ -50,6 +50,13 @@ def create_task(task: TaskCreate, current_user: dict = Depends(get_current_user)
         new_task["progress"] = (completed / len(checklist)) * 100.0
         if new_task["progress"] == 100.0:
             new_task["status"] = "Completed"
+            
+        # Calculate start_date and due_date based on checklist
+        due_dates = [item["due_date"] for item in checklist if item.get("due_date")]
+        if due_dates:
+            due_dates.sort()
+            new_task["start_date"] = due_dates[0]
+            new_task["due_date"] = due_dates[-1]
     else:
         new_task["progress"] = 100.0 if new_task["status"] == "Completed" else 0.0
         
@@ -74,7 +81,7 @@ def update_task(id: str, task_update: TaskUpdate, current_user: dict = Depends(g
         
     update_data = {k: v for k, v in task_update.model_dump().items() if v is not None}
     
-    # If checklist is provided, recalculate progress and status
+    # If checklist is provided, recalculate progress, status, and dates
     if "checklist" in update_data:
         checklist = update_data["checklist"]
         if checklist:
@@ -85,6 +92,13 @@ def update_task(id: str, task_update: TaskUpdate, current_user: dict = Depends(g
                 update_data["status"] = "Completed"
             elif progress < 100.0 and existing.get("status") == "Completed":
                 update_data["status"] = "In Progress"
+                
+            # Recalculate start_date and due_date based on checklist items
+            due_dates = [item.get("due_date") for item in checklist if item.get("due_date")]
+            if due_dates:
+                due_dates.sort()
+                update_data["start_date"] = due_dates[0]
+                update_data["due_date"] = due_dates[-1]
         else:
             update_data["progress"] = 0.0
             if existing.get("status") == "Completed":
