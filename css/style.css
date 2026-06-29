@@ -82,24 +82,31 @@ html:not(.dark) .text-slate-500 {
   color: #475569 !important;
 }
 
-/* Primary buttons and brand items should keep white text */
-html:not(.dark) .bg-brand-500 .text-white,
-html:not(.dark) .bg-brand-500.text-white,
-html:not(.dark) button.bg-brand-500,
-html:not(.dark) button.bg-indigo-500,
-html:not(.dark) .bg-rose-500 .text-white,
-html:not(.dark) .bg-emerald-500 .text-white,
-html:not(.dark) .bg-rose-500\/20 .text-rose-400,
-html:not(.dark) .bg-emerald-500\/20 .text-emerald-400,
-html:not(.dark) .bg-brand-500\/20 .text-brand-400 {
-  color: inherit !important;
+/* Force white text inside colored backgrounds and elements */
+html:not(.dark) .bg-brand-500,
+html:not(.dark) .bg-brand-600,
+html:not(.dark) .bg-brand-700,
+html:not(.dark) .bg-emerald-500,
+html:not(.dark) .bg-rose-500,
+html:not(.dark) .bg-indigo-500,
+html:not(.dark) .bg-brand-500 *,
+html:not(.dark) .bg-brand-600 *,
+html:not(.dark) .bg-brand-700 *,
+html:not(.dark) .bg-emerald-500 *,
+html:not(.dark) .bg-rose-500 *,
+html:not(.dark) .bg-indigo-500 * {
+  color: #ffffff !important;
 }
 
-html:not(.dark) button.bg-brand-500 span,
-html:not(.dark) button.bg-brand-500 i,
-html:not(.dark) button.bg-emerald-500 span,
-html:not(.dark) button.bg-emerald-500 i {
-  color: #ffffff !important;
+/* Active tab selection in Light Mode (replaces solid purple with soft brand tint) */
+html:not(.dark) .nav-btn.bg-brand-500 {
+  background-color: rgba(16, 185, 129, 0.12) !important;
+  color: #059669 !important;
+  box-shadow: none !important;
+}
+
+html:not(.dark) .nav-btn.bg-brand-500 i {
+  color: #059669 !important;
 }
 
 /* Inputs, Selects, and Textareas */
