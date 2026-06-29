@@ -303,6 +303,8 @@ async function viewSharedTracker(id) {
   if (tracker) {
     state.activeOwner = tracker;
     document.getElementById('shared-badge').classList.remove('hidden');
+    const headerSharedBadge = document.getElementById('header-shared-badge');
+    if (headerSharedBadge) headerSharedBadge.classList.remove('hidden');
     document.getElementById('header-add-expense-btn').classList.add('hidden');
     await fetchAllData();
     switchTab('dashboard');
@@ -312,6 +314,8 @@ async function viewSharedTracker(id) {
 async function exitSharedView() {
   state.activeOwner = null;
   document.getElementById('shared-badge').classList.add('hidden');
+  const headerSharedBadge = document.getElementById('header-shared-badge');
+  if (headerSharedBadge) headerSharedBadge.classList.add('hidden');
   document.getElementById('header-add-expense-btn').classList.remove('hidden');
   await fetchAllData();
   switchTab('dashboard');

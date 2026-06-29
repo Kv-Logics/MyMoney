@@ -332,6 +332,36 @@ function renderSharedTrackersSection() {
   } else {
     section.classList.add('hidden');
   }
+
+  // Also populate list in the Family Sharing tab (very useful on mobile)
+  const tabContainer = document.getElementById('shared-by-me-list-container');
+  if (tabContainer) {
+    tabContainer.innerHTML = '';
+    if (state.sharedTrackers.length > 0) {
+      state.sharedTrackers.forEach(t => {
+        const isCurrent = state.activeOwner?.owner_email === t.owner_email;
+        const btnText = isCurrent ? 'Viewing' : 'Switch View';
+        const btnClass = isCurrent 
+          ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3 py-1.5 rounded-xl text-xs font-semibold' 
+          : 'bg-brand-500/10 text-brand-400 hover:bg-brand-500/20 border border-brand-500/20 px-3 py-1.5 rounded-xl text-xs font-semibold';
+        
+        tabContainer.innerHTML += `
+          <div class="py-3 flex items-center justify-between">
+            <div>
+              <p class="text-xs font-semibold text-slate-200">${escapeHTML(t.owner_name)}</p>
+              <p class="text-[10px] text-slate-400">${escapeHTML(t.owner_email)}</p>
+            </div>
+            <button onclick="viewSharedTracker('${escapeHTML(t.id)}')" class="${btnClass}">
+              ${btnText}
+            </button>
+          </div>
+        `;
+      });
+    } else {
+      tabContainer.innerHTML = `<div class="py-4 text-center text-xs text-slate-500 italic">No trackers shared with you</div>`;
+    }
+  }
+
   lucide.createIcons();
 }
 

@@ -134,14 +134,14 @@
   <div id="app-screen" class="hidden min-h-screen flex bg-slate-950 text-slate-100">
     
     <!-- SIDEBAR -->
-    <aside class="w-64 glass border-r border-slate-800/80 flex flex-col shrink-0">
+    <aside class="w-16 md:w-64 glass border-r border-slate-800/80 flex flex-col shrink-0 transition-all duration-200">
       
       <!-- Logo Header -->
-      <div class="h-16 flex items-center gap-3 px-6 border-b border-slate-800/80">
-        <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500">
+      <div class="h-16 flex items-center justify-center md:justify-start gap-3 px-4 md:px-6 border-b border-slate-800/80">
+        <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500 shrink-0">
           <i data-lucide="wallet" class="w-5 h-5"></i>
         </div>
-        <div>
+        <div class="hidden md:block overflow-hidden">
           <span class="font-extrabold text-white tracking-wide text-lg">MyMoney</span>
           <span id="shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1">
             <span>Shared View</span>
@@ -151,12 +151,12 @@
       </div>
 
       <!-- User Profile Card -->
-      <div class="p-4 border-b border-slate-800/80">
+      <div class="p-3 md:p-4 border-b border-slate-800/80 flex justify-center md:justify-start">
         <div class="flex items-center gap-3">
-          <div id="user-avatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center font-bold text-white shadow-md">
+          <div id="user-avatar" class="w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center font-bold text-white shadow-md shrink-0">
             U
           </div>
-          <div class="overflow-hidden">
+          <div class="hidden md:block overflow-hidden">
             <h4 id="user-name-display" class="text-sm font-semibold text-white truncate">User Name</h4>
             <p id="user-email-display" class="hidden text-xs text-slate-400 truncate">user@example.com</p>
           </div>
@@ -164,50 +164,50 @@
       </div>
 
       <!-- Navigation Links -->
-      <nav class="flex-1 px-4 py-4 space-y-1 overflow-y-auto">
-        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all bg-brand-500 text-white shadow-lg shadow-brand-500/15">
-          <i data-lucide="trending-up" class="w-4 h-4"></i>
-          <span>Dashboard</span>
+      <nav class="flex-1 px-2 md:px-4 py-4 space-y-1.5 overflow-y-auto">
+        <button onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all bg-brand-500 text-white shadow-lg shadow-brand-500/15">
+          <i data-lucide="trending-up" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Dashboard</span>
         </button>
 
-        <button onclick="switchTab('expenses')" id="nav-expenses" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="dollar-sign" class="w-4 h-4"></i>
-          <span>Expenses</span>
+        <button onclick="switchTab('expenses')" id="nav-expenses" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="dollar-sign" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Expenses</span>
         </button>
 
-        <button onclick="switchTab('budgets')" id="nav-budgets" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="alert-triangle" class="w-4 h-4"></i>
-          <span>Budgets</span>
+        <button onclick="switchTab('budgets')" id="nav-budgets" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="alert-triangle" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Budgets</span>
         </button>
 
-        <button onclick="switchTab('savings')" id="nav-savings" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="award" class="w-4 h-4"></i>
-          <span>Savings Goals</span>
+        <button onclick="switchTab('savings')" id="nav-savings" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="award" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Savings Goals</span>
         </button>
 
-        <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="file-text" class="w-4 h-4"></i>
-          <span>Reports</span>
+        <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="file-text" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Reports</span>
         </button>
 
-        <button onclick="switchTab('sharing')" id="nav-sharing" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="users" class="w-4 h-4"></i>
-          <span>Family Sharing</span>
+        <button onclick="switchTab('sharing')" id="nav-sharing" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="users" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Family Sharing</span>
         </button>
 
-        <button onclick="switchTab('audit-log')" id="nav-audit-log" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="activity" class="w-4 h-4"></i>
-          <span>Audit Log</span>
+        <button onclick="switchTab('audit-log')" id="nav-audit-log" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="activity" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Audit Log</span>
         </button>
 
-        <button onclick="switchTab('settings')" id="nav-settings" style="display: none;" class="nav-btn w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
-          <i data-lucide="settings" class="w-4 h-4"></i>
-          <span>Settings</span>
+        <button onclick="switchTab('settings')" id="nav-settings" style="display: none;" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="settings" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Settings</span>
         </button>
       </nav>
 
       <!-- Shared Trackers available list -->
-      <div id="shared-list-section" class="hidden px-4 py-2 border-t border-slate-800/80">
+      <div id="shared-list-section" class="hidden md:block px-4 py-2 border-t border-slate-800/80">
         <span class="block text-[10px] text-slate-500 font-semibold uppercase tracking-wider mb-2">Shared With Me</span>
         <div id="shared-trackers-container" class="space-y-1">
           <!-- Dynamic tracker list -->
@@ -215,14 +215,14 @@
       </div>
 
       <!-- Logout -->
-      <div class="p-4 border-t border-slate-800/80">
-        <button onclick="logout()" class="w-full flex items-center gap-3 px-4 py-2 text-rose-400 hover:bg-rose-500/10 rounded-xl text-sm font-medium transition-colors">
-          <i data-lucide="log-out" class="w-4 h-4"></i>
-          <span>Logout</span>
+      <div class="p-3 md:p-4 border-t border-slate-800/80 flex justify-center md:justify-start">
+        <button onclick="logout()" class="w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-2 text-rose-400 hover:bg-rose-500/10 rounded-xl text-sm font-medium transition-colors">
+          <i data-lucide="log-out" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Logout</span>
         </button>
       </div>
       <!-- Footer / Credits -->
-      <div class="px-6 py-4 border-t border-slate-800/50 text-[10px] text-slate-500 text-center flex flex-col gap-1 shrink-0">
+      <div class="hidden md:flex px-6 py-4 border-t border-slate-800/50 text-[10px] text-slate-500 text-center flex-col gap-1 shrink-0">
         <span>Developed by <a href="https://github.com/Kv-Logics/MyMoney" target="_blank" rel="noopener noreferrer" class="text-brand-400 hover:underline">Kv-Logics</a></span>
       </div>
     </aside>
@@ -234,6 +234,10 @@
       <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
         <div class="flex items-center gap-4">
           <h2 id="page-title" class="text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
+          <span id="header-shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
+            <span>Shared View</span>
+            <i data-lucide="x" class="w-2.5 h-2.5"></i>
+          </span>
         </div>
 
         <div class="flex items-center gap-3 sm:gap-4">
@@ -557,7 +561,7 @@
 
         <!-- ================= TAB 6: SHARING ================= -->
         <div id="tab-sharing" class="tab-pane hidden space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Share invitation form -->
             <div class="glass rounded-2xl p-6 space-y-4">
               <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
@@ -584,8 +588,22 @@
 
             <!-- List active sharing -->
             <div class="glass rounded-2xl p-6 space-y-4">
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3">Active Viewers</h3>
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                <i data-lucide="users" class="w-4.5 h-4.5 text-brand-500"></i>
+                <span>Active Viewers</span>
+              </h3>
               <div id="sharing-list-container" class="divide-y divide-slate-900/60"></div>
+            </div>
+
+            <!-- Trackers Shared With Me -->
+            <div class="glass rounded-2xl p-6 space-y-4">
+              <h3 class="text-sm font-bold text-white uppercase tracking-wider border-b border-slate-800 pb-3 flex items-center gap-2">
+                <i data-lucide="eye" class="w-4.5 h-4.5 text-rose-500"></i>
+                <span>Trackers Shared With Me</span>
+              </h3>
+              <div id="shared-by-me-list-container" class="divide-y divide-slate-900/60">
+                <!-- Dynamically populated in js/ui.js -->
+              </div>
             </div>
           </div>
         </div>
