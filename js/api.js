@@ -17,6 +17,8 @@ async function fetchUserData() {
         timezone: state.user.timezone || 'UTC'
       };
       
+      applyTheme();
+      
       document.getElementById('settings-currency').value = state.settings.currency;
       document.getElementById('settings-theme').value = state.settings.theme;
       document.getElementById('settings-timezone').value = state.settings.timezone;
@@ -89,11 +91,14 @@ async function fetchAllData() {
     const auditRes = await fetch(`${API_BASE}/audit-logs${ownerQuery}`, { headers });
     if (auditRes.ok) state.auditLogs = await auditRes.json();
 
+    // Fetch Tasks
+    await fetchTasksData();
   } catch (err) {
     console.warn('Backend server offline. Loading cache.');
     state.expenses = JSON.parse(localStorage.getItem('cached_expenses') || '[]');
     state.categories = JSON.parse(localStorage.getItem('cached_categories') || '[]');
     state.budgets = JSON.parse(localStorage.getItem('cached_budgets') || '[]');
+    state.tasks = [];
   } finally {
     document.getElementById('loading-overlay').classList.add('hidden');
     populateSelectDropdowns();

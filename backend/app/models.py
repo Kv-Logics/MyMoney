@@ -88,3 +88,37 @@ class SettingsUpdate(BaseModel):
 class RefreshTokenRequest(BaseModel):
     refresh_token: str
 
+
+# Task schemas
+class ChecklistItem(BaseModel):
+    id: str
+    text: str
+    completed: bool = False
+
+class TaskCreate(BaseModel):
+    title: str = Field(..., min_length=1)
+    description: Optional[str] = ""
+    checklist: List[ChecklistItem] = []
+    due_date: str  # YYYY-MM-DD
+    due_time: Optional[str] = ""
+    priority: str = "medium"  # low, medium, high
+    category: str = "Personal"  # Personal, Work, Study, etc.
+    status: str = "Pending"  # Pending, In Progress, Completed, Overdue, Archived
+    recurrence: str = "none"  # none, daily, weekly, monthly, yearly
+    progress: float = 0.0
+    notes: Optional[str] = ""
+
+class TaskUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    checklist: Optional[List[ChecklistItem]] = None
+    due_date: Optional[str] = None
+    due_time: Optional[str] = None
+    priority: Optional[str] = None
+    category: Optional[str] = None
+    status: Optional[str] = None
+    recurrence: Optional[str] = None
+    progress: Optional[float] = None
+    notes: Optional[str] = None
+
+

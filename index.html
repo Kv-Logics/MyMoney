@@ -131,10 +131,10 @@
   </div>
 
   <!-- ================= APP LAYOUT SCREEN ================= -->
-  <div id="app-screen" class="hidden min-h-screen flex bg-slate-950 text-slate-100">
+  <div id="app-screen" class="hidden h-screen overflow-hidden flex bg-slate-950 text-slate-100">
     
     <!-- SIDEBAR -->
-    <aside class="w-16 md:w-64 glass border-r border-slate-800/80 flex flex-col shrink-0 transition-all duration-200">
+    <aside class="w-16 md:w-64 h-full glass border-r border-slate-800/80 flex flex-col shrink-0 transition-all duration-200">
       
       <!-- Logo Header -->
       <div class="h-16 flex items-center justify-center md:justify-start gap-3 px-4 md:px-6 border-b border-slate-800/80">
@@ -185,6 +185,11 @@
           <span class="hidden md:inline">Savings Goals</span>
         </button>
 
+        <button onclick="switchTab('tasks')" id="nav-tasks" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
+          <i data-lucide="check-square" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
+          <span class="hidden md:inline">Task Manager</span>
+        </button>
+
         <button onclick="switchTab('reports')" id="nav-reports" class="nav-btn w-full flex items-center justify-center md:justify-start gap-0 md:gap-3 p-3 md:px-4 md:py-3 rounded-xl text-sm font-medium transition-all text-slate-400 hover:bg-slate-900/60 hover:text-white">
           <i data-lucide="file-text" class="w-5 h-5 md:w-4 md:h-4 shrink-0"></i>
           <span class="hidden md:inline">Reports</span>
@@ -228,7 +233,7 @@
     </aside>
 
     <!-- MAIN APP SCREEN BODY -->
-    <main class="flex-1 flex flex-col min-w-0">
+    <main class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
       
       <!-- Top header bar -->
       <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
@@ -494,6 +499,55 @@
             </button>
           </div>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="savings-list-container"></div>
+        </div>
+
+        <!-- ================= TAB: TASK MANAGER ================= -->
+        <div id="tab-tasks" class="tab-pane hidden space-y-6">
+          <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <p class="text-sm text-slate-400">Organize and track tasks, checklists, and daily activities alongside expenses</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+              <!-- Category Filter -->
+              <select id="task-filter-category" onchange="renderTasks()" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500">
+                <option value="">All Categories</option>
+                <option value="Personal">Personal</option>
+                <option value="Work">Work</option>
+                <option value="Study">Study</option>
+                <option value="Finance">Finance</option>
+                <option value="Health">Health</option>
+                <option value="Others">Others</option>
+              </select>
+
+              <!-- Priority Filter -->
+              <select id="task-filter-priority" onchange="renderTasks()" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500">
+                <option value="">All Priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+
+              <!-- Status Filter -->
+              <select id="task-filter-status" onchange="renderTasks()" class="px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs text-white focus:outline-none focus:border-brand-500">
+                <option value="">All Statuses</option>
+                <option value="Pending">Pending</option>
+                <option value="In Progress">In Progress</option>
+                <option value="Completed">Completed</option>
+                <option value="Overdue">Overdue</option>
+              </select>
+
+              <button id="add-task-btn" onclick="openTaskModal()" class="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 rounded-xl text-xs font-semibold text-white transition-all">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Add New Task</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Tasks list layout -->
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="tasks-list-container">
+            <!-- Dynamically populated -->
+          </div>
         </div>
 
         <!-- ================= TAB 5: REPORTS ================= -->
@@ -792,13 +846,99 @@
         </button>
       </form>
     </div>
+  <!-- 4. Task Modal -->
+  <div id="modal-task" class="hidden fixed inset-0 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+    <div class="w-full max-w-md glass border border-slate-800 rounded-2xl shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+        <h3 id="modal-task-title" class="font-bold text-white text-base">Create New Task</h3>
+        <button onclick="closeTaskModal()" class="text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <form id="task-form" class="p-6 space-y-4 max-h-[75vh] overflow-y-auto">
+        <input type="hidden" id="task-id">
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Task Title</label>
+          <input type="text" required id="task-title" placeholder="Drink 3L Water..." class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+        </div>
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Description</label>
+          <textarea id="task-desc" placeholder="Details about this task..." rows="2" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white resize-none"></textarea>
+        </div>
+        
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
+            <select id="task-category" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              <option value="Personal">Personal</option>
+              <option value="Work">Work</option>
+              <option value="Study">Study</option>
+              <option value="Finance">Finance</option>
+              <option value="Health">Health</option>
+              <option value="Others">Others</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Priority</label>
+            <select id="task-priority" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+              <option value="low">Low</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Due Date</label>
+            <input type="date" required id="task-due-date" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+          </div>
+          <div>
+            <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Due Time</label>
+            <input type="time" id="task-due-time" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+          </div>
+        </div>
+
+        <!-- Checklist Section -->
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1 flex items-center justify-between">
+            <span>Checklist</span>
+            <span class="text-[9px] text-brand-400 normal-case" id="task-checklist-counter">0 items</span>
+          </label>
+          <div class="flex gap-2 mb-2">
+            <input type="text" id="checklist-item-input" placeholder="Add step..." class="flex-1 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white">
+            <button type="button" onclick="addChecklistItemToDraft()" class="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs flex items-center justify-center shrink-0">
+              <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+          <div id="modal-checklist-container" class="space-y-1.5 max-h-32 overflow-y-auto">
+            <!-- Checklist draft items -->
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Additional Notes</label>
+          <textarea id="task-notes" placeholder="Notes, links, details..." rows="2" class="w-full px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl focus:outline-none text-xs text-white resize-none"></textarea>
+        </div>
+
+        <button type="submit" class="w-full py-2.5 bg-brand-500 hover:bg-brand-600 text-white font-medium rounded-xl text-xs transition-colors">
+          Save Task Details
+        </button>
+      </form>
+    </div>
   </div>
 
   <!-- Modular Scripts -->
   <script src="js/app.js"></script>
   <script src="js/api.js"></script>
-  <script src="js/auth.js"></script>
+  <script src="js/components/expenses.js"></script>
+  <script src="js/components/budgets.js"></script>
+  <script src="js/components/savings.js"></script>
+  <script src="js/components/reports.js"></script>
+  <script src="js/components/sharing.js"></script>
   <script src="js/components/dashboard.js"></script>
+  <script src="js/components/tasks.js"></script>
+  <script src="js/auth.js"></script>
   <script src="js/ui.js"></script>
 </body>
 </html>

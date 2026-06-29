@@ -78,6 +78,7 @@ async function saveSettings() {
   const timezone = document.getElementById('settings-timezone').value;
 
   state.settings = { currency, theme, timezone, language: 'en' };
+  applyTheme();
   renderDashboard(); // refresh indicators
   
   if (state.isOffline) return;
