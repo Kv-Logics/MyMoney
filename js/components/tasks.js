@@ -2,6 +2,15 @@
 
 let taskChecklistDraft = [];
 
+function formatDateToDMY(dateStr) {
+  if (!dateStr) return '';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
+  }
+  return dateStr;
+}
+
 function openTaskModal(editingId = null) {
   if (state.activeOwner) return;
   const modal = document.getElementById('modal-task');
@@ -13,8 +22,6 @@ function openTaskModal(editingId = null) {
   document.getElementById('task-desc').value = '';
   document.getElementById('task-category').value = 'Personal';
   document.getElementById('task-priority').value = 'medium';
-  document.getElementById('task-due-date').value = new Date().toISOString().split('T')[0];
-  document.getElementById('task-due-time').value = '';
   document.getElementById('task-notes').value = '';
   document.getElementById('checklist-item-input').value = '';
   document.getElementById('checklist-item-date').value = '';
@@ -30,8 +37,6 @@ function openTaskModal(editingId = null) {
       document.getElementById('task-desc').value = task.description || '';
       document.getElementById('task-category').value = task.category;
       document.getElementById('task-priority').value = task.priority;
-      document.getElementById('task-due-date').value = task.due_date;
-      document.getElementById('task-due-time').value = task.due_time || '';
       document.getElementById('task-notes').value = task.notes || '';
       taskChecklistDraft = JSON.parse(JSON.stringify(task.checklist || []));
     }
@@ -79,7 +84,7 @@ function renderDraftChecklist() {
   counter.innerText = `${taskChecklistDraft.length} items`;
 
   taskChecklistDraft.forEach((item) => {
-    const dateBadge = item.due_date ? `<span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 shrink-0">${item.due_date}</span>` : '';
+    const dateBadge = item.due_date ? `<span class="text-[9px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded ml-2 shrink-0">${formatDateToDMY(item.due_date)}</span>` : '';
     container.innerHTML += `
       <div class="flex items-center justify-between bg-slate-900/50 border border-slate-800/40 rounded-lg p-2 text-xs">
         <div class="flex items-center min-w-0 flex-1">
@@ -105,9 +110,18 @@ async function handleTaskSubmit(e) {
   const description = document.getElementById('task-desc').value.trim();
   const category = document.getElementById('task-category').value;
   const priority = document.getElementById('task-priority').value;
-  const due_date = document.getElementById('task-due-date').value;
-  const due_time = document.getElementById('task-due-time').value;
   const notes = document.getElementById('task-notes').value.trim();
+
+  // Dynamically calculate due_date and start_date based on checklist draft
+  const dueDates = taskChecklistDraft.map(item => item.due_date).filter(Boolean);
+  let due_date = new Date().toISOString().split('T')[0]; // Default to today
+  let start_date = due_date;
+
+  if (dueDates.length > 0) {
+    dueDates.sort();
+    due_date = dueDates[dueDates.length - 1]; // Latest date
+    start_date = dueDates[0]; // Earliest date
+  }
 
   const payload = {
     title,
@@ -115,9 +129,10 @@ async function handleTaskSubmit(e) {
     category,
     priority,
     due_date,
-    due_time,
+    due_time: '',
     notes,
-    checklist: taskChecklistDraft
+    checklist: taskChecklistDraft,
+    start_date
   };
 
   try {
@@ -288,7 +303,7 @@ function renderTasks() {
         const disabledAttr = state.activeOwner ? 'disabled' : '';
         const textClass = item.completed ? 'line-through text-slate-500' : 'text-slate-300';
         const itemDateHtml = item.due_date 
-          ? `<span class="text-[9px] text-slate-500 font-semibold ml-auto pl-2 shrink-0">${item.due_date}</span>` 
+          ? `<span class="text-[9px] text-slate-500 font-semibold ml-auto pl-2 shrink-0">${formatDateToDMY(item.due_date)}</span>` 
           : '';
         checklistHtml += `
           <label class="flex items-center justify-between gap-2 text-[11px] cursor-pointer w-full">
@@ -320,9 +335,11 @@ function renderTasks() {
       </div>
     `;
 
-    const dateRange = (task.start_date && task.start_date !== task.due_date)
-      ? `${task.start_date} - ${task.due_date}`
-      : task.due_date;
+    const formattedStart = formatDateToDMY(task.start_date);
+    const formattedDue = formatDateToDMY(task.due_date);
+    const dateRange = (formattedStart && formattedStart !== formattedDue)
+      ? `${formattedStart} - ${formattedDue}`
+      : formattedDue;
 
     container.innerHTML += `
       <div class="glass rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between space-y-3">

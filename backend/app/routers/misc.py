@@ -208,3 +208,18 @@ async def upload_receipt(file: UploadFile = File(...), current_user: dict = Depe
         f.write(await file.read())
         
     return {"url": f"/uploads/{filename}", "filename": file.filename}
+
+from pydantic import BaseModel
+
+class WakeUpLog(BaseModel):
+    elapsed_seconds: float
+    user_agent: Optional[str] = None
+
+@router.post("/api/telemetry/wakeup")
+def log_wakeup(log: WakeUpLog):
+    logs_col = get_collection("wakeup_logs")
+    log_data = log.model_dump()
+    log_data["created_at"] = datetime.utcnow()
+    logs_col.insert_one(log_data)
+    return {"message": "Telemetry logged successfully"}
+
