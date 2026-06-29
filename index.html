@@ -136,6 +136,21 @@
           />
         </div>
 
+        <!-- Theme Selection -->
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Preferred Theme</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" onclick="setAuthFormTheme('light')" id="auth-theme-light" class="py-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 bg-brand-500/10 border-brand-500 text-brand-500">
+              <i data-lucide="sun" class="w-4 h-4"></i>
+              <span>Light Theme</span>
+            </button>
+            <button type="button" onclick="setAuthFormTheme('dark')" id="auth-theme-dark" class="py-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 bg-slate-900 border-slate-800 text-slate-400 hover:text-white">
+              <i data-lucide="moon" class="w-4 h-4"></i>
+              <span>Dark Theme</span>
+            </button>
+          </div>
+        </div>
+
         <button
           type="submit"
           id="auth-btn"

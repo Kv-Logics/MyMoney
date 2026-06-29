@@ -32,7 +32,7 @@ def register(user_data: UserRegister):
         "email": user_data.email,
         "password": hashed,
         "currency": "INR",
-        "theme": "dark",
+        "theme": "light",
         "language": "en",
         "timezone": "UTC",
         "created_at": datetime.utcnow()
@@ -105,7 +105,7 @@ def get_me(current_user: dict = Depends(get_current_user)):
         "name": current_user["name"],
         "email": current_user["email"],
         "currency": current_user.get("currency", "INR"),
-        "theme": current_user.get("theme", "dark"),
+        "theme": current_user.get("theme", "light"),
         "language": current_user.get("language", "en"),
         "timezone": current_user.get("timezone", "UTC")
     }

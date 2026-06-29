@@ -17,7 +17,7 @@ class UserResponse(BaseModel):
     name: str
     email: EmailStr
     currency: str = "INR"
-    theme: str = "dark"
+    theme: str = "light"
     language: str = "en"
     timezone: str = "UTC"
 

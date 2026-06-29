@@ -1,3 +1,25 @@
+let selectedAuthTheme = 'light'; // Default theme selection on login screen
+
+function setAuthFormTheme(theme) {
+  selectedAuthTheme = theme;
+  const lightBtn = document.getElementById('auth-theme-light');
+  const darkBtn = document.getElementById('auth-theme-dark');
+  
+  if (theme === 'light') {
+    if (lightBtn) lightBtn.className = "py-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 bg-brand-500/10 border-brand-500 text-brand-500";
+    if (darkBtn) darkBtn.className = "py-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 bg-slate-900 border-slate-800 text-slate-400 hover:text-white";
+    if (state.settings) state.settings.theme = 'light';
+    else state.settings = { theme: 'light' };
+    applyTheme();
+  } else {
+    if (darkBtn) darkBtn.className = "py-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 bg-brand-500/10 border-brand-500 text-brand-500";
+    if (lightBtn) lightBtn.className = "py-2.5 rounded-xl border-2 text-xs font-bold transition-all flex items-center justify-center gap-2 bg-slate-900 border-slate-800 text-slate-400 hover:text-white";
+    if (state.settings) state.settings.theme = 'dark';
+    else state.settings = { theme: 'dark' };
+    applyTheme();
+  }
+}
+
 async function handleAuthSubmit(e) {
   e.preventDefault();
   const authErrorDiv = document.getElementById('auth-error');
@@ -9,7 +31,11 @@ async function handleAuthSubmit(e) {
   
   const isRegister = !document.getElementById('register-fields').classList.contains('hidden');
   const endpoint = isRegister ? 'register' : 'login';
-  const body = isRegister ? { name, email, password } : { email, password };
+  
+  // Ensure we send theme during registration
+  const body = isRegister 
+    ? { name, email, password, theme: selectedAuthTheme } 
+    : { email, password };
 
   try {
     const res = await fetch(`${API_BASE}/auth/${endpoint}`, {
@@ -23,6 +49,31 @@ async function handleAuthSubmit(e) {
       setCookie('refresh_token', data.refresh_token, 7);
       state.token = data.access_token;
       state.refreshToken = data.refresh_token;
+      
+      // Update global theme from the selection
+      state.settings = {
+        currency: data.user.currency || '₹',
+        theme: selectedAuthTheme,
+        language: data.user.language || 'en',
+        timezone: data.user.timezone || 'UTC'
+      };
+      
+      applyTheme();
+      
+      // Save setting preference immediately to backend
+      try {
+        await fetch(`${API_BASE}/auth/settings`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${state.token}`
+          },
+          body: JSON.stringify(state.settings)
+        });
+      } catch (err) {
+        console.warn("Failed to sync theme preference to backend settings", err);
+      }
+      
       showApp();
     } else {
       showAuthError(data.detail || 'Authentication failed');
@@ -60,6 +111,7 @@ function logout() {
 function showAuth() {
   document.getElementById('auth-screen').classList.remove('hidden');
   document.getElementById('app-screen').classList.add('hidden');
+  setAuthFormTheme('light');
 }
 
 async function showApp() {

@@ -136,7 +136,7 @@ const state = {
   tasks: [],
   settings: {
     currency: '₹',
-    theme: 'dark',
+    theme: 'light',
     language: 'en',
     timezone: 'UTC'
   },
