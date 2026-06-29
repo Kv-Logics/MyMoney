@@ -247,7 +247,9 @@ function switchTab(tabId) {
     activeBtn.classList.add('bg-brand-500', 'text-white', 'shadow-lg', 'shadow-brand-500/15');
   }
 
-  const title = tabId.charAt(0).toUpperCase() + tabId.slice(1).replace('-', ' ');
+  let title = tabId.charAt(0).toUpperCase() + tabId.slice(1).replace('-', ' ');
+  if (tabId === 'budgets') title = 'Budgets & Savings';
+  
   document.getElementById('page-title').innerHTML = state.activeOwner 
     ? `Viewing ${state.activeOwner.owner_name}'s Tracker <span class="text-xs px-2 py-0.5 bg-rose-500/20 border border-rose-500/30 text-rose-400 font-medium rounded-full ml-2">Read Only</span>`
     : title;
@@ -258,8 +260,10 @@ function switchTab(tabId) {
 function renderTabContent() {
   if (state.currentTab === 'dashboard') renderDashboard();
   else if (state.currentTab === 'expenses') renderExpensesList();
-  else if (state.currentTab === 'budgets') renderBudgets();
-  else if (state.currentTab === 'savings') renderSavingsGoals();
+  else if (state.currentTab === 'budgets') {
+    renderBudgets();
+    renderSavingsGoals();
+  }
   else if (state.currentTab === 'reports') runReport();
   else if (state.currentTab === 'sharing') renderSharingTab();
   else if (state.currentTab === 'audit-log') renderAuditLogs();
@@ -311,18 +315,18 @@ document.addEventListener('click', function(event) {
 
 function applyTheme() {
   const theme = state.settings?.theme || 'dark';
-  const icon = document.getElementById('theme-toggle-icon');
+  const icons = document.querySelectorAll('.theme-toggle-icon');
   
   if (theme === 'light') {
     document.documentElement.classList.remove('dark');
-    if (icon) {
+    icons.forEach(icon => {
       icon.setAttribute('data-lucide', 'moon');
-    }
+    });
   } else {
     document.documentElement.classList.add('dark');
-    if (icon) {
+    icons.forEach(icon => {
       icon.setAttribute('data-lucide', 'sun');
-    }
+    });
   }
   if (window.lucide) {
     window.lucide.createIcons();
