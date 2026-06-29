@@ -105,7 +105,7 @@ html:not(.dark) .nav-btn.bg-brand-500 {
   box-shadow: none !important;
 }
 
-html:not(.dark) .nav-btn.bg-brand-500 i {
+html:not(.dark) .nav-btn.bg-brand-500 * {
   color: #059669 !important;
 }
 
