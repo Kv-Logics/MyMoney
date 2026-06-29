@@ -162,6 +162,63 @@ function escapeHTML(str) {
 
 // Initialize application
 window.addEventListener('DOMContentLoaded', () => {
+  // Initialize Flatpickr on all date inputs for DD/MM/YYYY formatting
+  if (window.flatpickr) {
+    flatpickr("#expense-date", {
+      altInput: true,
+      altFormat: "d/m/Y",
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      disableMobile: true
+    });
+    
+    flatpickr("#filter-start-date", {
+      altInput: true,
+      altFormat: "d/m/Y",
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      disableMobile: true,
+      onChange: () => {
+        if (typeof renderExpensesList === 'function') renderExpensesList();
+      }
+    });
+    
+    flatpickr("#filter-end-date", {
+      altInput: true,
+      altFormat: "d/m/Y",
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      disableMobile: true,
+      onChange: () => {
+        if (typeof renderExpensesList === 'function') renderExpensesList();
+      }
+    });
+    
+    flatpickr("#report-start-date", {
+      altInput: true,
+      altFormat: "d/m/Y",
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      disableMobile: true
+    });
+    
+    flatpickr("#report-end-date", {
+      altInput: true,
+      altFormat: "d/m/Y",
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      disableMobile: true
+    });
+
+    flatpickr("#checklist-item-date", {
+      altInput: true,
+      altFormat: "d/m/Y",
+      dateFormat: "Y-m-d",
+      allowInput: true,
+      disableMobile: true
+    });
+  }
+
   lucide.createIcons();
   setupEventListeners();
   
@@ -359,6 +416,33 @@ function toggleSidebar() {
   } else {
     aside.classList.add('expanded');
     if (icon) icon.style.transform = 'rotate(180deg)';
+  }
+}
+
+// Global DD/MM/YYYY formatting helper
+function formatDateToDMY(dateStr) {
+  if (!dateStr) return '';
+  // If already in DD/MM/YYYY format
+  if (/^\d{2}\/\d{2}\/\d{4}$/.test(dateStr)) {
+    return dateStr;
+  }
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    if (parts[0].length === 4) { // YYYY-MM-DD
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return dateStr;
+}
+
+// Helper to set inputs with or without Flatpickr instances
+function setDateValue(id, valueString) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  if (el._flatpickr) {
+    el._flatpickr.setDate(valueString, false);
+  } else {
+    el.value = valueString;
   }
 }
 

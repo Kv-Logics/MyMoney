@@ -115,7 +115,7 @@ function renderExpensesList() {
         </td>
         <td class="py-4 text-slate-400 text-xs">${escapeHTML(e.payment_method)}</td>
         <td class="py-4 text-slate-400 text-xs">
-          <p>${escapeHTML(e.date)}</p>
+          <p>${escapeHTML(formatDateToDMY(e.date))}</p>
           ${e.time ? `<p class="text-[10px] text-slate-500">${escapeHTML(e.time)}</p>` : ''}
         </td>
         <td class="py-4 text-slate-400 text-xs truncate max-w-[120px]">${escapeHTML(e.location) || '-'}</td>

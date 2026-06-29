@@ -27,8 +27,8 @@ async function runReport() {
     const now = new Date();
     start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
     end = now.toISOString().split('T')[0];
-    document.getElementById('report-start-date').value = start;
-    document.getElementById('report-end-date').value = end;
+    setDateValue('report-start-date', start);
+    setDateValue('report-end-date', end);
   }
 
   const ownerQuery = state.activeOwner ? `&owner_email=${encodeURIComponent(state.activeOwner.owner_email)}` : '';
@@ -51,7 +51,7 @@ async function runReport() {
       report.expenses.forEach(e => {
         tbody.innerHTML += `
           <tr class="hover:bg-slate-900/10">
-            <td class="py-3 text-xs text-slate-400">${escapeHTML(e.date)}</td>
+            <td class="py-3 text-xs text-slate-400">${escapeHTML(formatDateToDMY(e.date))}</td>
             <td class="py-3 font-semibold text-slate-200">${escapeHTML(e.title)}</td>
             <td class="py-3 text-slate-400 text-xs">${escapeHTML(e.category)}</td>
             <td class="py-3 text-slate-400 text-xs">${escapeHTML(e.payment_method)}</td>
@@ -77,7 +77,7 @@ async function runReport() {
     filtered.forEach(e => {
       tbody.innerHTML += `
         <tr class="hover:bg-slate-900/10">
-          <td class="py-3 text-xs text-slate-400">${escapeHTML(e.date)}</td>
+          <td class="py-3 text-xs text-slate-400">${escapeHTML(formatDateToDMY(e.date))}</td>
           <td class="py-3 font-semibold text-slate-200">${escapeHTML(e.title)}</td>
           <td class="py-3 text-slate-400 text-xs">${escapeHTML(e.category)}</td>
           <td class="py-3 text-slate-400 text-xs">${escapeHTML(e.payment_method)}</td>

@@ -14,7 +14,7 @@ function openExpenseModal(editingId = null) {
     document.getElementById('expense-title').value = exp.title;
     document.getElementById('expense-category').value = exp.category;
     document.getElementById('expense-payment').value = exp.payment_method;
-    document.getElementById('expense-date').value = exp.date;
+    setDateValue('expense-date', exp.date);
     document.getElementById('expense-time').value = exp.time || '';
     document.getElementById('expense-location').value = exp.location || '';
     document.getElementById('expense-desc').value = exp.description || '';
@@ -28,7 +28,7 @@ function openExpenseModal(editingId = null) {
     document.getElementById('expense-id').value = '';
     document.getElementById('expense-amount').value = '';
     document.getElementById('expense-title').value = '';
-    document.getElementById('expense-date').value = new Date().toISOString().split('T')[0];
+    setDateValue('expense-date', new Date().toISOString().split('T')[0]);
     document.getElementById('expense-time').value = new Date().toTimeString().split(' ')[0].substring(0, 5);
     document.getElementById('expense-location').value = '';
     document.getElementById('expense-desc').value = '';
@@ -167,10 +167,10 @@ function clearExpensesFilters() {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
-  document.getElementById('filter-start-date').value = `${year}-${month}-01`;
+  setDateValue('filter-start-date', `${year}-${month}-01`);
   
   const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
-  document.getElementById('filter-end-date').value = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
+  setDateValue('filter-end-date', `${year}-${month}-${String(lastDay).padStart(2, '0')}`);
   
   renderExpensesList();
 }
@@ -193,14 +193,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   
-  const startInput = document.getElementById('filter-start-date');
-  if (startInput) startInput.value = `${year}-${month}-01`;
-  
-  const endInput = document.getElementById('filter-end-date');
-  if (endInput) {
-    const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
-    endInput.value = `${year}-${month}-${String(lastDay).padStart(2, '0')}`;
-  }
+  setDateValue('filter-start-date', `${year}-${month}-01`);
+  const lastDay = new Date(year, now.getMonth() + 1, 0).getDate();
+  setDateValue('filter-end-date', `${year}-${month}-${String(lastDay).padStart(2, '0')}`);
 });
 
 async function showAddPaymentMethodPrompt() {
