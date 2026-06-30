@@ -17,7 +17,7 @@ from app.models import (
     SettingsUpdate,
     RefreshTokenRequest
 )
-from app.utils import serialize_doc, DEFAULT_PAYMENT_METHODS
+from app.utils import serialize_doc, DEFAULT_PAYMENT_METHODS, log_audit_action
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
@@ -137,6 +137,12 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
     existing_user = users_col.find_one({"email": target_email})
     if existing_user:
         users_col.update_one({"_id": existing_user["_id"]}, {"$set": {"password": hashed}})
+        log_audit_action(
+            user_id=current_user["id"],
+            user_name=current_user["name"],
+            action="admin_set_password",
+            details=f"Admin {current_user['email']} updated password for user {target_email}."
+        )
         return {"message": f"Password updated successfully for existing user {target_email}."}
     else:
         new_user = {
@@ -157,4 +163,10 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
             "user_id": str(result.inserted_id),
             "payment_methods": DEFAULT_PAYMENT_METHODS
         })
+        log_audit_action(
+            user_id=current_user["id"],
+            user_name=current_user["name"],
+            action="admin_register_user",
+            details=f"Admin {current_user['email']} registered and set password for new user {target_email}."
+        )
         return {"message": f"New user {target_email} registered and password set successfully."}
