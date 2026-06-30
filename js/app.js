@@ -480,3 +480,63 @@ function toggleDesktopSidebar() {
   }
 }
 
+function showLoading(show) {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    if (show) overlay.classList.remove('hidden');
+    else overlay.classList.add('hidden');
+  }
+}
+
+function showToast(message, type = 'success') {
+  let container = document.getElementById('custom-toast-container');
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'custom-toast-container';
+    container.className = 'fixed bottom-4 right-4 z-[9999] flex flex-col gap-2 pointer-events-none';
+    document.body.appendChild(container);
+  }
+
+  const toast = document.createElement('div');
+  toast.className = 'glass border p-4 rounded-xl shadow-xl flex items-center gap-3 max-w-sm transform translate-y-2 opacity-0 transition-all duration-300 pointer-events-auto';
+  
+  if (type === 'error') {
+    toast.classList.add('border-rose-500/30', 'bg-rose-950/40');
+    toast.innerHTML = `
+      <div class="p-1.5 bg-rose-500/10 rounded-lg text-rose-400 shrink-0">
+        <i data-lucide="alert-circle" class="w-4 h-4"></i>
+      </div>
+      <div class="text-xs font-semibold text-rose-200">${escapeHTML(message)}</div>
+    `;
+  } else {
+    toast.classList.add('border-emerald-500/30', 'bg-emerald-950/40');
+    toast.innerHTML = `
+      <div class="p-1.5 bg-emerald-500/10 rounded-lg text-emerald-400 shrink-0">
+        <i data-lucide="check" class="w-4 h-4"></i>
+      </div>
+      <div class="text-xs font-semibold text-emerald-200">${escapeHTML(message)}</div>
+    `;
+  }
+
+  container.appendChild(toast);
+  
+  if (window.lucide && typeof lucide.createIcons === 'function') {
+    lucide.createIcons({
+      attrs: {
+        class: 'w-4 h-4'
+      }
+    });
+  }
+
+  setTimeout(() => {
+    toast.classList.remove('translate-y-2', 'opacity-0');
+  }, 50);
+
+  setTimeout(() => {
+    toast.classList.add('translate-y-2', 'opacity-0');
+    setTimeout(() => {
+      toast.remove();
+    }, 300);
+  }, 4000);
+}
+
