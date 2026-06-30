@@ -69,3 +69,50 @@ async function exitSharedView() {
   await fetchAllData();
   switchTab('dashboard');
 }
+
+function toggleParentSharedDropdown() {
+  const dropdown = document.getElementById('parent-shared-dropdown');
+  if (!dropdown) return;
+  dropdown.classList.toggle('hidden');
+  
+  if (!dropdown.classList.contains('hidden')) {
+    const container = document.getElementById('parent-shared-trackers-list');
+    container.innerHTML = '';
+    
+    if (state.sharedTrackers.length === 0) {
+      container.innerHTML = '<div class="px-4 py-3 text-xs text-slate-400">No shared accounts</div>';
+      return;
+    }
+    
+    state.sharedTrackers.forEach(t => {
+      const isCurrent = state.activeOwner && state.activeOwner.id === t.id;
+      container.innerHTML += `
+        <button onclick="selectParentSharedAccount('${t.id}')" class="w-full text-left px-4 py-2 text-xs flex items-center justify-between transition-colors ${isCurrent ? 'bg-brand-500/10 text-brand-400 font-bold' : 'text-slate-300 hover:bg-slate-900/45'}">
+          <div class="flex items-center gap-2 truncate">
+            <i data-lucide="user" class="w-3.5 h-3.5 shrink-0"></i>
+            <span class="truncate">${escapeHTML(t.owner_name)}</span>
+          </div>
+          ${isCurrent ? '<i data-lucide="check" class="w-3.5 h-3.5 text-brand-400"></i>' : ''}
+        </button>
+      `;
+    });
+    
+    if (state.activeOwner) {
+      container.innerHTML += `
+        <div class="border-t border-slate-800/80 my-1"></div>
+        <button onclick="exitSharedView(); document.getElementById('parent-shared-dropdown').classList.add('hidden');" class="w-full text-left px-4 py-2 text-xs text-rose-400 hover:bg-slate-900/40 flex items-center gap-2 font-semibold">
+          <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          <span>Exit Shared View</span>
+        </button>
+      `;
+    }
+    
+    lucide.createIcons();
+  }
+}
+
+async function selectParentSharedAccount(id) {
+  const dropdown = document.getElementById('parent-shared-dropdown');
+  if (dropdown) dropdown.classList.add('hidden');
+  await viewSharedTracker(id);
+}

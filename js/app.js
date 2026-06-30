@@ -222,6 +222,12 @@ window.addEventListener('DOMContentLoaded', () => {
   lucide.createIcons();
   setupEventListeners();
   
+  // Restore saved desktop sidebar collapsed preference
+  const aside = document.querySelector('aside');
+  if (aside && localStorage.getItem('sidebar_collapsed') === 'true' && window.innerWidth >= 768) {
+    aside.classList.add('collapsed');
+  }
+  
   if (state.token) {
     showApp();
   } else {
@@ -359,13 +365,21 @@ function toggleMobileSidebar() {
   // Sidebar is static now; no-op to prevent errors
 }
 
-// Close notifications dropdown when clicking outside
+// Close dropdowns when clicking outside
 document.addEventListener('click', function(event) {
   const dropdown = document.getElementById('notifications-dropdown');
   const bellBtn = document.getElementById('bell-btn');
   if (dropdown && !dropdown.classList.contains('hidden')) {
     if (!dropdown.contains(event.target) && (!bellBtn || !bellBtn.contains(event.target))) {
       dropdown.classList.add('hidden');
+    }
+  }
+
+  const parentDropdown = document.getElementById('parent-shared-dropdown');
+  const parentBtn = document.querySelector('#parent-shared-dropdown-container button');
+  if (parentDropdown && !parentDropdown.classList.contains('hidden')) {
+    if (!parentDropdown.contains(event.target) && (!parentBtn || !parentBtn.contains(event.target))) {
+      parentDropdown.classList.add('hidden');
     }
   }
 });
@@ -443,6 +457,26 @@ function setDateValue(id, valueString) {
     el._flatpickr.setDate(valueString, false);
   } else {
     el.value = valueString;
+  }
+}
+
+function toggleDesktopSidebar() {
+  const aside = document.querySelector('aside');
+  if (!aside) return;
+  
+  if (window.innerWidth >= 768) {
+    aside.classList.toggle('collapsed');
+    localStorage.setItem('sidebar_collapsed', aside.classList.contains('collapsed'));
+  } else {
+    aside.classList.toggle('expanded');
+    const icon = document.getElementById('sidebar-toggle-icon');
+    if (icon) {
+      if (aside.classList.contains('expanded')) {
+        icon.style.transform = 'rotate(180deg)';
+      } else {
+        icon.style.transform = 'rotate(0deg)';
+      }
+    }
   }
 }
 

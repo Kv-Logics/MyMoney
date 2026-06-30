@@ -291,4 +291,31 @@ html:not(.dark) span.flatpickr-weekday {
   color: #64748b !important;
 }
 
+/* Desktop Sidebar Collapse Styling Overrides */
+@media (min-width: 768px) {
+  aside {
+    width: 16rem !important; /* Default expanded state */
+    transition: width 0.2s ease-in-out !important;
+  }
+  aside.collapsed {
+    width: 4rem !important; /* Collapsed state: 64px */
+  }
+  
+  /* When collapsed, hide text labels, email, and details */
+  aside.collapsed .nav-btn span,
+  aside.collapsed .logo-text,
+  aside.collapsed .profile-details {
+    display: none !important;
+  }
+  
+  aside.collapsed .nav-btn,
+  aside.collapsed .logo-container,
+  aside.collapsed .profile-container {
+    justify-content: center !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    gap: 0 !important;
+  }
+}
+
 

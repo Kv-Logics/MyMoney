@@ -31,13 +31,13 @@ function updateSyncStatus() {
   
   if (state.isOffline) {
     syncDiv.classList.add('bg-amber-500/10', 'text-amber-400', 'border', 'border-amber-500/20');
-    syncDiv.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i><span>Offline Mode</span>`;
+    syncDiv.innerHTML = `<i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Offline Mode</span>`;
   } else if (state.syncQueue.length > 0) {
     syncDiv.classList.add('bg-indigo-500/10', 'text-indigo-400', 'border', 'border-indigo-500/20', 'animate-pulse');
     syncDiv.innerHTML = `<i data-lucide="refresh-cw" class="w-3.5 h-3.5 animate-spin"></i><span onclick="syncOfflineQueue()">Syncing (${state.syncQueue.length})</span>`;
   } else {
     syncDiv.classList.add('bg-emerald-500/10', 'text-emerald-400', 'border', 'border-emerald-500/20');
-    syncDiv.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i><span>Synced</span>`;
+    syncDiv.innerHTML = `<i data-lucide="check-circle" class="w-3.5 h-3.5"></i><span class="hidden sm:inline">Synced</span>`;
   }
   lucide.createIcons();
 }
@@ -314,6 +314,16 @@ function renderSharedTrackersSection() {
   const container = document.getElementById('shared-trackers-container');
   const section = document.getElementById('shared-list-section');
   
+  // Show or hide the top header quick shared switcher for parents
+  const parentContainer = document.getElementById('parent-shared-dropdown-container');
+  if (parentContainer) {
+    if (state.sharedTrackers && state.sharedTrackers.length > 0) {
+      parentContainer.classList.remove('hidden');
+    } else {
+      parentContainer.classList.add('hidden');
+    }
+  }
+
   container.innerHTML = '';
   if (state.sharedTrackers.length > 0) {
     section.classList.remove('hidden');

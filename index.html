@@ -181,11 +181,11 @@
       
       <!-- Logo Header -->
       <div class="h-16 flex items-center justify-between md:justify-start gap-3 px-4 md:px-6 border-b border-slate-800/80">
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-3 logo-container">
           <div class="p-2 bg-brand-500/10 rounded-lg text-brand-500 shrink-0">
             <i data-lucide="wallet" class="w-5 h-5"></i>
           </div>
-          <div class="hidden md:block overflow-hidden">
+          <div class="hidden md:block logo-text overflow-hidden">
             <span class="font-extrabold text-white tracking-wide text-lg">MyMoney</span>
             <span id="shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full mt-1">
               <span>Shared View</span>
@@ -200,12 +200,12 @@
       </div>
 
       <!-- User Profile Card -->
-      <div class="p-3 md:p-4 border-b border-slate-800/80 flex justify-center md:justify-start">
+      <div class="p-3 md:p-4 border-b border-slate-800/80 flex justify-center md:justify-start profile-container">
         <div class="flex items-center gap-3">
           <div id="user-avatar" class="hidden w-10 h-10 rounded-xl bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center font-bold text-white shadow-md shrink-0">
             U
           </div>
-          <div class="hidden md:block overflow-hidden">
+          <div class="hidden md:block profile-details overflow-hidden">
             <h4 id="user-name-display" class="text-sm font-semibold text-white truncate">User Name</h4>
             <p id="user-email-display" class="hidden text-xs text-slate-400 truncate">user@example.com</p>
           </div>
@@ -281,7 +281,11 @@
       
       <!-- Top header bar -->
       <header class="h-16 border-b border-slate-800/80 flex items-center justify-between px-6 bg-slate-950/60 backdrop-blur-md sticky top-0 z-30">
-        <div class="flex items-center gap-4">
+        <div class="flex items-center gap-3">
+          <!-- Desktop/Mobile Sidebar Toggle -->
+          <button onclick="toggleDesktopSidebar()" class="p-1.5 hover:bg-slate-900/60 rounded-lg text-slate-400 hover:text-white transition-all shrink-0 flex items-center justify-center" title="Toggle Sidebar">
+            <i data-lucide="menu" class="w-5 h-5"></i>
+          </button>
           <h2 id="page-title" class="text-lg font-bold text-white flex items-center gap-2">Dashboard</h2>
           <span id="header-shared-badge" onclick="exitSharedView()" class="hidden cursor-pointer inline-flex items-center gap-1 text-[10px] bg-rose-500/20 hover:bg-rose-500/30 border border-rose-500/30 text-rose-400 font-bold uppercase tracking-wider px-2 py-0.5 rounded-full">
             <span>Shared View</span>
@@ -289,11 +293,29 @@
           </span>
         </div>
 
-        <div class="flex items-center gap-3 sm:gap-4">
+        <div class="flex items-center gap-2 sm:gap-4">
+          <!-- Parent shared accounts quick selector -->
+          <div id="parent-shared-dropdown-container" class="hidden relative">
+            <button onclick="toggleParentSharedDropdown()" class="p-2 hover:bg-slate-900 rounded-lg text-brand-400 hover:text-brand-300 relative" title="Shared Accounts">
+              <i data-lucide="users" class="w-5 h-5"></i>
+              <span class="absolute top-1 right-1 w-2 h-2 bg-rose-500 rounded-full animate-ping"></span>
+            </button>
+            
+            <!-- Shared Accounts Dropdown -->
+            <div id="parent-shared-dropdown" class="hidden absolute right-0 mt-2 w-64 glass border border-slate-800 rounded-2xl shadow-xl py-2 z-50">
+              <div class="px-4 py-2 border-b border-slate-800/80">
+                <span class="font-bold text-sm text-white">Shared Trackers</span>
+              </div>
+              <div id="parent-shared-trackers-list" class="max-h-60 overflow-y-auto py-1">
+                <!-- Dynamically filled -->
+              </div>
+            </div>
+          </div>
+
           <!-- Sync / Offline indicator -->
           <div id="sync-status" class="text-xs flex items-center gap-1.5 px-2.5 py-1 rounded-full font-medium">
             <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-            <span>Synced</span>
+            <span class="hidden sm:inline">Synced</span>
           </div>
 
           <!-- Theme switch inside main header -->
@@ -321,9 +343,9 @@
           </div>
 
           <!-- Add Expense Button -->
-          <button id="header-add-expense-btn" onclick="openExpenseModal()" class="flex items-center gap-1.5 px-4 py-2 bg-brand-500 hover:bg-brand-600 active:scale-[0.97] transition-all text-white font-medium rounded-xl text-xs shadow-md shadow-brand-500/10">
-            <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
-            <span>Add Expense</span>
+          <button id="header-add-expense-btn" onclick="openExpenseModal()" class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 bg-brand-500 hover:bg-brand-600 active:scale-[0.97] transition-all text-white font-medium rounded-xl text-xs shadow-md shadow-brand-500/10">
+            <i data-lucide="plus-circle" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
+            <span class="hidden sm:inline">Add Expense</span>
           </button>
         </div>
       </header>
@@ -420,7 +442,13 @@
           <!-- Recent transactions -->
           <div class="glass rounded-2xl p-6">
             <div class="flex items-center justify-between mb-4">
-              <h3 class="text-sm font-bold text-white uppercase tracking-wider">Recent Transactions</h3>
+              <div class="flex items-center gap-2">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Recent Transactions</h3>
+                <span id="dashboard-filter-indicator" class="hidden text-[10px] bg-brand-500/20 border border-brand-500/30 text-brand-400 font-medium px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                  <span>Filtered</span>
+                  <button onclick="clearDashboardTrendFilter()" class="hover:text-white font-extrabold text-xs cursor-pointer">&times;</button>
+                </span>
+              </div>
               <button onclick="switchTab('expenses')" class="text-xs text-brand-500 hover:underline font-semibold">View All</button>
             </div>
             <div class="overflow-x-auto">
