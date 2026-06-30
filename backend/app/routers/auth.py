@@ -170,3 +170,35 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
             details=f"Admin {current_user['email']} registered and set password for new user {target_email}."
         )
         return {"message": f"New user {target_email} registered and password set successfully."}
+
+ADMIN_EMAIL = "a.keerthivasan7676@gmail.com"
+
+def _assert_admin(current_user):
+    if current_user.get("email") != ADMIN_EMAIL:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only.")
+
+@router.get("/admin/users")
+def admin_list_users(current_user: dict = Depends(get_current_user)):
+    _assert_admin(current_user)
+    users_col = get_collection("users")
+    users = list(users_col.find({}, {"password": 0}))
+    return serialize_docs(users)
+
+@router.get("/admin/stats")
+def admin_stats(current_user: dict = Depends(get_current_user)):
+    _assert_admin(current_user)
+    users_col = get_collection("users")
+    expenses_col = get_collection("expenses")
+
+    total_users = users_col.count_documents({})
+    total_expenses = expenses_col.count_documents({})
+
+    pipeline = [{"$group": {"_id": None, "total": {"$sum": "$amount"}}}]
+    agg = list(expenses_col.aggregate(pipeline))
+    total_amount = agg[0]["total"] if agg else 0
+
+    return {
+        "total_users": total_users,
+        "total_expenses": total_expenses,
+        "total_amount": total_amount
+    }

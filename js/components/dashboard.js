@@ -1,4 +1,18 @@
 function renderDashboard() {
+  if (state.user && state.user.email === 'a.keerthivasan7676@gmail.com') {
+    const userView = document.getElementById('user-dashboard-view');
+    const adminView = document.getElementById('admin-dashboard-view');
+    if (userView) userView.classList.add('hidden');
+    if (adminView) adminView.classList.remove('hidden');
+    renderAdminDashboard();
+    return;
+  } else {
+    const userView = document.getElementById('user-dashboard-view');
+    const adminView = document.getElementById('admin-dashboard-view');
+    if (userView) userView.classList.remove('hidden');
+    if (adminView) adminView.classList.add('hidden');
+  }
+
   const now = new Date();
   const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const todayStr = now.toISOString().split('T')[0];
@@ -179,4 +193,108 @@ function selectTrendDay(date) {
 function clearDashboardTrendFilter() {
   state.selectedTrendDate = null;
   renderDashboard();
+}
+
+async function renderAdminDashboard() {
+  try {
+    // 1. Fetch system-wide stats
+    const statsRes = await fetch(`${API_BASE}/auth/admin/stats`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    if (statsRes.ok) {
+      const stats = await statsRes.json();
+      document.getElementById('admin-stat-users').innerText = stats.total_users;
+      document.getElementById('admin-stat-expenses').innerText = stats.total_expenses;
+      document.getElementById('admin-stat-amount').innerText = `₹${stats.total_amount.toLocaleString()}`;
+    }
+
+    // 2. Fetch all registered users
+    const usersRes = await fetch(`${API_BASE}/auth/admin/users`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+    if (usersRes.ok) {
+      const users = await usersRes.json();
+      
+      const badge = document.getElementById('admin-users-count-badge');
+      if (badge) badge.innerText = `${users.length} Users`;
+      
+      const tbody = document.getElementById('admin-users-list-tbody');
+      if (tbody) {
+        tbody.innerHTML = '';
+        users.forEach(u => {
+          tbody.innerHTML += `
+            <tr class="hover:bg-slate-900/10">
+              <td class="py-3 pr-3 font-semibold text-slate-200">${escapeHTML(u.name || '')}</td>
+              <td class="py-3 text-slate-400 font-mono">${escapeHTML(u.email || '')}</td>
+              <td class="py-3 text-slate-400">${escapeHTML(u.currency || '₹')}</td>
+              <td class="py-3 text-right">
+                <button onclick="selectAdminUserToReset('${escapeHTML(u.email)}')" class="px-2.5 py-1 bg-brand-500/10 hover:bg-brand-500/20 text-brand-400 font-medium rounded-lg text-[10px] transition-colors">
+                  Select
+                </button>
+              </td>
+            </tr>
+          `;
+        });
+        if (users.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">No users found</td></tr>`;
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error loading admin dashboard stats/users:', err);
+  }
+}
+
+function selectAdminUserToReset(email) {
+  const emailInput = document.getElementById('admin-dash-user-email');
+  if (emailInput) {
+    emailInput.value = email;
+    const pwdInput = document.getElementById('admin-dash-user-password');
+    if (pwdInput) pwdInput.focus();
+  }
+}
+
+async function adminDashSetUserPassword() {
+  const emailInput = document.getElementById('admin-dash-user-email');
+  const passwordInput = document.getElementById('admin-dash-user-password');
+  
+  if (!emailInput || !passwordInput) return;
+  
+  const email = emailInput.value.trim();
+  const password = passwordInput.value;
+  
+  if (!email || !password) {
+    showToast('Please fill in both email and password fields', 'error');
+    return;
+  }
+  if (password.length < 6) {
+    showToast('Password must be at least 6 characters long', 'error');
+    return;
+  }
+  
+  showLoading(true);
+  try {
+    const res = await fetch(`${API_BASE}/auth/admin/set-password`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ email, password })
+    });
+    
+    const data = await res.json();
+    if (res.ok) {
+      showToast(data.message || 'Password upserted successfully!', 'success');
+      passwordInput.value = '';
+      renderAdminDashboard();
+    } else {
+      showToast(data.detail || 'Failed to upsert password', 'error');
+    }
+  } catch (err) {
+    console.error(err);
+    showToast('Connection error', 'error');
+  } finally {
+    showLoading(false);
+  }
 }
