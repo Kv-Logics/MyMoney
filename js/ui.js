@@ -78,6 +78,11 @@ function renderExpensesList() {
   });
 
   document.getElementById('expenses-count-text').innerText = `Showing ${filtered.length} Transactions`;
+  
+  const totalSum = filtered.reduce((sum, e) => sum + e.amount, 0);
+  const sumEl = document.getElementById('expenses-sum-text');
+  if (sumEl) sumEl.innerText = `Total: ${state.settings.currency} ${totalSum.toLocaleString()}`;
+
   const tbody = document.getElementById('expenses-list-tbody');
   tbody.innerHTML = '';
 
