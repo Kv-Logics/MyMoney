@@ -26,24 +26,28 @@ function renderDashboard() {
   document.getElementById('stat-month-spending').innerText = `${state.settings.currency} ${monthTotal.toLocaleString()}`;
   document.getElementById('stat-today-spending').innerText = `${state.settings.currency} ${todayTotal.toLocaleString()}`;
 
-  const overallB = state.budgets.find(b => b.category === 'Overall');
-  const overallBarContainer = document.getElementById('overall-budget-progress-container');
-  const setBudgetBtn = document.getElementById('set-budget-link-btn');
+  const activeBudgets = state.budgets.filter(b => b.amount > 0);
+  const budgetSelect = document.getElementById('dashboard-budget-select');
   
-  if (overallB && overallB.amount > 0) {
-    overallBarContainer.classList.remove('hidden');
-    setBudgetBtn.classList.add('hidden');
-    const pct = Math.min(100, (monthTotal / overallB.amount) * 100);
-    document.getElementById('stat-remaining-budget').innerText = `${state.settings.currency} ${Math.max(0, overallB.amount - monthTotal).toLocaleString()}`;
-    
-    const bar = document.getElementById('overall-budget-progress-bar');
-    bar.style.width = `${pct}%`;
-    bar.className = `h-full rounded-full transition-all duration-500 ${pct >= 100 ? 'bg-rose-500' : pct >= 75 ? 'bg-amber-500' : 'bg-emerald-500'}`;
-  } else {
-    overallBarContainer.classList.add('hidden');
-    setBudgetBtn.classList.remove('hidden');
-    document.getElementById('stat-remaining-budget').innerText = 'Not Set';
-    if (state.activeOwner) setBudgetBtn.classList.add('hidden');
+  if (budgetSelect) {
+    if (activeBudgets.length > 1) {
+      budgetSelect.classList.remove('hidden');
+      const currentVal = budgetSelect.value || (activeBudgets.find(b => b.category === 'Overall') ? 'Overall' : activeBudgets[0].category);
+      budgetSelect.innerHTML = '';
+      activeBudgets.forEach(b => {
+        const isSelected = b.category === currentVal ? 'selected' : '';
+        budgetSelect.innerHTML += `<option value="${b.category}" ${isSelected}>${b.category}</option>`;
+      });
+    } else {
+      budgetSelect.classList.add('hidden');
+      budgetSelect.innerHTML = activeBudgets.length === 1 
+        ? `<option value="${activeBudgets[0].category}" selected>${activeBudgets[0].category}</option>` 
+        : `<option value="Overall" selected>Overall</option>`;
+    }
+  }
+  
+  if (typeof window.renderDashboardBudget === 'function') {
+    window.renderDashboardBudget();
   }
 
   // Draw Category Pie
@@ -296,5 +300,43 @@ async function adminDashSetUserPassword() {
     showToast('Connection error', 'error');
   } finally {
     showLoading(false);
+  }
+}
+
+window.renderDashboardBudget = function() {
+  const select = document.getElementById('dashboard-budget-select');
+  const cat = select ? select.value : 'Overall';
+  const budget = state.budgets.find(b => b.category === cat);
+  const limit = budget ? budget.amount : 0;
+  
+  const overallBarContainer = document.getElementById('overall-budget-progress-container');
+  const setBudgetBtn = document.getElementById('set-budget-link-btn');
+  const spentText = document.getElementById('budget-spent-text');
+  
+  if (limit > 0) {
+    overallBarContainer.classList.remove('hidden');
+    setBudgetBtn.classList.add('hidden');
+    if(spentText) spentText.classList.remove('hidden');
+    
+    const now = new Date();
+    const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const spent = state.expenses
+      .filter(e => e.date.startsWith(thisMonthStr) && (cat === 'Overall' || e.category === cat))
+      .reduce((sum, e) => sum + e.amount, 0);
+      
+    const pct = Math.min(100, (spent / limit) * 100);
+    document.getElementById('stat-remaining-budget').innerText = `${state.settings.currency} ${Math.max(0, limit - spent).toLocaleString()}`;
+    
+    if(spentText) spentText.innerText = `${Math.round(pct)}% used (${state.settings.currency} ${spent.toLocaleString()})`;
+    
+    const bar = document.getElementById('overall-budget-progress-bar');
+    bar.style.width = `${pct}%`;
+    bar.className = `h-full rounded-full transition-all duration-500 ${pct >= 100 ? 'bg-rose-500' : pct >= 75 ? 'bg-amber-500' : 'bg-emerald-500'}`;
+  } else {
+    overallBarContainer.classList.add('hidden');
+    if(spentText) spentText.classList.add('hidden');
+    setBudgetBtn.classList.remove('hidden');
+    document.getElementById('stat-remaining-budget').innerText = 'Not Set';
+    if (state.activeOwner) setBudgetBtn.classList.add('hidden');
   }
 }
