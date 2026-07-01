@@ -48,7 +48,7 @@ function renderDashboard() {
 
   // Draw Category Pie
   const categoryMap = {};
-  state.expenses.forEach(e => {
+  monthExpenses.forEach(e => {
     categoryMap[e.category] = (categoryMap[e.category] || 0) + e.amount;
   });
 
@@ -73,7 +73,7 @@ function renderDashboard() {
     
     let cumulative = 0;
     catSummary.forEach(item => {
-      const pct = (item.amount / monthTotal) * 100;
+      const pct = monthTotal > 0 ? (item.amount / monthTotal) * 100 : 0;
       const offset = 251.2 - (251.2 * pct / 100) + (251.2 * (100 - cumulative) / 100);
       donut.innerHTML += `
         <circle cx="50" cy="50" r="40" fill="transparent" stroke="${item.color}" stroke-width="8"
@@ -85,7 +85,7 @@ function renderDashboard() {
     const legend = document.getElementById('pie-legend');
     legend.innerHTML = '';
     catSummary.slice(0, 5).forEach(item => {
-      const pct = Math.round((item.amount / monthTotal) * 100);
+      const pct = monthTotal > 0 ? Math.round((item.amount / monthTotal) * 100) : 0;
       legend.innerHTML += `
         <div class="flex items-center justify-between text-xs">
           <div class="flex items-center gap-2 truncate">
