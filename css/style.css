@@ -318,4 +318,112 @@ html:not(.dark) span.flatpickr-weekday {
   }
 }
 
+/* ================= LOGIN LOADING SCREEN ANIMATIONS ================= */
+
+@keyframes loginOrbFloat {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+  25% { transform: translate(60px, -80px) scale(1.2); opacity: 0.6; }
+  50% { transform: translate(-40px, -120px) scale(0.9); opacity: 0.3; }
+  75% { transform: translate(80px, -40px) scale(1.1); opacity: 0.55; }
+}
+
+@keyframes loginOrbFloat2 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.3; }
+  25% { transform: translate(-70px, -60px) scale(1.15); opacity: 0.5; }
+  50% { transform: translate(50px, -100px) scale(0.85); opacity: 0.25; }
+  75% { transform: translate(-30px, -30px) scale(1.05); opacity: 0.45; }
+}
+
+@keyframes loginOrbFloat3 {
+  0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.35; }
+  33% { transform: translate(40px, -70px) scale(1.3); opacity: 0.55; }
+  66% { transform: translate(-60px, -50px) scale(0.8); opacity: 0.2; }
+}
+
+@keyframes loginPulseRing {
+  0% { transform: scale(0.8); opacity: 0.6; }
+  50% { transform: scale(1.3); opacity: 0; }
+  100% { transform: scale(0.8); opacity: 0.6; }
+}
+
+@keyframes loginPulseRing2 {
+  0% { transform: scale(1); opacity: 0.4; }
+  50% { transform: scale(1.5); opacity: 0; }
+  100% { transform: scale(1); opacity: 0.4; }
+}
+
+@keyframes loginShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes loginFadeIn {
+  0% { opacity: 0; transform: translateY(10px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes loginSpinSlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes loginTimerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
+.login-loading-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(60px);
+  pointer-events: none;
+}
+
+.login-loading-orb-1 {
+  width: 200px; height: 200px;
+  background: radial-gradient(circle, rgba(99, 102, 241, 0.5), transparent 70%);
+  top: 20%; left: 15%;
+  animation: loginOrbFloat 8s ease-in-out infinite;
+}
+
+.login-loading-orb-2 {
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(16, 185, 129, 0.45), transparent 70%);
+  top: 50%; right: 15%;
+  animation: loginOrbFloat2 10s ease-in-out infinite;
+}
+
+.login-loading-orb-3 {
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.4), transparent 70%);
+  bottom: 15%; left: 40%;
+  animation: loginOrbFloat3 12s ease-in-out infinite;
+}
+
+.login-loading-orb-4 {
+  width: 120px; height: 120px;
+  background: radial-gradient(circle, rgba(244, 63, 94, 0.3), transparent 70%);
+  top: 10%; right: 25%;
+  animation: loginOrbFloat 14s ease-in-out infinite reverse;
+}
+
+.login-loading-orb-5 {
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.35), transparent 70%);
+  bottom: 25%; left: 10%;
+  animation: loginOrbFloat2 9s ease-in-out infinite reverse;
+}
+
+.login-shimmer-text {
+  background: linear-gradient(90deg, #94a3b8 0%, #e2e8f0 40%, #94a3b8 80%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: loginShimmer 3s linear infinite;
+}
+
+.login-loading-fadein {
+  animation: loginFadeIn 0.5s ease-out forwards;
+}
 

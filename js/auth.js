@@ -20,6 +20,73 @@ function setAuthFormTheme(theme) {
   }
 }
 
+// Login loading state
+let loginTimerInterval = null;
+let loginTimerStart = null;
+let loginStatusInterval = null;
+let loginAbortController = null;
+
+const LOGIN_STATUS_MESSAGES = [
+  "Connecting to server...",
+  "Waking up the backend...",
+  "Establishing secure connection...",
+  "Server is warming up...",
+  "Almost there, hold tight...",
+  "Fetching your financial data...",
+  "Authenticating credentials...",
+  "Preparing your dashboard...",
+  "Just a few more seconds...",
+  "Loading your expense tracker..."
+];
+
+function showLoginLoading() {
+  const overlay = document.getElementById('login-loading-overlay');
+  if (!overlay) return;
+  overlay.classList.remove('hidden');
+
+  // Reset and start timer
+  loginTimerStart = Date.now();
+  const timerEl = document.getElementById('login-timer');
+  if (timerEl) timerEl.textContent = '00:00';
+
+  loginTimerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - loginTimerStart) / 1000);
+    const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+    const secs = String(elapsed % 60).padStart(2, '0');
+    if (timerEl) timerEl.textContent = `${mins}:${secs}`;
+  }, 1000);
+
+  // Cycle status messages
+  let msgIndex = 0;
+  const msgEl = document.getElementById('login-status-msg');
+  if (msgEl) msgEl.textContent = LOGIN_STATUS_MESSAGES[0];
+
+  loginStatusInterval = setInterval(() => {
+    msgIndex = (msgIndex + 1) % LOGIN_STATUS_MESSAGES.length;
+    if (msgEl) msgEl.textContent = LOGIN_STATUS_MESSAGES[msgIndex];
+  }, 3500);
+
+  // Re-render lucide icons inside the overlay
+  if (window.lucide) lucide.createIcons();
+}
+
+function hideLoginLoading() {
+  const overlay = document.getElementById('login-loading-overlay');
+  if (overlay) overlay.classList.add('hidden');
+
+  if (loginTimerInterval) { clearInterval(loginTimerInterval); loginTimerInterval = null; }
+  if (loginStatusInterval) { clearInterval(loginStatusInterval); loginStatusInterval = null; }
+  loginTimerStart = null;
+}
+
+function cancelLoginLoading() {
+  if (loginAbortController) {
+    loginAbortController.abort();
+    loginAbortController = null;
+  }
+  hideLoginLoading();
+}
+
 async function handleAuthSubmit(e) {
   e.preventDefault();
   const authErrorDiv = document.getElementById('auth-error');
@@ -37,11 +104,16 @@ async function handleAuthSubmit(e) {
     ? { name, email, password, theme: selectedAuthTheme } 
     : { email, password };
 
+  // Show immersive loading screen
+  showLoginLoading();
+  loginAbortController = new AbortController();
+
   try {
     const res = await fetch(`${API_BASE}/auth/${endpoint}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
+      signal: loginAbortController.signal
     });
     const data = await res.json();
     if (res.ok) {
@@ -74,11 +146,15 @@ async function handleAuthSubmit(e) {
         console.warn("Failed to sync theme preference to backend settings", err);
       }
       
+      hideLoginLoading();
       showApp();
     } else {
+      hideLoginLoading();
       showAuthError(data.detail || 'Authentication failed');
     }
   } catch (err) {
+    hideLoginLoading();
+    if (err.name === 'AbortError') return; // User cancelled
     showAuthError('Cannot reach server');
   }
 }

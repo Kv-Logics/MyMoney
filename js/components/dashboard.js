@@ -110,17 +110,35 @@ function renderDashboard() {
     });
   }
 
-  // Daily Trend Bars
+  // Daily Trend Bars (with week navigation)
+  if (typeof state.weekOffset === 'undefined') state.weekOffset = 0;
+
   const trendBars = document.getElementById('weekly-trend-bars');
   trendBars.innerHTML = '';
   const dailyTrend = [];
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
-    d.setDate(d.getDate() - i);
+    d.setDate(d.getDate() - i + (state.weekOffset * 7));
     const dateStr = d.toISOString().split('T')[0];
     const dayName = d.toLocaleDateString(undefined, { weekday: 'short' });
     const dayAmt = state.expenses.filter(e => e.date === dateStr && e.category.toLowerCase() !== 'rent').reduce((sum, e) => sum + e.amount, 0);
     dailyTrend.push({ day: dayName, amount: dayAmt, date: dateStr });
+  }
+
+  // Week total
+  const weekTotal = dailyTrend.reduce((sum, d) => sum + d.amount, 0);
+  const weekTotalEl = document.getElementById('weekly-trend-total');
+  if (weekTotalEl) weekTotalEl.textContent = `${state.settings.currency} ${weekTotal.toLocaleString()}`;
+
+  // Week date range label
+  const weekRangeEl = document.getElementById('weekly-trend-range');
+  if (weekRangeEl && dailyTrend.length >= 7) {
+    const startDate = dailyTrend[0].date;
+    const endDate = dailyTrend[6].date;
+    const fmt = (ds) => { const p = ds.split('-'); return `${p[2]}/${p[1]}`; };
+    weekRangeEl.textContent = state.weekOffset === 0 
+      ? `This Week · ${fmt(startDate)} – ${fmt(endDate)}`
+      : `${fmt(startDate)} – ${fmt(endDate)}`;
   }
 
   const maxVal = Math.max(...dailyTrend.map(t => t.amount), 1);
@@ -203,6 +221,16 @@ function selectTrendDay(date) {
 }
 
 function clearDashboardTrendFilter() {
+  state.selectedTrendDate = null;
+  renderDashboard();
+}
+
+function shiftWeek(direction) {
+  if (typeof state.weekOffset === 'undefined') state.weekOffset = 0;
+  const newOffset = state.weekOffset + direction;
+  // Don't allow navigating into the future
+  if (newOffset > 0) return;
+  state.weekOffset = newOffset;
   state.selectedTrendDate = null;
   renderDashboard();
 }
