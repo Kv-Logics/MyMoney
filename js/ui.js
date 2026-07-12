@@ -147,7 +147,7 @@ function renderBudgets() {
 
   const thisMonthPrefix = new Date().toISOString().split('-').slice(0, 2).join('-');
 
-  ['Overall', ...state.categories.map(c => c.name)].forEach(catName => {
+  ['Overall', ...state.categories.map(c => c.name).filter(name => name.toLowerCase() !== 'rent')].forEach(catName => {
     const budgetItem = state.budgets.find(b => b.category === catName);
     if (!budgetItem && catName !== 'Overall') return;
 
@@ -155,6 +155,7 @@ function renderBudgets() {
     const spent = state.expenses
       .filter(e => {
         const isThisMonth = e.date.startsWith(thisMonthPrefix);
+        if (e.category.toLowerCase() === 'rent') return false;
         const isCat = catName === 'Overall' ? true : e.category === catName;
         return isThisMonth && isCat;
       })

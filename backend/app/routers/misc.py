@@ -110,7 +110,8 @@ def get_report(
     expenses_col = get_collection("expenses")
     query = {
         "user_id": target_user_id,
-        "date": {"$gte": start_date, "$lte": end_date}
+        "date": {"$gte": start_date, "$lte": end_date},
+        "category": {"$nin": ["Rent", "rent"]}
     }
     
     expenses = list(expenses_col.find(query).sort("date", -1))
@@ -152,7 +153,8 @@ def export_report(
     expenses_col = get_collection("expenses")
     query = {
         "user_id": current_user["id"],
-        "date": {"$gte": start_date, "$lte": end_date}
+        "date": {"$gte": start_date, "$lte": end_date},
+        "category": {"$nin": ["Rent", "rent"]}
     }
     expenses = list(expenses_col.find(query).sort("date", -1))
     

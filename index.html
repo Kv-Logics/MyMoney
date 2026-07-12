@@ -367,7 +367,7 @@
           <!-- User Dashboard View -->
           <div id="user-dashboard-view" class="space-y-6">
             <!-- Summary grid -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
               <!-- Spend Month -->
               <div class="glass rounded-2xl p-6 relative overflow-hidden">
                 <div class="absolute top-0 right-0 w-24 h-24 bg-brand-500/5 rounded-full blur-xl"></div>
@@ -387,6 +387,17 @@
                 <div class="flex items-center gap-1 text-[11px] text-slate-400 mt-2">
                   <i data-lucide="info" class="w-3.5 h-3.5"></i>
                   <span>Updated just now</span>
+                </div>
+              </div>
+
+              <!-- Monthly Rent -->
+              <div class="glass rounded-2xl p-6 relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-24 h-24 bg-violet-500/5 rounded-full blur-xl"></div>
+                <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Rent</span>
+                <h3 id="stat-monthly-rent" class="text-3xl font-extrabold text-white mt-2">₹0</h3>
+                <div class="flex items-center gap-1 text-[11px] text-slate-400 mt-2">
+                  <i data-lucide="home" class="w-3.5 h-3.5 text-violet-400"></i>
+                  <span>Dedicated Rent Tracker</span>
                 </div>
               </div>
 

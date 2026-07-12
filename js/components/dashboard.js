@@ -17,16 +17,24 @@ function renderDashboard() {
   const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   const todayStr = now.toISOString().split('T')[0];
 
-  const monthExpenses = state.expenses.filter(e => e.date.startsWith(thisMonthStr));
-  const todayExpenses = state.expenses.filter(e => e.date === todayStr);
+  const monthExpenses = state.expenses.filter(e => e.date.startsWith(thisMonthStr) && e.category.toLowerCase() !== 'rent');
+  const todayExpenses = state.expenses.filter(e => e.date === todayStr && e.category.toLowerCase() !== 'rent');
 
   const monthTotal = monthExpenses.reduce((sum, e) => sum + e.amount, 0);
   const todayTotal = todayExpenses.reduce((sum, e) => sum + e.amount, 0);
 
+  const rentExpenses = state.expenses.filter(e => e.date.startsWith(thisMonthStr) && e.category.toLowerCase() === 'rent');
+  const rentTotal = rentExpenses.reduce((sum, e) => sum + e.amount, 0);
+
   document.getElementById('stat-month-spending').innerText = `${state.settings.currency} ${monthTotal.toLocaleString()}`;
   document.getElementById('stat-today-spending').innerText = `${state.settings.currency} ${todayTotal.toLocaleString()}`;
 
-  const activeBudgets = state.budgets.filter(b => b.amount > 0);
+  const rentStatEl = document.getElementById('stat-monthly-rent');
+  if (rentStatEl) {
+    rentStatEl.innerText = `${state.settings.currency} ${rentTotal.toLocaleString()}`;
+  }
+
+  const activeBudgets = state.budgets.filter(b => b.amount > 0 && b.category.toLowerCase() !== 'rent');
   const budgetSelect = document.getElementById('dashboard-budget-select');
   
   if (budgetSelect) {
@@ -111,7 +119,7 @@ function renderDashboard() {
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split('T')[0];
     const dayName = d.toLocaleDateString(undefined, { weekday: 'short' });
-    const dayAmt = state.expenses.filter(e => e.date === dateStr).reduce((sum, e) => sum + e.amount, 0);
+    const dayAmt = state.expenses.filter(e => e.date === dateStr && e.category.toLowerCase() !== 'rent').reduce((sum, e) => sum + e.amount, 0);
     dailyTrend.push({ day: dayName, amount: dayAmt, date: dateStr });
   }
 
@@ -159,8 +167,8 @@ function renderDashboard() {
     
     // Filter by selected day if one is selected
     const filteredExpenses = state.selectedTrendDate 
-      ? sortedExpenses.filter(e => e.date === state.selectedTrendDate)
-      : sortedExpenses;
+      ? sortedExpenses.filter(e => e.date === state.selectedTrendDate && e.category.toLowerCase() !== 'rent')
+      : sortedExpenses.filter(e => e.category.toLowerCase() !== 'rent');
       
     const itemsToShow = filteredExpenses.slice(0, 5);
     
@@ -321,7 +329,7 @@ window.renderDashboardBudget = function() {
     const now = new Date();
     const thisMonthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const spent = state.expenses
-      .filter(e => e.date.startsWith(thisMonthStr) && (cat === 'Overall' || e.category === cat))
+      .filter(e => e.date.startsWith(thisMonthStr) && e.category.toLowerCase() !== 'rent' && (cat === 'Overall' || e.category === cat))
       .reduce((sum, e) => sum + e.amount, 0);
       
     const pct = Math.min(100, (spent / limit) * 100);
