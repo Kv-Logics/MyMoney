@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login Animation Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: { 400: '#34d399', 500: '#10b981', 600: '#059669' }
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    #login-particles-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+    }
+  </style>
+</head>
+<body class="bg-slate-950 m-0 p-0 overflow-hidden">
+
+  <div class="fixed inset-0 bg-slate-950 flex flex-col items-center justify-between overflow-hidden">
+
+    <!-- Canvas background -->
+    <canvas id="login-particles-canvas"></canvas>
+
+    <!-- Top: Timer -->
+    <div class="relative z-10 pt-16 flex flex-col items-center login-loading-fadein">
+      <span id="login-timer" class="text-6xl font-extrabold text-white tracking-tight font-mono" style="animation: loginTimerPulse 2s ease-in-out infinite;">00:00</span>
+      <p class="text-xs text-slate-500 mt-2 uppercase tracking-widest font-semibold">Elapsed</p>
+    </div>
+
+    <!-- Center: Icon + Status -->
+    <div class="relative z-10 flex flex-col items-center login-loading-fadein">
+      <!-- Pulse rings behind icon -->
+      <div class="relative mb-6">
+        <div class="absolute inset-0 w-20 h-20 rounded-full border-2 border-brand-500/30" style="animation: loginPulseRing 2.5s ease-in-out infinite;"></div>
+        <div class="absolute inset-0 w-20 h-20 rounded-full border border-violet-500/20" style="animation: loginPulseRing2 3s ease-in-out infinite 0.5s;"></div>
+        <div class="w-20 h-20 rounded-2xl bg-gradient-to-br from-brand-500/20 to-violet-500/20 border border-white/10 flex items-center justify-center backdrop-blur-sm">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="animation: loginSpinSlow 8s linear infinite;">
+            <path d="M19 7V4a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2.5"/>
+            <path d="M3 5v14a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-4"/>
+          </svg>
+        </div>
+      </div>
+
+      <p id="login-status-msg" class="login-shimmer-text text-sm font-semibold tracking-wide mb-1">Connecting to server...</p>
+      <p class="text-[11px] text-slate-500 max-w-xs text-center leading-relaxed">Our server may take a moment to wake up. Hang tight!</p>
+    </div>
+
+    <!-- Bottom: Cancel -->
+    <div class="relative z-10 pb-12">
+      <button onclick="window.close(); location.href='index.html';" class="px-6 py-2.5 bg-slate-900/80 border border-slate-800 rounded-xl text-xs text-slate-400 hover:text-white hover:border-slate-700 transition-all">
+        Back to App
+      </button>
+    </div>
+  </div>
+
+  <script>
+    // ── Particle constellation canvas ──
+    const canvas = document.getElementById('login-particles-canvas');
+    const ctx = canvas.getContext('2d');
+    let particles = [];
+    const PARTICLE_COUNT = 70;
+    const CONNECT_DIST = 140;
+
+    function resize() {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    class Particle {
+      constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * 0.6;
+        this.vy = (Math.random() - 0.5) * 0.6;
+        this.radius = Math.random() * 2 + 1;
+        // Random color from palette
+        const colors = [
+          'rgba(99, 102, 241, ',   // indigo
+          'rgba(16, 185, 129, ',   // emerald/brand
+          'rgba(139, 92, 246, ',   // violet
+          'rgba(14, 165, 233, ',   // sky
+          'rgba(244, 63, 94, ',    // rose
+        ];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+        this.alpha = Math.random() * 0.5 + 0.3;
+      }
+
+      update() {
+        this.x += this.vx;
+        this.y += this.vy;
+
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+      }
+
+      draw() {
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        ctx.fillStyle = this.color + this.alpha + ')';
+        ctx.fill();
+      }
+    }
+
+    function initParticles() {
+      particles = [];
+      for (let i = 0; i < PARTICLE_COUNT; i++) {
+        particles.push(new Particle());
+      }
+    }
+
+    function drawConnections() {
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            const opacity = (1 - dist / CONNECT_DIST) * 0.15;
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(148, 163, 184, ${opacity})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
+          }
+        }
+      }
+    }
+
+    function animate() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      particles.forEach(p => { p.update(); p.draw(); });
+      drawConnections();
+      requestAnimationFrame(animate);
+    }
+
+    initParticles();
+    animate();
+
+    // ── Timer ──
+    const start = Date.now();
+    const timerEl = document.getElementById('login-timer');
+    setInterval(() => {
+      const elapsed = Math.floor((Date.now() - start) / 1000);
+      const mins = String(Math.floor(elapsed / 60)).padStart(2, '0');
+      const secs = String(elapsed % 60).padStart(2, '0');
+      timerEl.textContent = `${mins}:${secs}`;
+    }, 1000);
+
+    // ── Cycling status messages ──
+    const STATUS_MESSAGES = [
+      "Connecting to server...",
+      "Waking up the backend...",
+      "Establishing secure connection...",
+      "Server is warming up...",
+      "Almost there, hold tight...",
+      "Fetching your financial data...",
+      "Authenticating credentials...",
+      "Preparing your dashboard...",
+      "Just a few more seconds...",
+      "Loading your expense tracker..."
+    ];
+    let msgIndex = 0;
+    const msgEl = document.getElementById('login-status-msg');
+    setInterval(() => {
+      msgIndex = (msgIndex + 1) % STATUS_MESSAGES.length;
+      msgEl.textContent = STATUS_MESSAGES[msgIndex];
+    }, 3500);
+  </script>
+</body>
+</html>

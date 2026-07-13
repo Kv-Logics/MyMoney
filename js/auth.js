@@ -39,6 +39,8 @@ const LOGIN_STATUS_MESSAGES = [
   "Loading your expense tracker..."
 ];
 
+let loginParticlesRAF = null;
+
 function showLoginLoading() {
   const overlay = document.getElementById('login-loading-overlay');
   if (!overlay) return;
@@ -68,6 +70,83 @@ function showLoginLoading() {
 
   // Re-render lucide icons inside the overlay
   if (window.lucide) lucide.createIcons();
+
+  // Start canvas particle animation
+  startLoginParticles();
+}
+
+function startLoginParticles() {
+  const canvas = document.getElementById('login-particles-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const PARTICLE_COUNT = 70;
+  const CONNECT_DIST = 140;
+
+  function resize() {
+    canvas.width = canvas.parentElement.clientWidth || window.innerWidth;
+    canvas.height = canvas.parentElement.clientHeight || window.innerHeight;
+  }
+  resize();
+  window._loginParticleResize = resize;
+  window.addEventListener('resize', resize);
+
+  const colors = [
+    'rgba(99, 102, 241, ',
+    'rgba(16, 185, 129, ',
+    'rgba(139, 92, 246, ',
+    'rgba(14, 165, 233, ',
+    'rgba(244, 63, 94, ',
+  ];
+
+  const particles = [];
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push({
+      x: Math.random() * canvas.width,
+      y: Math.random() * canvas.height,
+      vx: (Math.random() - 0.5) * 0.6,
+      vy: (Math.random() - 0.5) * 0.6,
+      r: Math.random() * 2 + 1,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      alpha: Math.random() * 0.5 + 0.3
+    });
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Update & draw particles
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+      if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = p.color + p.alpha + ')';
+      ctx.fill();
+    });
+
+    // Draw connecting lines
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONNECT_DIST) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(148, 163, 184, ${(1 - dist / CONNECT_DIST) * 0.15})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    loginParticlesRAF = requestAnimationFrame(animate);
+  }
+
+  animate();
 }
 
 function hideLoginLoading() {
@@ -76,6 +155,11 @@ function hideLoginLoading() {
 
   if (loginTimerInterval) { clearInterval(loginTimerInterval); loginTimerInterval = null; }
   if (loginStatusInterval) { clearInterval(loginStatusInterval); loginStatusInterval = null; }
+  if (loginParticlesRAF) { cancelAnimationFrame(loginParticlesRAF); loginParticlesRAF = null; }
+  if (window._loginParticleResize) {
+    window.removeEventListener('resize', window._loginParticleResize);
+    window._loginParticleResize = null;
+  }
   loginTimerStart = null;
 }
 
