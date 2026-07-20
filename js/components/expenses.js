@@ -52,6 +52,86 @@ function handleReceiptUpload(e) {
   reader.readAsDataURL(file);
 }
 
+// Ensure the listener is added for AI bill scanning
+document.addEventListener('DOMContentLoaded', () => {
+  const billUploadInput = document.getElementById('bill-upload');
+  if (billUploadInput) {
+    billUploadInput.addEventListener('change', handleBillExtractUpload);
+  }
+});
+
+async function handleBillExtractUpload(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const container = document.getElementById('ai-scan-container');
+  const loading = document.getElementById('ai-scan-loading');
+  
+  // Show loading state
+  loading.classList.remove('hidden');
+  container.classList.add('pointer-events-none', 'opacity-80');
+  
+  // Also save it as the receipt image
+  const reader = new FileReader();
+  reader.onloadend = () => {
+    state.receiptBase64 = reader.result;
+    document.getElementById('expense-receipt-badge').classList.remove('hidden');
+  };
+  reader.readAsDataURL(file);
+
+  try {
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const res = await fetch(`${API_BASE}/expenses/extract`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: formData
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const extracted = data.extracted;
+      
+      if (extracted.amount) document.getElementById('expense-amount').value = extracted.amount;
+      if (extracted.title) document.getElementById('expense-title').value = extracted.title;
+      if (extracted.date) setDateValue('expense-date', extracted.date);
+      if (extracted.category) {
+        // Find if category exists, if not use default or create it
+        const catSelect = document.getElementById('expense-category');
+        const opts = Array.from(catSelect.options).map(o => o.value);
+        if (opts.includes(extracted.category)) {
+          catSelect.value = extracted.category;
+        } else {
+          // Select Other as fallback
+          if (opts.includes("Other")) catSelect.value = "Other";
+        }
+      }
+      if (extracted.payment_method) {
+        const paySelect = document.getElementById('expense-payment');
+        const opts = Array.from(paySelect.options).map(o => o.value);
+        if (opts.includes(extracted.payment_method)) {
+          paySelect.value = extracted.payment_method;
+        }
+      }
+      
+      showToast('Receipt analyzed successfully!', 'success');
+    } else {
+      const err = await res.json();
+      showToast(`Extraction failed: ${err.detail || 'Unknown error'}`, 'error');
+    }
+  } catch (err) {
+    showToast('Failed to connect to AI extraction service.', 'error');
+  } finally {
+    loading.classList.add('hidden');
+    container.classList.remove('pointer-events-none', 'opacity-80');
+    // Reset file input so same file can be selected again if needed
+    e.target.value = '';
+  }
+}
+
 async function handleExpenseSubmit(e) {
   e.preventDefault();
   const id = document.getElementById('expense-id').value;

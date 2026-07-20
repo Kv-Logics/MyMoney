@@ -1,11 +1,12 @@
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from bson import ObjectId
 from app.database import get_collection
 from app.auth import get_current_user
-from app.models import ExpenseCreate, ExpenseUpdate
+from app.models import ExpenseCreate, ExpenseUpdate, ExtractionResponse
 from app.utils import serialize_doc, serialize_docs, log_audit_action, verify_sharing_access
+from app.services.llm_extractor import call_gemini_vision
 
 router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
@@ -73,6 +74,42 @@ def check_budget_thresholds(user_id: str, email: str, category: str, added_amoun
                     "created_at": datetime.utcnow()
                 })
                 break
+
+@router.post("/extract", response_model=ExtractionResponse)
+async def extract_from_bill(
+    file: UploadFile = File(...),
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Accepts an image file, sends it to Gemini API,
+    and returns structured JSON for the expense.
+    """
+    try:
+        image_bytes = await file.read()
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Failed to read uploaded file")
+        
+    prompt = """
+    Analyze this receipt/bill and extract the following information in JSON format. Do not include markdown code blocks, just the raw JSON.
+    {
+      "title": "Vendor or store name",
+      "amount": numeric total amount,
+      "date": "YYYY-MM-DD format",
+      "category": "One of: Food, Grocery, Fuel, Shopping, Electricity, Entertainment, Transport, Rent, Medical, Education, Utilities, Travel, Other",
+      "payment_method": "One of: Cash, UPI, Credit Card, Debit Card, Bank Transfer, Wallet"
+    }
+    If a field cannot be found, use null.
+    """
+    
+    try:
+        extracted_json = await call_gemini_vision(image_bytes, prompt)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+        
+    return ExtractionResponse(
+        extracted=extracted_json,
+        confidence=0.95
+    )
 
 @router.post("")
 def create_expense(expense: ExpenseCreate, current_user: dict = Depends(get_current_user)):

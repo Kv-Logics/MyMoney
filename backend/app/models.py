@@ -128,4 +128,14 @@ class TaskUpdate(BaseModel):
     notes: Optional[str] = None
     start_date: Optional[str] = None  # YYYY-MM-DD
 
+# AI Extraction schemas
+class ExtractedExpenseData(BaseModel):
+    title: Optional[str] = None
+    amount: Optional[float] = None
+    date: Optional[str] = None
+    category: Optional[str] = None
+    payment_method: Optional[str] = None
 
+class ExtractionResponse(BaseModel):
+    extracted: ExtractedExpenseData
+    confidence: float
