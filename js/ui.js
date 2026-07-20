@@ -193,12 +193,24 @@ function renderBudgets() {
       `;
     }
 
+    let editActionHtml = '';
+    if (limit > 0 && !state.activeOwner) {
+      editActionHtml = `
+        <button onclick="openBudgetModal('${catName}')" class="p-1 text-slate-400 hover:text-white bg-slate-900/50 hover:bg-slate-800 rounded-lg transition-colors ml-2" title="Edit Budget">
+          <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+        </button>
+      `;
+    }
+
     container.innerHTML += `
-      <div class="glass rounded-2xl p-6 space-y-4">
+      <div class="glass rounded-2xl p-6 space-y-4 relative group">
         <div class="flex items-start justify-between">
-          <div>
-            <h4 class="font-bold text-white text-base">${escapeHTML(catName)} Budget</h4>
-            <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Monthly Limit</span>
+          <div class="flex items-center">
+            <div>
+              <h4 class="font-bold text-white text-base">${escapeHTML(catName)} Budget</h4>
+              <span class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Monthly Limit</span>
+            </div>
+            ${editActionHtml}
           </div>
           <div class="text-right">
             <p class="text-sm font-extrabold text-white">${limit > 0 ? `${state.settings.currency} ${limit.toLocaleString()}` : 'Not Set'}</p>
