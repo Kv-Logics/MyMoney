@@ -11,7 +11,7 @@ root_env = os.path.join(os.path.dirname(__file__), "..", "..", ".env")
 if os.path.exists(root_env):
     load_dotenv(root_env)
 
-MONGODB_URI = os.getenv("MONGODB_URI", "mongodb+srv://muruga:muruga99@muruga.n9rrdn0.mongodb.net/?appName=muruga")
+MONGODB_URI = os.getenv("MONGODB_URI", "")
 DB_NAME = "mymoney"
 
 client = None
@@ -20,6 +20,8 @@ db = None
 def get_db():
     global client, db
     if db is None:
+        if not MONGODB_URI:
+            raise ValueError("MONGODB_URI is not configured. Please define MONGODB_URI in your .env file.")
         try:
             client = MongoClient(MONGODB_URI)
             db = client[DB_NAME]
