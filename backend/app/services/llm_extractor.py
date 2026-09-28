@@ -95,7 +95,8 @@ async def process_voice_narration(
     # Try Gemini API if key is available in env or passed explicitly
     api_key = custom_gemini_key or os.environ.get("GEMINI_API_KEY")
     if api_key:
-        for model_name in ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash']:
+        import asyncio
+        for model_name in ['gemini-2.0-flash', 'gemini-1.5-flash']:
             try:
                 genai.configure(api_key=api_key)
                 model = genai.GenerativeModel(model_name)
@@ -161,7 +162,10 @@ INSTRUCTIONS:
   "requires_clarification": false
 }}
 """
-                response = model.generate_content(prompt)
+                response = await asyncio.wait_for(
+                    asyncio.to_thread(model.generate_content, prompt),
+                    timeout=5.0
+                )
                 text = response.text.strip()
 
                 if "```json" in text:

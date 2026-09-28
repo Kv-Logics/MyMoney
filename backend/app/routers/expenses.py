@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File, BackgroundTasks
 from bson import ObjectId
 from app.database import get_collection
 from app.auth import get_current_user
@@ -114,6 +114,7 @@ async def extract_from_bill(
 @router.post("/voice-agent", response_model=VoiceAgentResponse)
 async def voice_agent_narration(
     req: VoiceAgentRequest,
+    background_tasks: BackgroundTasks,
     current_user: dict = Depends(get_current_user)
 ):
     """
@@ -138,11 +139,14 @@ async def voice_agent_narration(
             currency=req.currency,
             custom_gemini_key=req.gemini_api_key
         )
-        try:
-            record_ai_usage(current_user["id"], current_user["email"], action="voice_narration", estimated_tokens=350)
-        except Exception as log_err:
-            import logging
-            logging.getLogger(__name__).warning(f"Could not record AI usage log: {log_err}")
+        # Asynchronously log AI token usage without blocking the HTTP response
+        background_tasks.add_task(
+            record_ai_usage,
+            current_user["id"],
+            current_user["email"],
+            action="voice_narration",
+            estimated_tokens=350
+        )
         return VoiceAgentResponse(**result)
     except HTTPException:
         raise
@@ -150,7 +154,11 @@ async def voice_agent_narration(
         raise HTTPException(status_code=500, detail=f"Voice AI Agent Error: {str(e)}")
 
 @router.post("")
-def create_expense(expense: ExpenseCreate, current_user: dict = Depends(get_current_user)):
+def create_expense(
+    expense: ExpenseCreate,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user)
+):
     expenses_col = get_collection("expenses")
     
     new_expense = expense.model_dump()
@@ -161,14 +169,21 @@ def create_expense(expense: ExpenseCreate, current_user: dict = Depends(get_curr
     res = expenses_col.insert_one(new_expense)
     new_expense["_id"] = res.inserted_id
     
-    log_audit_action(
+    # Asynchronously execute audit logging & budget alerts
+    background_tasks.add_task(
+        log_audit_action,
         user_id=current_user["id"],
         user_name=current_user["name"],
         action="expense_created",
         details=f"Added expense '{expense.title}' of amount {expense.amount} in {expense.category}."
     )
-    
-    check_budget_thresholds(current_user["id"], current_user["email"], expense.category, expense.amount)
+    background_tasks.add_task(
+        check_budget_thresholds,
+        current_user["id"],
+        current_user["email"],
+        expense.category,
+        expense.amount
+    )
     
     return serialize_doc(new_expense)
 

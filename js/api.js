@@ -59,63 +59,48 @@ async function fetchAllData() {
   const headers = { 'Authorization': `Bearer ${state.token}` };
 
   try {
-    // Fetch Expenses
-    const expRes = await fetch(`${API_BASE}/expenses${ownerQuery}`, { headers });
-    if (expRes.ok) {
-      state.expenses = await expRes.json();
+    const results = await Promise.allSettled([
+      fetch(`${API_BASE}/expenses${ownerQuery}`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/categories`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/budgets${ownerQuery}`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/payment-methods`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/savings${ownerQuery}`, { headers }).then(r => r.ok ? r.json() : null),
+      (!state.activeOwner ? fetch(`${API_BASE}/sharing/shared-with`, { headers }).then(r => r.ok ? r.json() : null) : Promise.resolve(null)),
+      fetch(`${API_BASE}/sharing/shared-by`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/notifications`, { headers }).then(r => r.ok ? r.json() : null),
+      fetch(`${API_BASE}/audit-logs${ownerQuery}`, { headers }).then(r => r.ok ? r.json() : null),
+      typeof fetchTasksData === 'function' ? fetchTasksData() : Promise.resolve(null)
+    ]);
+
+    const [expRes, catRes, budRes, pmRes, savRes, swRes, sbRes, notRes, auditRes] = results;
+
+    if (expRes.status === 'fulfilled' && expRes.value) {
+      state.expenses = expRes.value;
       localStorage.setItem('cached_expenses', JSON.stringify(state.expenses));
     }
-
-    // Fetch Categories
-    const catRes = await fetch(`${API_BASE}/categories`, { headers });
-    if (catRes.ok) {
-      state.categories = await catRes.json();
+    if (catRes.status === 'fulfilled' && catRes.value) {
+      state.categories = catRes.value;
       localStorage.setItem('cached_categories', JSON.stringify(state.categories));
     }
-
-    // Fetch Budgets
-    const budRes = await fetch(`${API_BASE}/budgets${ownerQuery}`, { headers });
-    if (budRes.ok) {
-      state.budgets = await budRes.json();
+    if (budRes.status === 'fulfilled' && budRes.value) {
+      state.budgets = budRes.value;
       localStorage.setItem('cached_budgets', JSON.stringify(state.budgets));
     }
-
-    // Fetch Payment Methods
-    const pmRes = await fetch(`${API_BASE}/payment-methods`, { headers });
-    if (pmRes.ok) state.paymentMethods = await pmRes.json();
-
-    // Fetch Savings Goals
-    const savRes = await fetch(`${API_BASE}/savings${ownerQuery}`, { headers });
-    if (savRes.ok) state.savingsGoals = await savRes.json();
-
-    // Fetch active sharing list
-    if (!state.activeOwner) {
-      const swRes = await fetch(`${API_BASE}/sharing/shared-with`, { headers });
-      if (swRes.ok) state.sharingList = await swRes.json();
+    if (pmRes.status === 'fulfilled' && pmRes.value) state.paymentMethods = pmRes.value;
+    if (savRes.status === 'fulfilled' && savRes.value) state.savingsGoals = savRes.value;
+    if (swRes.status === 'fulfilled' && swRes.value) state.sharingList = swRes.value;
+    if (sbRes.status === 'fulfilled' && sbRes.value) {
+      state.sharedTrackers = sbRes.value;
+      if (typeof renderSharedTrackersSection === 'function') renderSharedTrackersSection();
     }
-
-    // Fetch shared trackers with me
-    const sbRes = await fetch(`${API_BASE}/sharing/shared-by`, { headers });
-    if (sbRes.ok) {
-      state.sharedTrackers = await sbRes.json();
-      renderSharedTrackersSection();
+    if (notRes.status === 'fulfilled' && notRes.value) {
+      state.notifications = notRes.value;
+      if (typeof renderNotifications === 'function') renderNotifications();
     }
+    if (auditRes.status === 'fulfilled' && auditRes.value) state.auditLogs = auditRes.value;
 
-    // Fetch notifications
-    const notRes = await fetch(`${API_BASE}/notifications`, { headers });
-    if (notRes.ok) {
-      state.notifications = await notRes.json();
-      renderNotifications();
-    }
-
-    // Fetch Audit Log
-    const auditRes = await fetch(`${API_BASE}/audit-logs${ownerQuery}`, { headers });
-    if (auditRes.ok) state.auditLogs = await auditRes.json();
-
-    // Fetch Tasks
-    await fetchTasksData();
   } catch (err) {
-    console.warn('Backend server offline. Loading cache.');
+    console.warn('Backend server offline or partial fetch error. Loading cache:', err);
     state.expenses = JSON.parse(localStorage.getItem('cached_expenses') || '[]');
     state.categories = JSON.parse(localStorage.getItem('cached_categories') || '[]');
     state.budgets = JSON.parse(localStorage.getItem('cached_budgets') || '[]');

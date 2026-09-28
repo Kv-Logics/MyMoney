@@ -27,6 +27,17 @@ DB_NAME = "mymoney"
 client = None
 db = None
 
+def ensure_indexes(database):
+    try:
+        database["expenses"].create_index([("user_id", 1), ("date", -1)], background=True)
+        database["expenses"].create_index([("user_id", 1), ("category", 1)], background=True)
+        database["budgets"].create_index([("user_id", 1), ("category", 1)], background=True)
+        database["ai_access"].create_index([("user_id", 1)], background=True)
+        database["tasks"].create_index([("user_id", 1), ("due_date", 1)], background=True)
+        database["audit_logs"].create_index([("user_id", 1), ("timestamp", -1)], background=True)
+    except Exception as idx_err:
+        print(f"Index creation note: {idx_err}")
+
 def get_db():
     global client, db
     if db is None:
@@ -34,11 +45,20 @@ def get_db():
         if not uri:
             raise ValueError("MONGODB_URI is not configured. Please define MONGODB_URI in your .env file.")
         try:
-            client = MongoClient(uri, w="majority")
+            client = MongoClient(
+                uri,
+                w="majority",
+                minPoolSize=5,
+                maxPoolSize=50,
+                serverSelectionTimeoutMS=5000,
+                connectTimeoutMS=5000,
+                socketTimeoutMS=10000
+            )
             db = client[DB_NAME]
             # Verify connection
             client.admin.command('ping')
             print("Successfully connected to MongoDB Atlas!")
+            ensure_indexes(db)
         except Exception as e:
             print(f"Error connecting to MongoDB Atlas: {e}")
             if "bad auth" in str(e).lower() or "authentication failed" in str(e).lower():

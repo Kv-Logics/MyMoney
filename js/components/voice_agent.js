@@ -772,8 +772,7 @@ async function confirmSaveAllVoiceDrafts() {
     const today = new Date().toISOString().split('T')[0];
     const nowTime = new Date().toTimeString().split(' ')[0].substring(0, 5);
 
-    let savedCount = 0;
-    for (const draft of currentDraftExpenses) {
+    const savePromises = currentDraftExpenses.map(draft => {
       const payload = {
         amount: draft.amount,
         title: draft.title || "Voice Expense",
@@ -786,7 +785,7 @@ async function confirmSaveAllVoiceDrafts() {
         receipt_image: ""
       };
 
-      const res = await fetch(`${API_BASE}/expenses`, {
+      return fetch(`${API_BASE}/expenses`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -794,9 +793,10 @@ async function confirmSaveAllVoiceDrafts() {
         },
         body: JSON.stringify(payload)
       });
+    });
 
-      if (res.ok) savedCount++;
-    }
+    const results = await Promise.allSettled(savePromises);
+    const savedCount = results.filter(r => r.status === 'fulfilled' && r.value.ok).length;
 
     if (savedCount > 0) {
       if (typeof confetti === 'function') confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
