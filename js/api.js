@@ -11,8 +11,10 @@ async function fetchUserData() {
       document.getElementById('user-avatar').innerText = state.user.name[0].toUpperCase();
       
       const adminPanel = document.getElementById('settings-admin-panel');
+      const isAdmin = state.user.email === 'keerthivasan.220722@gmail.com' || state.user.email === 'a.keerthivasan7676@gmail.com';
+      state.isAdmin = isAdmin;
       if (adminPanel) {
-        if (state.user.email === 'a.keerthivasan7676@gmail.com') {
+        if (isAdmin) {
           adminPanel.classList.remove('hidden');
         } else {
           adminPanel.classList.add('hidden');

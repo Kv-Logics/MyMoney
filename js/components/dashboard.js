@@ -1,5 +1,6 @@
 function renderDashboard() {
-  if (state.user && state.user.email === 'a.keerthivasan7676@gmail.com') {
+  const isAdmin = state.user && (state.user.email === 'keerthivasan.220722@gmail.com' || state.user.email === 'a.keerthivasan7676@gmail.com');
+  if (isAdmin) {
     const userView = document.getElementById('user-dashboard-view');
     const adminView = document.getElementById('admin-dashboard-view');
     if (userView) userView.classList.add('hidden');
@@ -279,6 +280,11 @@ async function renderAdminDashboard() {
           tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-slate-400">No users found</td></tr>`;
         }
       }
+    }
+
+    // 3. Load AI Agent & Token monitoring data
+    if (typeof loadAdminAIPanel === 'function') {
+      loadAdminAIPanel();
     }
   } catch (err) {
     console.error('Error loading admin dashboard stats/users:', err);

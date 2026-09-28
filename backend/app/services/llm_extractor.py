@@ -1,25 +1,26 @@
 import os
 import json
 import logging
+from datetime import datetime
 import google.generativeai as genai
 
 # Setup logger
 logger = logging.getLogger(__name__)
 
-def init_gemini():
-    api_key = os.environ.get("GEMINI_API_KEY")
+def init_gemini(custom_key: str = None):
+    api_key = custom_key or os.environ.get("GEMINI_API_KEY")
     if not api_key:
-        logger.warning("GEMINI_API_KEY not found in environment variables.")
+        logger.warning("GEMINI_API_KEY not found in environment variables or user settings.")
         return False
     genai.configure(api_key=api_key)
     return True
 
-async def call_gemini_vision(image_bytes: bytes, prompt: str) -> dict:
+async def call_gemini_vision(image_bytes: bytes, prompt: str, custom_key: str = None) -> dict:
     """
     Takes an image as bytes and a prompt, sends them to Gemini 1.5 Flash,
     and returns the parsed JSON dictionary.
     """
-    if not init_gemini():
+    if not init_gemini(custom_key):
         raise Exception("Gemini API is not configured. Missing GEMINI_API_KEY.")
 
     # Use Gemini 1.5 Flash as it is fast and excellent for this use case

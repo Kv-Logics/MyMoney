@@ -674,6 +674,64 @@
                 </button>
               </div>
             </div>
+
+            <!-- AI Agent Token & User Access Management -->
+            <div id="admin-ai-panel" class="glass rounded-2xl p-6 flex flex-col space-y-4">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                <div class="flex items-center gap-2">
+                  <div class="p-2 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-xl text-white shadow-md">
+                    <i data-lucide="bot" class="w-4 h-4"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">AI Voice Agent & Token Monitoring</h3>
+                    <p class="text-[11px] text-slate-400">Control user approvals and monitor Gemini AI API token credits</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span id="admin-ai-pending-badge" class="text-[10px] bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold px-2.5 py-0.5 rounded-full">0 Pending</span>
+                  <button onclick="loadAdminAIPanel()" class="p-1.5 hover:bg-slate-800 rounded-lg text-slate-400 hover:text-white transition-all" title="Refresh AI Stats">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- AI Mini Metrics -->
+              <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                <div class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4">
+                  <span class="text-[10px] font-semibold uppercase text-slate-400">Total AI Calls</span>
+                  <h4 id="admin-ai-total-calls" class="text-xl font-extrabold text-white mt-1">0</h4>
+                  <span class="text-[10px] text-slate-500">Voice & extraction requests</span>
+                </div>
+                <div class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4">
+                  <span class="text-[10px] font-semibold uppercase text-slate-400">Estimated Tokens Used</span>
+                  <h4 id="admin-ai-total-tokens" class="text-xl font-extrabold text-brand-400 mt-1">0</h4>
+                  <span class="text-[10px] text-slate-500">Across all platform users</span>
+                </div>
+                <div class="bg-slate-900/40 border border-slate-800/80 rounded-xl p-4">
+                  <span class="text-[10px] font-semibold uppercase text-slate-400">AI Admin Controller</span>
+                  <h4 class="text-xs font-bold text-violet-300 mt-1 truncate">keerthivasan.220722@gmail.com</h4>
+                  <span class="text-[10px] text-emerald-400 font-semibold">Active & Enforcing Approvals</span>
+                </div>
+              </div>
+
+              <!-- AI Users Table -->
+              <div class="overflow-x-auto max-h-[300px] overflow-y-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr class="border-b border-slate-800 text-slate-400 uppercase tracking-wider text-[10px]">
+                      <th class="pb-3">User</th>
+                      <th class="pb-3">Email</th>
+                      <th class="pb-3">AI Status</th>
+                      <th class="pb-3">Consumption</th>
+                      <th class="pb-3 text-right">Approval Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-ai-users-tbody" class="divide-y divide-slate-900/60">
+                    <!-- Populated dynamically via loadAdminAIPanel() -->
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
         </div>
@@ -1281,55 +1339,85 @@
         </button>
       </div>
 
-      <!-- Center Voice Recording Control -->
-      <div class="py-6 flex flex-col items-center justify-center shrink-0 border-b border-slate-800/60 relative">
-        <div id="voice-pulse-ring" class="hidden absolute w-28 h-28 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none"></div>
-        <button id="voice-mic-btn" type="button" onclick="toggleVoiceRecording()" class="w-20 h-20 rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-xl flex items-center justify-center transition-all transform active:scale-95 group relative z-10">
-          <i data-lucide="mic" id="voice-mic-icon" class="w-8 h-8 transition-transform group-hover:scale-110"></i>
-        </button>
-        <span class="text-[11px] text-slate-400 mt-3 font-medium">Tap to Speak • Powered by Gemini AI</span>
-      </div>
-
-      <!-- Chat input & response -->
-      <div class="p-4 bg-slate-900/40 rounded-2xl border border-slate-800/80 my-4 shrink-0 space-y-3">
-        <div id="voice-agent-chat-reply" class="text-xs text-violet-200 leading-relaxed font-medium bg-violet-950/30 border border-violet-500/20 p-3 rounded-xl">
-          Hi! I am your AI Voice Expense Agent. Tell me what you spent today (e.g. 'I spent 450 at Reliance Smart with UPI, and 180 for lunch cash').
+      <!-- Approval Required Banner (Shown if user does not have AI access) -->
+      <div id="voice-approval-banner" class="hidden my-auto py-8 px-6 text-center space-y-4">
+        <div class="w-16 h-16 rounded-2xl bg-violet-500/10 border border-violet-500/20 flex items-center justify-center mx-auto text-violet-400">
+          <i data-lucide="lock" class="w-8 h-8"></i>
         </div>
-
-        <form onsubmit="handleVoiceNarrationSubmit(event)" class="flex gap-2">
-          <input type="text" id="voice-input-text" placeholder="Or type your narration here..." class="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-violet-500 text-xs text-white" />
-          <button id="voice-send-btn" type="submit" class="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md">
-            <span>Analyze</span>
-            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+        <div>
+          <span id="voice-approval-status-badge" class="px-3 py-1 bg-violet-500/20 border border-violet-500/30 text-violet-400 font-bold rounded-full text-xs">Approval Required</span>
+          <h4 class="text-lg font-extrabold text-white mt-3">Voice AI Agent Access</h4>
+          <p id="voice-approval-desc" class="text-xs text-slate-400 max-w-sm mx-auto mt-2 leading-relaxed">
+            To manage token consumption and free credits, AI features require one-time approval from admin (keerthivasan.220722@gmail.com).
+          </p>
+        </div>
+        <div class="pt-2 max-w-xs mx-auto">
+          <button id="voice-request-access-btn" type="button" onclick="requestAIAccessSubmit()" class="w-full py-3 bg-violet-600 hover:bg-violet-500 text-white font-bold rounded-xl text-xs transition-all shadow-lg shadow-violet-500/20 flex items-center justify-center gap-2">
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Request AI Access from Admin</span>
           </button>
-        </form>
-      </div>
-
-      <!-- Draft Cards Section -->
-      <div class="flex-1 overflow-y-auto space-y-3 min-h-[150px] pr-1">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Extracted Expense Drafts</span>
-          <span class="text-[10px] text-slate-500">Review & Edit before saving</span>
-        </div>
-
-        <div id="voice-drafts-empty" class="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
-          No expenses extracted yet. Speak or type above to analyze!
-        </div>
-
-        <div id="voice-drafts-container" class="space-y-3">
-          <!-- Draft expense items render dynamically -->
         </div>
       </div>
 
-      <!-- Modal Footer -->
-      <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between shrink-0 mt-3">
-        <button onclick="closeVoiceAgentModal()" class="px-4 py-2 text-xs text-slate-400 hover:text-white">
-          Cancel
-        </button>
-        <button id="voice-save-all-btn" onclick="confirmSaveAllVoiceDrafts()" class="hidden px-6 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-500/20 flex items-center gap-2 transition-all">
-          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-          <span>Save All to MyMoney</span>
-        </button>
+      <!-- Active Voice Agent Body (Shown when approved or admin) -->
+      <div id="voice-agent-active-body" class="flex flex-col flex-1 overflow-hidden">
+        <!-- Gemini Key Local Config Bar -->
+        <div class="mt-3 px-3 py-2 bg-slate-900/60 border border-slate-800 rounded-xl flex items-center gap-2 shrink-0">
+          <i data-lucide="key" class="w-4 h-4 text-violet-400 shrink-0"></i>
+          <input type="password" id="voice-gemini-key-input" placeholder="Paste Gemini Key here (stored locally in your browser)..." class="flex-1 bg-transparent text-xs text-white focus:outline-none placeholder-slate-500" />
+          <button type="button" onclick="saveGeminiAPIKeyFromUI()" class="px-3 py-1 bg-violet-600/30 hover:bg-violet-600/50 text-violet-200 border border-violet-500/30 text-[10px] font-bold rounded-lg transition-all shrink-0">Save Key</button>
+        </div>
+
+        <!-- Center Voice Recording Control -->
+        <div class="py-4 flex flex-col items-center justify-center shrink-0 border-b border-slate-800/60 relative mt-2">
+          <div id="voice-pulse-ring" class="hidden absolute w-28 h-28 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none"></div>
+          <button id="voice-mic-btn" type="button" onclick="toggleVoiceRecording()" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-xl flex items-center justify-center transition-all transform active:scale-95 group relative z-10">
+            <i data-lucide="mic" id="voice-mic-icon" class="w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-110"></i>
+          </button>
+          <span class="text-[11px] text-slate-400 mt-2 font-medium">Tap to Speak • Powered by Gemini AI</span>
+        </div>
+
+        <!-- Chat input & response -->
+        <div class="p-3 bg-slate-900/40 rounded-2xl border border-slate-800/80 my-3 shrink-0 space-y-2">
+          <div id="voice-agent-chat-reply" class="text-xs text-violet-200 leading-relaxed font-medium bg-violet-950/30 border border-violet-500/20 p-2.5 rounded-xl">
+            Hi! I am your AI Voice Expense Agent. Tell me what you spent today (e.g. 'I spent 450 at Reliance Smart with UPI, and 180 for lunch cash').
+          </div>
+
+          <form onsubmit="handleVoiceNarrationSubmit(event)" class="flex gap-2">
+            <input type="text" id="voice-input-text" placeholder="Or type your narration here..." class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-violet-500 text-xs text-white" />
+            <button id="voice-send-btn" type="submit" class="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shrink-0">
+              <span>Analyze</span>
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+            </button>
+          </form>
+        </div>
+
+        <!-- Draft Cards Section -->
+        <div class="flex-1 overflow-y-auto space-y-2 min-h-[120px] pr-1">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Extracted Expense Drafts</span>
+            <span class="text-[10px] text-slate-500">Review & Edit before saving</span>
+          </div>
+
+          <div id="voice-drafts-empty" class="text-center py-6 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+            No expenses extracted yet. Speak or type above to analyze!
+          </div>
+
+          <div id="voice-drafts-container" class="space-y-2.5">
+            <!-- Draft expense items render dynamically -->
+          </div>
+        </div>
+
+        <!-- Modal Footer -->
+        <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between shrink-0 mt-2">
+          <button onclick="closeVoiceAgentModal()" class="px-4 py-2 text-xs text-slate-400 hover:text-white">
+            Cancel
+          </button>
+          <button id="voice-save-all-btn" onclick="confirmSaveAllVoiceDrafts()" class="hidden px-5 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-500/20 flex items-center gap-2 transition-all">
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>Save All to MyMoney</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>

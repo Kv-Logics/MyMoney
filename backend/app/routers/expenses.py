@@ -120,6 +120,13 @@ async def voice_agent_narration(
     Accepts natural spoken narration or text chat messages from user,
     parses items, maps categories/methods, and returns structured drafts & AI reply.
     """
+    from app.services.ai_access import check_can_use_ai, record_ai_usage
+    if not check_can_use_ai(current_user["id"], current_user["email"]):
+        raise HTTPException(
+            status_code=403,
+            detail="AI Voice Agent access requires approval from admin (keerthivasan.220722@gmail.com). Please request access from the Voice Agent screen."
+        )
+
     try:
         drafts_dict = [d.model_dump() for d in req.existing_drafts] if req.existing_drafts else []
         result = await process_voice_narration(
@@ -127,9 +134,13 @@ async def voice_agent_narration(
             existing_drafts=drafts_dict,
             categories=req.categories,
             payment_methods=req.payment_methods,
-            currency=req.currency
+            currency=req.currency,
+            custom_gemini_key=req.gemini_api_key
         )
+        record_ai_usage(current_user["id"], current_user["email"], action="voice_narration", estimated_tokens=350)
         return VoiceAgentResponse(**result)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Voice AI Agent Error: {str(e)}")
 

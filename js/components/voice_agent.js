@@ -1,8 +1,10 @@
 // VOICE AI AGENT MODULE ("Agentic MyMoney")
+// Features: Real-time Voice Recognition, Gemini Extraction, AI Access Approval & Token Monitoring
 
 let voiceRecognition = null;
 let isRecording = false;
 let currentDraftExpenses = [];
+let userAIStatus = null;
 
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -49,7 +51,6 @@ function initSpeechRecognition() {
 
 function updateMicUI(recording) {
   const micBtn = document.getElementById('voice-mic-btn');
-  const micIcon = document.getElementById('voice-mic-icon');
   const statusText = document.getElementById('voice-agent-status-text');
   const pulseRing = document.getElementById('voice-pulse-ring');
 
@@ -87,7 +88,7 @@ function toggleVoiceRecording() {
   }
 }
 
-function openVoiceAgentModal() {
+async function openVoiceAgentModal() {
   if (state.activeOwner) {
     alert("Voice Agent is disabled in shared read-only view.");
     return;
@@ -95,6 +96,15 @@ function openVoiceAgentModal() {
 
   const modal = document.getElementById('modal-voice-agent');
   if (modal) modal.classList.remove('hidden');
+
+  // Pre-fill saved Gemini key in input if present
+  const keyInput = document.getElementById('voice-gemini-key-input');
+  if (keyInput) {
+    keyInput.value = localStorage.getItem('gemini_api_key') || '';
+  }
+
+  // Check access permission
+  await checkAIAccessPermission();
 
   currentDraftExpenses = [];
   renderVoiceDraftCards();
@@ -111,6 +121,109 @@ function closeVoiceAgentModal() {
   }
   const modal = document.getElementById('modal-voice-agent');
   if (modal) modal.classList.add('hidden');
+}
+
+async function checkAIAccessPermission() {
+  const approvalSection = document.getElementById('voice-approval-banner');
+  const agentBody = document.getElementById('voice-agent-active-body');
+  
+  try {
+    const res = await fetch(`${API_BASE}/ai/access/status`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+
+    if (res.ok) {
+      userAIStatus = await res.json();
+      if (userAIStatus.can_use_ai || userAIStatus.is_admin) {
+        if (approvalSection) approvalSection.classList.add('hidden');
+        if (agentBody) agentBody.classList.remove('hidden');
+      } else {
+        if (approvalSection) approvalSection.classList.remove('hidden');
+        if (agentBody) agentBody.classList.add('hidden');
+        updateApprovalBannerUI(userAIStatus.status);
+      }
+    }
+  } catch (err) {
+    console.warn("Could not check AI permission:", err);
+  }
+}
+
+function updateApprovalBannerUI(status) {
+  const badge = document.getElementById('voice-approval-status-badge');
+  const reqBtn = document.getElementById('voice-request-access-btn');
+  const desc = document.getElementById('voice-approval-desc');
+
+  if (status === 'pending') {
+    if (badge) {
+      badge.innerText = 'Approval Pending';
+      badge.className = 'px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-full text-xs';
+    }
+    if (reqBtn) {
+      reqBtn.disabled = true;
+      reqBtn.innerText = 'Request Sent (Pending Admin Review)';
+      reqBtn.className = 'w-full py-2.5 bg-slate-800 text-slate-400 font-medium rounded-xl text-xs cursor-not-allowed';
+    }
+    if (desc) desc.innerText = 'Your request has been submitted to the admin (keerthivasan.220722@gmail.com). You will get access once approved!';
+  } else if (status === 'revoked') {
+    if (badge) {
+      badge.innerText = 'Access Revoked';
+      badge.className = 'px-3 py-1 bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold rounded-full text-xs';
+    }
+    if (reqBtn) {
+      reqBtn.disabled = false;
+      reqBtn.innerText = 'Re-request Access';
+      reqBtn.className = 'w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs transition-colors';
+    }
+    if (desc) desc.innerText = 'Your AI access was revoked. Contact admin to re-enable.';
+  } else {
+    if (badge) {
+      badge.innerText = 'Approval Required';
+      badge.className = 'px-3 py-1 bg-violet-500/20 border border-violet-500/30 text-violet-400 font-bold rounded-full text-xs';
+    }
+    if (reqBtn) {
+      reqBtn.disabled = false;
+      reqBtn.innerText = 'Request AI Access from Admin';
+      reqBtn.className = 'w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs transition-colors shadow-md';
+    }
+    if (desc) desc.innerText = 'To manage token consumption and free credits, AI features require one-time approval from admin.';
+  }
+}
+
+async function requestAIAccessSubmit() {
+  const reqBtn = document.getElementById('voice-request-access-btn');
+  if (reqBtn) reqBtn.disabled = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/ai/access/request`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+
+    if (res.ok) {
+      showToast('AI Access requested! Admin will review your request.', 'success');
+      await checkAIAccessPermission();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to submit request', 'error');
+    }
+  } catch (e) {
+    showToast('Network error while requesting AI access', 'error');
+  } finally {
+    if (reqBtn) reqBtn.disabled = false;
+  }
+}
+
+function saveGeminiAPIKeyFromUI() {
+  const input = document.getElementById('voice-gemini-key-input');
+  if (!input) return;
+  const key = input.value.trim();
+  if (key) {
+    localStorage.setItem('gemini_api_key', key);
+    showToast('Gemini API Key saved locally for this browser!', 'success');
+  } else {
+    localStorage.removeItem('gemini_api_key');
+    showToast('Gemini API Key cleared.', 'info');
+  }
 }
 
 async function handleVoiceNarrationSubmit(e) {
@@ -130,12 +243,14 @@ async function handleVoiceNarrationSubmit(e) {
   if (chatReply) chatReply.innerHTML = `<span class="animate-pulse">Thinking & parsing your narration with Gemini AI...</span>`;
 
   try {
+    const customKey = localStorage.getItem('gemini_api_key') || '';
     const payload = {
       narration: narration,
       existing_drafts: currentDraftExpenses,
       categories: state.categories.map(c => c.name),
       payment_methods: state.paymentMethods.map(p => p.name),
-      currency: state.settings?.currency || '₹'
+      currency: state.settings?.currency || '₹',
+      gemini_api_key: customKey || null
     };
 
     const res = await fetch(`${API_BASE}/expenses/voice-agent`, {
@@ -291,5 +406,98 @@ async function confirmSaveAllVoiceDrafts() {
     showToast('Error saving voice expenses.', 'error');
   } finally {
     if (saveBtn) saveBtn.disabled = false;
+  }
+}
+
+// ================= ADMIN AI MONITORING & APPROVAL =================
+async function loadAdminAIPanel() {
+  const container = document.getElementById('admin-ai-panel');
+  if (!container) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/ai/admin/dashboard`, {
+      headers: { 'Authorization': `Bearer ${state.token}` }
+    });
+
+    if (!res.ok) return;
+
+    const data = await res.json();
+    const summary = data.summary;
+
+    const callsEl = document.getElementById('admin-ai-total-calls');
+    const tokensEl = document.getElementById('admin-ai-total-tokens');
+    const pendingEl = document.getElementById('admin-ai-pending-badge');
+    
+    if (callsEl) callsEl.innerText = summary.total_ai_requests;
+    if (tokensEl) tokensEl.innerText = summary.total_tokens_consumed.toLocaleString();
+    if (pendingEl) pendingEl.innerText = `${summary.pending_approvals} Pending`;
+
+    const tbody = document.getElementById('admin-ai-users-tbody');
+    if (tbody) {
+      tbody.innerHTML = '';
+      data.users.forEach(u => {
+        let statusBadge = '';
+        if (u.is_admin) {
+          statusBadge = `<span class="px-2 py-0.5 bg-violet-500/20 text-violet-300 border border-violet-500/30 rounded-full text-[10px] font-bold">Admin</span>`;
+        } else if (u.status === 'approved') {
+          statusBadge = `<span class="px-2 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full text-[10px] font-bold">Approved</span>`;
+        } else if (u.status === 'pending') {
+          statusBadge = `<span class="px-2 py-0.5 bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-full text-[10px] font-bold animate-pulse">Pending</span>`;
+        } else {
+          statusBadge = `<span class="px-2 py-0.5 bg-slate-800 text-slate-400 rounded-full text-[10px]">None</span>`;
+        }
+
+        let actionBtns = '';
+        if (!u.is_admin) {
+          if (u.status !== 'approved') {
+            actionBtns += `<button onclick="setAdminUserAIStatus('${u.user_id}', 'approved')" class="px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 font-semibold rounded-lg text-[10px] transition-all mr-1">Approve</button>`;
+          }
+          if (u.status === 'approved' || u.status === 'pending') {
+            actionBtns += `<button onclick="setAdminUserAIStatus('${u.user_id}', 'revoked')" class="px-2.5 py-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-semibold rounded-lg text-[10px] transition-all">Revoke</button>`;
+          }
+        } else {
+          actionBtns = `<span class="text-[10px] text-slate-500 italic">Full Access</span>`;
+        }
+
+        tbody.innerHTML += `
+          <tr class="hover:bg-slate-900/10">
+            <td class="py-3 pr-3 font-semibold text-slate-200 text-xs">${escapeHTML(u.name)}</td>
+            <td class="py-3 text-slate-400 font-mono text-xs">${escapeHTML(u.email)}</td>
+            <td class="py-3">${statusBadge}</td>
+            <td class="py-3 text-xs text-brand-400 font-mono">${u.total_requests} calls / ~${u.total_tokens.toLocaleString()} tok</td>
+            <td class="py-3 text-right">${actionBtns}</td>
+          </tr>
+        `;
+      });
+
+      if (data.users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="py-6 text-center text-slate-500 text-xs">No users registered yet</td></tr>`;
+      }
+    }
+  } catch (err) {
+    console.error('Error loading AI admin dashboard:', err);
+  }
+}
+
+async function setAdminUserAIStatus(userId, newStatus) {
+  try {
+    const res = await fetch(`${API_BASE}/ai/admin/users/${userId}/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${state.token}`
+      },
+      body: JSON.stringify({ status: newStatus })
+    });
+
+    if (res.ok) {
+      showToast(`User AI status updated to '${newStatus}'!`, 'success');
+      loadAdminAIPanel();
+    } else {
+      const err = await res.json();
+      showToast(err.detail || 'Failed to update user AI status', 'error');
+    }
+  } catch (e) {
+    showToast('Network error updating user AI status', 'error');
   }
 }

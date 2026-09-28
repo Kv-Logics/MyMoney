@@ -157,6 +157,7 @@ class VoiceAgentRequest(BaseModel):
     categories: Optional[List[str]] = []
     payment_methods: Optional[List[str]] = []
     currency: Optional[str] = "₹"
+    gemini_api_key: Optional[str] = None
 
 class VoiceAgentResponse(BaseModel):
     reply_message: str
