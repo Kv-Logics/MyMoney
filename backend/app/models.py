@@ -139,3 +139,28 @@ class ExtractedExpenseData(BaseModel):
 class ExtractionResponse(BaseModel):
     extracted: ExtractedExpenseData
     confidence: float
+
+# Voice Agent schemas
+class VoiceAgentExpenseItem(BaseModel):
+    title: str
+    amount: float
+    category: Optional[str] = "Other"
+    payment_method: Optional[str] = "Cash"
+    date: Optional[str] = None  # YYYY-MM-DD
+    time: Optional[str] = ""
+    location: Optional[str] = ""
+    description: Optional[str] = ""
+
+class VoiceAgentRequest(BaseModel):
+    narration: str
+    existing_drafts: Optional[List[VoiceAgentExpenseItem]] = []
+    categories: Optional[List[str]] = []
+    payment_methods: Optional[List[str]] = []
+    currency: Optional[str] = "₹"
+
+class VoiceAgentResponse(BaseModel):
+    reply_message: str
+    extracted_expenses: List[VoiceAgentExpenseItem]
+    confidence: float = 0.95
+    requires_clarification: bool = False
+

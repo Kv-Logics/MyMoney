@@ -381,6 +381,12 @@
             </div>
           </div>
 
+          <!-- Voice AI Agent Button -->
+          <button id="header-voice-agent-btn" onclick="openVoiceAgentModal()" class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-500 hover:to-indigo-500 active:scale-[0.97] transition-all text-white font-medium rounded-xl text-xs shadow-md shadow-violet-500/20 border border-violet-400/30">
+            <i data-lucide="mic" class="w-4 h-4 sm:w-3.5 sm:h-3.5 text-violet-200"></i>
+            <span class="hidden sm:inline font-bold">Voice AI Agent</span>
+          </button>
+
           <!-- Add Expense Button -->
           <button id="header-add-expense-btn" onclick="openExpenseModal()" class="flex items-center gap-1.5 px-3 py-2 sm:px-4 sm:py-2 bg-brand-500 hover:bg-brand-600 active:scale-[0.97] transition-all text-white font-medium rounded-xl text-xs shadow-md shadow-brand-500/10">
             <i data-lucide="plus-circle" class="w-4 h-4 sm:w-3.5 sm:h-3.5"></i>
@@ -1254,10 +1260,85 @@
     </div>
   </div>
 
+  <!-- ================= VOICE AI AGENT MODAL ================= -->
+  <div id="modal-voice-agent" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center z-50 p-4 overflow-y-auto">
+    <div class="w-full max-w-xl glass border border-violet-500/30 rounded-3xl p-6 shadow-2xl relative bg-slate-950/90 max-h-[90vh] flex flex-col">
+      <!-- Header -->
+      <div class="flex items-center justify-between pb-4 border-b border-slate-800/80 shrink-0">
+        <div class="flex items-center gap-3">
+          <div class="p-2.5 bg-gradient-to-tr from-violet-600 to-indigo-600 rounded-2xl text-white shadow-lg shadow-violet-500/20">
+            <i data-lucide="bot" class="w-6 h-6"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-extrabold text-white flex items-center gap-2">
+              Agentic MyMoney <span class="text-[10px] px-2 py-0.5 bg-violet-500/20 border border-violet-500/30 text-violet-300 font-semibold rounded-full uppercase tracking-wider">Voice AI</span>
+            </h3>
+            <p id="voice-agent-status-text" class="text-xs text-slate-400">Click mic or speak naturally to record expenses</p>
+          </div>
+        </div>
+        <button onclick="closeVoiceAgentModal()" class="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl transition-all">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Center Voice Recording Control -->
+      <div class="py-6 flex flex-col items-center justify-center shrink-0 border-b border-slate-800/60 relative">
+        <div id="voice-pulse-ring" class="hidden absolute w-28 h-28 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none"></div>
+        <button id="voice-mic-btn" type="button" onclick="toggleVoiceRecording()" class="w-20 h-20 rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-xl flex items-center justify-center transition-all transform active:scale-95 group relative z-10">
+          <i data-lucide="mic" id="voice-mic-icon" class="w-8 h-8 transition-transform group-hover:scale-110"></i>
+        </button>
+        <span class="text-[11px] text-slate-400 mt-3 font-medium">Tap to Speak • Powered by Gemini AI</span>
+      </div>
+
+      <!-- Chat input & response -->
+      <div class="p-4 bg-slate-900/40 rounded-2xl border border-slate-800/80 my-4 shrink-0 space-y-3">
+        <div id="voice-agent-chat-reply" class="text-xs text-violet-200 leading-relaxed font-medium bg-violet-950/30 border border-violet-500/20 p-3 rounded-xl">
+          Hi! I am your AI Voice Expense Agent. Tell me what you spent today (e.g. 'I spent 450 at Reliance Smart with UPI, and 180 for lunch cash').
+        </div>
+
+        <form onsubmit="handleVoiceNarrationSubmit(event)" class="flex gap-2">
+          <input type="text" id="voice-input-text" placeholder="Or type your narration here..." class="flex-1 px-4 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-violet-500 text-xs text-white" />
+          <button id="voice-send-btn" type="submit" class="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md">
+            <span>Analyze</span>
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- Draft Cards Section -->
+      <div class="flex-1 overflow-y-auto space-y-3 min-h-[150px] pr-1">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Extracted Expense Drafts</span>
+          <span class="text-[10px] text-slate-500">Review & Edit before saving</span>
+        </div>
+
+        <div id="voice-drafts-empty" class="text-center py-8 text-xs text-slate-500 border border-dashed border-slate-800 rounded-2xl">
+          No expenses extracted yet. Speak or type above to analyze!
+        </div>
+
+        <div id="voice-drafts-container" class="space-y-3">
+          <!-- Draft expense items render dynamically -->
+        </div>
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="pt-4 border-t border-slate-800/80 flex items-center justify-between shrink-0 mt-3">
+        <button onclick="closeVoiceAgentModal()" class="px-4 py-2 text-xs text-slate-400 hover:text-white">
+          Cancel
+        </button>
+        <button id="voice-save-all-btn" onclick="confirmSaveAllVoiceDrafts()" class="hidden px-6 py-2.5 bg-brand-500 hover:bg-brand-600 active:scale-[0.98] text-white font-bold text-xs rounded-xl shadow-lg shadow-brand-500/20 flex items-center gap-2 transition-all">
+          <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+          <span>Save All to MyMoney</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modular Scripts -->
   <script src="js/app.js"></script>
   <script src="js/api.js"></script>
   <script src="js/components/expenses.js"></script>
+  <script src="js/components/voice_agent.js"></script>
   <script src="js/components/budgets.js"></script>
   <script src="js/components/savings.js"></script>
   <script src="js/components/reports.js"></script>

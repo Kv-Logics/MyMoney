@@ -4,9 +4,9 @@ from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from bson import ObjectId
 from app.database import get_collection
 from app.auth import get_current_user
-from app.models import ExpenseCreate, ExpenseUpdate, ExtractionResponse
+from app.models import ExpenseCreate, ExpenseUpdate, ExtractionResponse, VoiceAgentRequest, VoiceAgentResponse
 from app.utils import serialize_doc, serialize_docs, log_audit_action, verify_sharing_access
-from app.services.llm_extractor import call_gemini_vision
+from app.services.llm_extractor import call_gemini_vision, process_voice_narration
 
 router = APIRouter(prefix="/api/expenses", tags=["Expenses"])
 
@@ -110,6 +110,28 @@ async def extract_from_bill(
         extracted=extracted_json,
         confidence=0.95
     )
+
+@router.post("/voice-agent", response_model=VoiceAgentResponse)
+async def voice_agent_narration(
+    req: VoiceAgentRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Accepts natural spoken narration or text chat messages from user,
+    parses items, maps categories/methods, and returns structured drafts & AI reply.
+    """
+    try:
+        drafts_dict = [d.model_dump() for d in req.existing_drafts] if req.existing_drafts else []
+        result = await process_voice_narration(
+            narration=req.narration,
+            existing_drafts=drafts_dict,
+            categories=req.categories,
+            payment_methods=req.payment_methods,
+            currency=req.currency
+        )
+        return VoiceAgentResponse(**result)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Voice AI Agent Error: {str(e)}")
 
 @router.post("")
 def create_expense(expense: ExpenseCreate, current_user: dict = Depends(get_current_user)):
