@@ -1368,13 +1368,31 @@
           <button type="button" onclick="saveGeminiAPIKeyFromUI()" class="px-3 py-1 bg-violet-600/30 hover:bg-violet-600/50 text-violet-200 border border-violet-500/30 text-[10px] font-bold rounded-lg transition-all shrink-0">Save Key</button>
         </div>
 
-        <!-- Center Voice Recording Control -->
+        <!-- Center Voice Recording Control with Manual Start/Stop -->
         <div class="py-4 flex flex-col items-center justify-center shrink-0 border-b border-slate-800/60 relative mt-2">
           <div id="voice-pulse-ring" class="hidden absolute w-28 h-28 rounded-full border-2 border-rose-500/40 animate-ping pointer-events-none"></div>
-          <button id="voice-mic-btn" type="button" onclick="toggleVoiceRecording()" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-xl flex items-center justify-center transition-all transform active:scale-95 group relative z-10">
+          <button id="voice-mic-btn" type="button" onclick="toggleVoiceRecording()" class="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-brand-500 hover:bg-brand-600 text-white shadow-xl flex items-center justify-center transition-all transform active:scale-95 group relative z-10" title="Tap to Start / Stop Recording">
             <i data-lucide="mic" id="voice-mic-icon" class="w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-110"></i>
           </button>
-          <span class="text-[11px] text-slate-400 mt-2 font-medium">Tap to Speak • Powered by Gemini AI</span>
+          
+          <!-- Dynamic Recording State Label -->
+          <div id="voice-mic-status-label" class="mt-2.5 flex items-center gap-1.5 text-xs text-slate-300 font-medium">
+            <span id="voice-mic-dot" class="w-2 h-2 rounded-full bg-brand-400"></span>
+            <span id="voice-mic-state-text">Ready to Record • Click Start or Mic</span>
+          </div>
+
+          <!-- Explicit Start & Stop Buttons -->
+          <div class="flex items-center gap-2 mt-2">
+            <button id="voice-start-btn" type="button" onclick="startVoiceRecording()" class="px-3.5 py-1.5 bg-brand-500/20 hover:bg-brand-500/30 text-brand-300 border border-brand-500/40 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 shadow-sm active:scale-95">
+              <i data-lucide="play" class="w-3.5 h-3.5 fill-brand-300"></i>
+              <span>Start Recording</span>
+            </button>
+            <button id="voice-stop-btn" type="button" onclick="stopVoiceRecording()" class="px-3.5 py-1.5 bg-rose-500/20 hover:bg-rose-500/30 text-rose-300 border border-rose-500/30 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 opacity-50 cursor-not-allowed shadow-sm active:scale-95" disabled>
+              <i data-lucide="square" class="w-3.5 h-3.5 fill-rose-300"></i>
+              <span>Stop Recording</span>
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-500 mt-1.5 font-medium">You decide when to start & stop speaking</span>
         </div>
 
         <!-- Chat input & response -->
@@ -1383,9 +1401,14 @@
             Hi! I am your AI Voice Expense Agent. Tell me what you spent today (e.g. 'I spent 450 at Reliance Smart with UPI, and 180 for lunch cash').
           </div>
 
-          <form onsubmit="handleVoiceNarrationSubmit(event)" class="flex gap-2">
-            <input type="text" id="voice-input-text" placeholder="Or type your narration here..." class="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-violet-500 text-xs text-white" />
-            <button id="voice-send-btn" type="submit" class="px-3.5 py-2 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shrink-0">
+          <form onsubmit="handleVoiceNarrationSubmit(event)" class="flex gap-2 items-center">
+            <div class="relative flex-1">
+              <input type="text" id="voice-input-text" oninput="updateVoiceClearBtn()" placeholder="Speak or type narration / edit prompts here..." class="w-full pl-3 pr-8 py-2.5 bg-slate-950 border border-slate-800 rounded-xl focus:outline-none focus:border-violet-500 text-xs text-white placeholder-slate-500" />
+              <button type="button" onclick="clearVoiceInputText()" id="voice-clear-input-btn" title="Clear text" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 p-1 rounded-full transition-colors">
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+            <button id="voice-send-btn" type="submit" class="px-4 py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-semibold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md shrink-0 active:scale-95">
               <span>Analyze</span>
               <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
             </button>

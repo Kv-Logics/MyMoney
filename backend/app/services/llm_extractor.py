@@ -105,12 +105,26 @@ User Narration / Spoken Input:
 "{narration}"
 
 INSTRUCTIONS:
-1. Analyze the spoken narration carefully. The user may be stating multiple new expenses (e.g. "I spent 400 on lunch using UPI and 50 for auto cash"), OR correcting existing draft expenses.
-2. Extract all distinct expense items with title, amount (float), category, payment_method, date (YYYY-MM-DD), time (HH:MM or empty), location (store/place name or empty), and description.
-3. Map category to the best match from Available Categories.
-4. Map payment_method to the best match from Available Payment Methods.
-5. Generate a helpful, concise, conversational reply_message in friendly natural language summarizing what was detected or modified.
-6. Return ONLY valid raw JSON with this exact structure:
+1. Analyze the spoken narration carefully in relation to "Current Existing Expense Drafts":
+   - IF THE USER IS EDITING OR CORRECTING PREVIOUS DRAFTS (e.g. "Change amount to 800", "Actually it was 500", "Make payment method Cash", "Change category to Dinner", "Change store to DMart"):
+     Apply those requested modifications directly to the corresponding item in Current Existing Expense Drafts and return the updated draft list.
+   - IF THE USER EDITED OR REVISED THE PROMPT TEXT (e.g. changed "1000" to "800" or changed a store name in the text):
+     Parse the revised narration and return the accurate updated expense list.
+   - IF THE USER IS ADDING NEW EXPENSES (e.g. "Also 50 for chai"):
+     Keep the existing drafts and append the new expense item.
+   - IF THE USER SAYS TO DELETE/REMOVE AN ITEM (e.g. "Remove the first item" or "Delete biryani"):
+     Remove that item from the draft list.
+2. Extract all distinct expense items with:
+   - "title": Clean concise name of item/service (e.g. "Biryani", "Dosa")
+   - "amount": float (e.g. 800.0)
+   - "category": mapped to best match from Available Categories
+   - "payment_method": mapped to best match from Available Payment Methods
+   - "date": YYYY-MM-DD
+   - "time": HH:MM or ""
+   - "location": store/merchant/platform name or ""
+   - "description": brief summary of narration
+3. Generate a friendly, conversational reply_message in natural language explaining what was extracted, updated, or corrected.
+4. Return ONLY valid raw JSON with this exact structure:
 {{
   "reply_message": "Friendly response string explaining extracted/modified expenses",
   "extracted_expenses": [

@@ -1,10 +1,11 @@
 // VOICE AI AGENT MODULE ("Agentic MyMoney")
-// Features: Real-time Voice Recognition, Gemini Extraction, AI Access Approval & Token Monitoring
+// Features: Real-time Continuous Voice Recognition, Manual Start/Stop Control, Gemini Extraction, AI Access Approval & Token Monitoring
 
 let voiceRecognition = null;
-let isRecording = false;
+let isUserRecording = false;
 let currentDraftExpenses = [];
 let userAIStatus = null;
+let recordedTranscript = '';
 
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -14,60 +15,67 @@ function initSpeechRecognition() {
   }
 
   const recognition = new SpeechRecognition();
-  recognition.continuous = false;
+  // Continuous recognition so the browser does NOT stop when user pauses to think
+  recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = 'en-US';
 
   recognition.onstart = () => {
-    isRecording = true;
+    isUserRecording = true;
     updateMicUI(true);
   };
 
   recognition.onresult = (event) => {
-    let transcript = '';
-    for (let i = event.resultIndex; i < event.results.length; i++) {
-      transcript += event.results[i][0].transcript;
+    let interim = '';
+    let finalStr = '';
+    for (let i = 0; i < event.results.length; ++i) {
+      if (event.results[i].isFinal) {
+        finalStr += event.results[i][0].transcript + ' ';
+      } else {
+        interim += event.results[i][0].transcript;
+      }
     }
+    const fullText = (finalStr + interim).trim();
     const inputEl = document.getElementById('voice-input-text');
-    if (inputEl) inputEl.value = transcript;
+    if (inputEl && fullText) {
+      inputEl.value = fullText;
+      updateVoiceClearBtn();
+    }
   };
 
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
-    isRecording = false;
-    updateMicUI(false);
-    if (typeof showToast === 'function') {
+    if (event.error === 'no-speech') {
+      // Don't kill recording session on brief silence; user decides when to stop
+      if (isUserRecording) return;
+    }
+    if (typeof showToast === 'function' && event.error !== 'no-speech') {
       showToast(`Voice capture error: ${event.error}`, 'error');
     }
+    isUserRecording = false;
+    updateMicUI(false);
   };
 
   recognition.onend = () => {
-    isRecording = false;
+    // If the browser terminated recognition while user is still in recording mode,
+    // automatically restart it so recording continues until user explicitly stops!
+    if (isUserRecording) {
+      try {
+        recognition.start();
+        return;
+      } catch (e) {
+        console.warn("Auto-restart recognition notice:", e);
+      }
+    }
+    isUserRecording = false;
     updateMicUI(false);
   };
 
   return recognition;
 }
 
-function updateMicUI(recording) {
-  const micBtn = document.getElementById('voice-mic-btn');
-  const statusText = document.getElementById('voice-agent-status-text');
-  const pulseRing = document.getElementById('voice-pulse-ring');
-
-  if (recording) {
-    if (micBtn) micBtn.classList.add('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
-    if (micBtn) micBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
-    if (statusText) statusText.innerText = 'Listening... Speak your expenses naturally';
-    if (pulseRing) pulseRing.classList.remove('hidden');
-  } else {
-    if (micBtn) micBtn.classList.remove('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
-    if (micBtn) micBtn.classList.add('bg-brand-500', 'hover:bg-brand-600');
-    if (statusText) statusText.innerText = 'Click mic or type to speak to Agent';
-    if (pulseRing) pulseRing.classList.add('hidden');
-  }
-}
-
-function toggleVoiceRecording() {
+function startVoiceRecording() {
+  if (isUserRecording) return;
   if (!voiceRecognition) {
     voiceRecognition = initSpeechRecognition();
   }
@@ -77,14 +85,111 @@ function toggleVoiceRecording() {
     return;
   }
 
-  if (isRecording) {
-    voiceRecognition.stop();
-  } else {
+  isUserRecording = true;
+  try {
+    voiceRecognition.start();
+  } catch (e) {
+    console.warn("Recognition already active or starting:", e);
+  }
+  updateMicUI(true);
+}
+
+function stopVoiceRecording() {
+  if (!isUserRecording) return;
+  isUserRecording = false;
+  if (voiceRecognition) {
     try {
-      voiceRecognition.start();
+      voiceRecognition.stop();
     } catch (e) {
-      console.error(e);
+      console.warn("Error stopping voice recognition:", e);
     }
+  }
+  updateMicUI(false);
+  if (typeof showToast === 'function') {
+    showToast("Recording stopped. Click 'Analyze' to parse expenses.", "info");
+  }
+}
+
+function toggleVoiceRecording() {
+  if (isUserRecording) {
+    stopVoiceRecording();
+  } else {
+    startVoiceRecording();
+  }
+}
+
+function updateMicUI(recording) {
+  const micBtn = document.getElementById('voice-mic-btn');
+  const micIcon = document.getElementById('voice-mic-icon');
+  const pulseRing = document.getElementById('voice-pulse-ring');
+  const dot = document.getElementById('voice-mic-dot');
+  const stateText = document.getElementById('voice-mic-state-text');
+  const startBtn = document.getElementById('voice-start-btn');
+  const stopBtn = document.getElementById('voice-stop-btn');
+  const statusHeader = document.getElementById('voice-agent-status-text');
+
+  if (recording) {
+    if (micBtn) {
+      micBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
+      micBtn.classList.add('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
+    }
+    if (micIcon) {
+      micIcon.setAttribute('data-lucide', 'square');
+      micIcon.className = 'w-6 h-6 fill-white text-white';
+    }
+    if (pulseRing) pulseRing.classList.remove('hidden');
+    if (dot) {
+      dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping';
+    }
+    if (stateText) {
+      stateText.innerText = 'Recording Active — Click Stop When Finished';
+      stateText.className = 'text-rose-400 font-bold';
+    }
+    if (startBtn) {
+      startBtn.disabled = true;
+      startBtn.classList.add('opacity-40', 'cursor-not-allowed');
+    }
+    if (stopBtn) {
+      stopBtn.disabled = false;
+      stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      stopBtn.classList.add('ring-2', 'ring-rose-500/50', 'shadow-md', 'shadow-rose-500/20');
+    }
+    if (statusHeader) {
+      statusHeader.innerText = 'Listening continuously... Speak at your own pace, then click Stop';
+    }
+  } else {
+    if (micBtn) {
+      micBtn.classList.remove('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
+      micBtn.classList.add('bg-brand-500', 'hover:bg-brand-600');
+    }
+    if (micIcon) {
+      micIcon.setAttribute('data-lucide', 'mic');
+      micIcon.className = 'w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-110';
+    }
+    if (pulseRing) pulseRing.classList.add('hidden');
+    if (dot) {
+      dot.className = 'w-2 h-2 rounded-full bg-brand-400';
+    }
+    if (stateText) {
+      stateText.innerText = 'Ready to Record • Click Start or Mic';
+      stateText.className = 'text-slate-300 font-medium';
+    }
+    if (startBtn) {
+      startBtn.disabled = false;
+      startBtn.classList.remove('opacity-40', 'cursor-not-allowed');
+    }
+    if (stopBtn) {
+      stopBtn.disabled = true;
+      stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      stopBtn.classList.remove('ring-2', 'ring-rose-500/50', 'shadow-md', 'shadow-rose-500/20');
+    }
+    if (statusHeader) {
+      statusHeader.innerText = 'Click Start or Mic to record expenses';
+    }
+  }
+
+  if (window.lucide) {
+    lucide.createIcons();
   }
 }
 
@@ -108,6 +213,7 @@ async function openVoiceAgentModal() {
 
   currentDraftExpenses = [];
   renderVoiceDraftCards();
+  updateMicUI(false);
   
   const statusMsg = document.getElementById('voice-agent-chat-reply');
   if (statusMsg) {
@@ -116,8 +222,8 @@ async function openVoiceAgentModal() {
 }
 
 function closeVoiceAgentModal() {
-  if (isRecording && voiceRecognition) {
-    voiceRecognition.stop();
+  if (isUserRecording) {
+    stopVoiceRecording();
   }
   const modal = document.getElementById('modal-voice-agent');
   if (modal) modal.classList.add('hidden');
@@ -279,7 +385,8 @@ async function handleVoiceNarrationSubmit(e) {
       currentDraftExpenses = data.extracted_expenses || [];
       if (chatReply) chatReply.innerText = data.reply_message || "Extracted expenses successfully.";
       renderVoiceDraftCards();
-      if (inputEl) inputEl.value = '';
+      // Keep prompt text in the input box so the user can continue editing or correcting their prompt directly!
+      updateVoiceClearBtn();
     } else {
       const err = await res.json();
       let errorDetail = 'Failed to process narration';
@@ -303,6 +410,27 @@ async function handleVoiceNarrationSubmit(e) {
   }
 }
 
+function updateVoiceClearBtn() {
+  const inputEl = document.getElementById('voice-input-text');
+  const clearBtn = document.getElementById('voice-clear-input-btn');
+  if (clearBtn) {
+    if (inputEl && inputEl.value.trim().length > 0) {
+      clearBtn.classList.remove('hidden');
+    } else {
+      clearBtn.classList.add('hidden');
+    }
+  }
+}
+
+function clearVoiceInputText() {
+  const inputEl = document.getElementById('voice-input-text');
+  if (inputEl) {
+    inputEl.value = '';
+    inputEl.focus();
+  }
+  updateVoiceClearBtn();
+}
+
 function renderVoiceDraftCards() {
   const container = document.getElementById('voice-drafts-container');
   const saveAllBtn = document.getElementById('voice-save-all-btn');
@@ -320,24 +448,34 @@ function renderVoiceDraftCards() {
   if (emptyState) emptyState.classList.add('hidden');
   if (saveAllBtn) saveAllBtn.classList.remove('hidden');
 
-  const categories = state.categories.map(c => c.name);
+  const categories = (state.categories || []).map(c => typeof c === 'string' ? c : (c && c.name ? c.name : '')).filter(Boolean);
+  if (!categories.includes('Food')) categories.unshift('Food');
   if (!categories.includes('Other')) categories.push('Other');
 
-  const pmethods = state.paymentMethods.map(p => p.name);
+  const pmethods = (state.paymentMethods || []).map(p => typeof p === 'string' ? p : (p && p.name ? p.name : '')).filter(Boolean);
+  if (!pmethods.includes('UPI')) pmethods.unshift('UPI');
   if (!pmethods.includes('Cash')) pmethods.push('Cash');
 
   const curr = state.settings?.currency || '₹';
 
-  container.innerHTML = currentDraftExpenses.map((item, idx) => `
+  container.innerHTML = currentDraftExpenses.map((item, idx) => {
+    // Ensure the item's category and payment method are available in dropdown
+    const itemCats = [...categories];
+    if (item.category && !itemCats.includes(item.category)) itemCats.unshift(item.category);
+
+    const itemPMs = [...pmethods];
+    if (item.payment_method && !itemPMs.includes(item.payment_method)) itemPMs.unshift(item.payment_method);
+
+    return `
     <div class="glass border border-brand-500/30 rounded-xl p-4 space-y-3 relative group bg-slate-900/60 transition-all hover:border-brand-500/60">
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 flex-1 min-w-0">
           <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">${idx + 1}</span>
-          <input type="text" value="${escapeHTML(item.title)}" onchange="updateVoiceDraft(${idx}, 'title', this.value)" placeholder="Expense title" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-semibold text-white focus:border-brand-500 focus:outline-none" />
+          <input type="text" value="${escapeHTML(item.title)}" oninput="updateVoiceDraft(${idx}, 'title', this.value)" placeholder="Expense title" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-semibold text-white focus:border-brand-500 focus:outline-none" />
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <span class="text-xs text-slate-400 font-bold">${curr}</span>
-          <input type="number" step="0.01" value="${item.amount}" onchange="updateVoiceDraft(${idx}, 'amount', parseFloat(this.value))" placeholder="Amount" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-bold text-brand-400 focus:border-brand-500 focus:outline-none text-right" />
+          <input type="number" step="0.01" value="${item.amount}" oninput="updateVoiceDraft(${idx}, 'amount', parseFloat(this.value) || 0)" placeholder="Amount" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-bold text-brand-400 focus:border-brand-500 focus:outline-none text-right" />
         </div>
       </div>
 
@@ -345,26 +483,26 @@ function renderVoiceDraftCards() {
         <div>
           <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Category</label>
           <select onchange="updateVoiceDraft(${idx}, 'category', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:border-brand-500 focus:outline-none">
-            ${categories.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
+            ${itemCats.map(c => `<option value="${c}" ${c === item.category ? 'selected' : ''}>${c}</option>`).join('')}
           </select>
         </div>
         <div>
           <label class="block text-[10px] text-slate-400 font-semibold uppercase mb-1">Payment Method</label>
           <select onchange="updateVoiceDraft(${idx}, 'payment_method', this.value)" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2 py-1 text-xs text-slate-200 focus:border-brand-500 focus:outline-none">
-            ${pmethods.map(p => `<option value="${p}" ${p === item.payment_method ? 'selected' : ''}>${p}</option>`).join('')}
+            ${itemPMs.map(p => `<option value="${p}" ${p === item.payment_method ? 'selected' : ''}>${p}</option>`).join('')}
           </select>
         </div>
       </div>
 
       <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60">
         <span class="text-[11px] text-slate-400">Date: ${item.date || new Date().toISOString().split('T')[0]}</span>
-        <button onclick="removeVoiceDraft(${idx})" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 py-0.5 px-2 rounded hover:bg-rose-500/10">
+        <button onclick="removeVoiceDraft(${idx})" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 py-0.5 px-2 rounded hover:bg-rose-500/10 transition-colors">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           <span>Remove</span>
         </button>
       </div>
     </div>
-  `).join('');
+  `}).join('');
 
   if (window.lucide) window.lucide.createIcons();
 }
