@@ -1,11 +1,25 @@
 // VOICE AI AGENT MODULE ("Agentic MyMoney")
-// Features: Real-time Continuous Voice Recognition, Manual Start/Stop Control, Gemini Extraction, AI Access Approval & Token Monitoring
+// Features: Real-time Continuous Voice Recognition, Manual Start/Stop Control, Multi-turn Chat Memory, Meal/Timing Extraction, AI Access Approval & Token Monitoring
 
 let voiceRecognition = null;
 let isUserRecording = false;
 let currentDraftExpenses = [];
 let userAIStatus = null;
 let recordedTranscript = '';
+
+// Persistent conversation history across turns
+let conversationHistory = [
+  {
+    role: 'assistant',
+    content: "Hi! I am your Voice AI Agent. Speak naturally or type instructions (e.g. 'I ate dosa in the morning for 150 online, and biryani at night for 350 cash'). You can correct me anytime (e.g. 'change amount to 400')!",
+    time: formatTimeNow()
+  }
+];
+
+function formatTimeNow() {
+  const d = new Date();
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
 
 function initSpeechRecognition() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -15,7 +29,7 @@ function initSpeechRecognition() {
   }
 
   const recognition = new SpeechRecognition();
-  // Continuous recognition so the browser does NOT stop when user pauses to think
+  // Continuous recognition so browser does NOT terminate when user pauses to think
   recognition.continuous = true;
   recognition.interimResults = true;
   recognition.lang = 'en-US';
@@ -46,7 +60,7 @@ function initSpeechRecognition() {
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
     if (event.error === 'no-speech') {
-      // Don't kill recording session on brief silence; user decides when to stop
+      // Don't kill recording session on brief silence; user explicitly controls start/stop
       if (isUserRecording) return;
     }
     if (typeof showToast === 'function' && event.error !== 'no-speech') {
@@ -57,8 +71,8 @@ function initSpeechRecognition() {
   };
 
   recognition.onend = () => {
-    // If the browser terminated recognition while user is still in recording mode,
-    // automatically restart it so recording continues until user explicitly stops!
+    // If the browser ended recognition while user is still in recording mode,
+    // automatically restart it so recording continues until user clicks Stop!
     if (isUserRecording) {
       try {
         recognition.start();
@@ -81,7 +95,7 @@ function startVoiceRecording() {
   }
 
   if (!voiceRecognition) {
-    alert("Speech recognition is not supported in your browser. Please type your narration below.");
+    alert("Speech recognition is not supported in your browser. Please type your narration in the chat input.");
     return;
   }
 
@@ -106,7 +120,7 @@ function stopVoiceRecording() {
   }
   updateMicUI(false);
   if (typeof showToast === 'function') {
-    showToast("Recording stopped. Click 'Analyze' to parse expenses.", "info");
+    showToast("Recording stopped. Click 'Send' to parse expenses.", "info");
   }
 }
 
@@ -119,73 +133,86 @@ function toggleVoiceRecording() {
 }
 
 function updateMicUI(recording) {
-  const micBtn = document.getElementById('voice-mic-btn');
-  const micIcon = document.getElementById('voice-mic-icon');
-  const pulseRing = document.getElementById('voice-pulse-ring');
-  const dot = document.getElementById('voice-mic-dot');
-  const stateText = document.getElementById('voice-mic-state-text');
-  const startBtn = document.getElementById('voice-start-btn');
-  const stopBtn = document.getElementById('voice-stop-btn');
-  const statusHeader = document.getElementById('voice-agent-status-text');
+  // Tab elements
+  const tabMicBtn = document.getElementById('voice-tab-mic-btn');
+  const tabMicIcon = document.getElementById('voice-tab-mic-icon');
+  const tabPulseRing = document.getElementById('voice-tab-pulse-ring');
+  const tabDot = document.getElementById('voice-tab-dot');
+  const tabStateText = document.getElementById('voice-tab-state-text');
+  const tabStartBtn = document.getElementById('voice-tab-start-btn');
+  const tabStopBtn = document.getElementById('voice-tab-stop-btn');
+
+  // Modal elements (backward compatibility)
+  const modalMicBtn = document.getElementById('voice-mic-btn');
+  const modalMicIcon = document.getElementById('voice-mic-icon');
+  const modalPulseRing = document.getElementById('voice-pulse-ring');
+  const modalDot = document.getElementById('voice-mic-dot');
+  const modalStateText = document.getElementById('voice-mic-state-text');
+  const modalStartBtn = document.getElementById('voice-start-btn');
+  const modalStopBtn = document.getElementById('voice-stop-btn');
 
   if (recording) {
-    if (micBtn) {
-      micBtn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
-      micBtn.classList.add('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
-    }
-    if (micIcon) {
-      micIcon.setAttribute('data-lucide', 'square');
-      micIcon.className = 'w-6 h-6 fill-white text-white';
-    }
-    if (pulseRing) pulseRing.classList.remove('hidden');
-    if (dot) {
-      dot.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping';
-    }
-    if (stateText) {
-      stateText.innerText = 'Recording Active — Click Stop When Finished';
-      stateText.className = 'text-rose-400 font-bold';
-    }
-    if (startBtn) {
-      startBtn.disabled = true;
-      startBtn.classList.add('opacity-40', 'cursor-not-allowed');
-    }
-    if (stopBtn) {
-      stopBtn.disabled = false;
-      stopBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-      stopBtn.classList.add('ring-2', 'ring-rose-500/50', 'shadow-md', 'shadow-rose-500/20');
-    }
-    if (statusHeader) {
-      statusHeader.innerText = 'Listening continuously... Speak at your own pace, then click Stop';
-    }
+    [tabMicBtn, modalMicBtn].forEach(btn => {
+      if (!btn) return;
+      btn.classList.remove('bg-brand-500', 'hover:bg-brand-600');
+      btn.classList.add('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
+    });
+    [tabMicIcon, modalMicIcon].forEach(icon => {
+      if (!icon) return;
+      icon.setAttribute('data-lucide', 'square');
+      icon.className = 'w-7 h-7 fill-white text-white';
+    });
+    [tabPulseRing, modalPulseRing].forEach(el => el && el.classList.remove('hidden'));
+    [tabDot, modalDot].forEach(el => {
+      if (el) el.className = 'w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping';
+    });
+    [tabStateText, modalStateText].forEach(el => {
+      if (!el) return;
+      el.innerText = 'Recording Active — Speak Continuously (Click Stop to End)';
+      el.className = 'text-rose-400 font-bold';
+    });
+    [tabStartBtn, modalStartBtn].forEach(btn => {
+      if (!btn) return;
+      btn.disabled = true;
+      btn.classList.add('opacity-40', 'cursor-not-allowed');
+    });
+    [tabStopBtn, modalStopBtn].forEach(btn => {
+      if (!btn) return;
+      btn.disabled = false;
+      btn.classList.remove('opacity-50', 'cursor-not-allowed');
+      btn.classList.add('ring-2', 'ring-rose-500/50', 'shadow-md', 'shadow-rose-500/20');
+    });
   } else {
-    if (micBtn) {
-      micBtn.classList.remove('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
-      micBtn.classList.add('bg-brand-500', 'hover:bg-brand-600');
-    }
-    if (micIcon) {
-      micIcon.setAttribute('data-lucide', 'mic');
-      micIcon.className = 'w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-110';
-    }
-    if (pulseRing) pulseRing.classList.add('hidden');
-    if (dot) {
-      dot.className = 'w-2 h-2 rounded-full bg-brand-400';
-    }
-    if (stateText) {
-      stateText.innerText = 'Ready to Record • Click Start or Mic';
-      stateText.className = 'text-slate-300 font-medium';
-    }
-    if (startBtn) {
-      startBtn.disabled = false;
-      startBtn.classList.remove('opacity-40', 'cursor-not-allowed');
-    }
-    if (stopBtn) {
-      stopBtn.disabled = true;
-      stopBtn.classList.add('opacity-50', 'cursor-not-allowed');
-      stopBtn.classList.remove('ring-2', 'ring-rose-500/50', 'shadow-md', 'shadow-rose-500/20');
-    }
-    if (statusHeader) {
-      statusHeader.innerText = 'Click Start or Mic to record expenses';
-    }
+    [tabMicBtn, modalMicBtn].forEach(btn => {
+      if (!btn) return;
+      btn.classList.remove('bg-rose-500', 'hover:bg-rose-600', 'ring-4', 'ring-rose-500/30', 'scale-105');
+      btn.classList.add('bg-brand-500', 'hover:bg-brand-600');
+    });
+    [tabMicIcon, modalMicIcon].forEach(icon => {
+      if (!icon) return;
+      icon.setAttribute('data-lucide', 'mic');
+      icon.className = 'w-7 h-7 sm:w-8 sm:h-8 transition-transform group-hover:scale-110';
+    });
+    [tabPulseRing, modalPulseRing].forEach(el => el && el.classList.add('hidden'));
+    [tabDot, modalDot].forEach(el => {
+      if (el) el.className = 'w-2 h-2 rounded-full bg-brand-400';
+    });
+    [tabStateText, modalStateText].forEach(el => {
+      if (!el) return;
+      el.innerText = 'Ready to Record • Click Start or Mic';
+      el.className = 'text-slate-300 font-medium';
+    });
+    [tabStartBtn, modalStartBtn].forEach(btn => {
+      if (!btn) return;
+      btn.disabled = false;
+      btn.classList.remove('opacity-40', 'cursor-not-allowed');
+    });
+    [tabStopBtn, modalStopBtn].forEach(btn => {
+      if (!btn) return;
+      btn.disabled = true;
+      btn.classList.add('opacity-50', 'cursor-not-allowed');
+      btn.classList.remove('ring-2', 'ring-rose-500/50', 'shadow-md', 'shadow-rose-500/20');
+    });
   }
 
   if (window.lucide) {
@@ -193,32 +220,141 @@ function updateMicUI(recording) {
   }
 }
 
+// ================= AI MODE TAB INITIALIZATION =================
+async function initVoiceAgentPage() {
+  if (state.activeOwner) {
+    showToast("Voice AI Agent is disabled in shared read-only view.", "info");
+    return;
+  }
+
+  // Pre-fill saved Gemini key in tab input if present
+  const tabKeyInput = document.getElementById('tab-gemini-key-input');
+  if (tabKeyInput) {
+    tabKeyInput.value = localStorage.getItem('gemini_api_key') || '';
+  }
+
+  // Check access permission
+  await checkAIAccessPermission();
+
+  // Render chat messages and current draft cards
+  renderChatMessages();
+  renderVoiceDraftCards();
+  updateMicUI(isUserRecording);
+  updateVoiceClearBtn();
+}
+
+function renderChatMessages() {
+  const container = document.getElementById('voice-chat-messages');
+  if (!container) return;
+
+  container.innerHTML = conversationHistory.map(msg => {
+    if (msg.role === 'user') {
+      return `
+        <div class="flex justify-end gap-2.5 items-end">
+          <div class="max-w-[85%] sm:max-w-[75%] space-y-1 text-right">
+            <div class="chat-bubble-user px-4 py-2.5 text-xs text-white leading-relaxed inline-block text-left break-words">
+              ${escapeHTML(msg.content)}
+            </div>
+            <div class="text-[10px] text-slate-500 pr-1">${msg.time || ''}</div>
+          </div>
+          <div class="w-7 h-7 rounded-xl bg-violet-600/30 border border-violet-500/40 text-violet-300 flex items-center justify-center shrink-0 text-xs font-bold mb-4">
+            <i data-lucide="user" class="w-3.5 h-3.5"></i>
+          </div>
+        </div>
+      `;
+    } else {
+      return `
+        <div class="flex justify-start gap-2.5 items-end">
+          <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md mb-4">
+            <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+          </div>
+          <div class="max-w-[85%] sm:max-w-[75%] space-y-1">
+            <div class="chat-bubble-ai px-4 py-2.5 text-xs leading-relaxed inline-block break-words">
+              ${escapeHTML(msg.content)}
+            </div>
+            <div class="text-[10px] text-slate-500 pl-1">${msg.time || ''}</div>
+          </div>
+        </div>
+      `;
+    }
+  }).join('');
+
+  if (window.lucide) lucide.createIcons();
+  container.scrollTop = container.scrollHeight;
+}
+
+function showAiThinkingIndicator() {
+  const container = document.getElementById('voice-chat-messages');
+  if (!container) return;
+  const existing = document.getElementById('voice-ai-thinking-bubble');
+  if (existing) return;
+
+  const bubble = document.createElement('div');
+  bubble.id = 'voice-ai-thinking-bubble';
+  bubble.className = 'flex justify-start gap-2.5 items-end animate-pulse';
+  bubble.innerHTML = `
+    <div class="w-7 h-7 rounded-xl bg-gradient-to-tr from-violet-600 to-indigo-600 text-white flex items-center justify-center shrink-0 shadow-md">
+      <i data-lucide="bot" class="w-3.5 h-3.5"></i>
+    </div>
+    <div class="chat-bubble-ai px-4 py-2 text-xs flex items-center gap-2 text-violet-300">
+      <span class="inline-block w-2 h-2 rounded-full bg-violet-400 animate-ping"></span>
+      <span>Thinking & parsing your narration...</span>
+    </div>
+  `;
+  container.appendChild(bubble);
+  if (window.lucide) lucide.createIcons();
+  container.scrollTop = container.scrollHeight;
+}
+
+function hideAiThinkingIndicator() {
+  const el = document.getElementById('voice-ai-thinking-bubble');
+  if (el) el.remove();
+}
+
+function useChatChip(text) {
+  const inputEl = document.getElementById('voice-input-text');
+  if (inputEl) {
+    inputEl.value = text;
+    updateVoiceClearBtn();
+    inputEl.focus();
+  }
+}
+
+function clearChatHistory() {
+  conversationHistory = [
+    {
+      role: 'assistant',
+      content: "Conversation reset! How can I help you record or organize your expenses?",
+      time: formatTimeNow()
+    }
+  ];
+  renderChatMessages();
+}
+
+// Modal compatibility functions
 async function openVoiceAgentModal() {
   if (state.activeOwner) {
     alert("Voice Agent is disabled in shared read-only view.");
     return;
   }
 
+  // Switch to the dedicated AI Mode tab with left slide-in animation!
+  if (typeof switchTab === 'function') {
+    switchTab('ai-agent');
+    return;
+  }
+
   const modal = document.getElementById('modal-voice-agent');
   if (modal) modal.classList.remove('hidden');
 
-  // Pre-fill saved Gemini key in input if present
   const keyInput = document.getElementById('voice-gemini-key-input');
   if (keyInput) {
     keyInput.value = localStorage.getItem('gemini_api_key') || '';
   }
 
-  // Check access permission
   await checkAIAccessPermission();
-
-  currentDraftExpenses = [];
   renderVoiceDraftCards();
   updateMicUI(false);
-  
-  const statusMsg = document.getElementById('voice-agent-chat-reply');
-  if (statusMsg) {
-    statusMsg.innerText = "Hi! I am your AI Voice Expense Agent. Tell me what you spent today (e.g. 'I spent 450 at Reliance Smart with UPI, and 180 for lunch cash').";
-  }
 }
 
 function closeVoiceAgentModal() {
@@ -229,9 +365,12 @@ function closeVoiceAgentModal() {
   if (modal) modal.classList.add('hidden');
 }
 
+// ================= PERMISSION & APPROVAL HANDLING =================
 async function checkAIAccessPermission() {
   const approvalSection = document.getElementById('voice-approval-banner');
   const agentBody = document.getElementById('voice-agent-active-body');
+  const tabApproval = document.getElementById('tab-voice-approval-banner');
+  const tabBody = document.getElementById('tab-voice-active-body');
   
   try {
     const res = await fetch(`${API_BASE}/ai/access/status`, {
@@ -240,12 +379,17 @@ async function checkAIAccessPermission() {
 
     if (res.ok) {
       userAIStatus = await res.json();
-      if (userAIStatus.can_use_ai || userAIStatus.is_admin) {
+      const hasAccess = userAIStatus.can_use_ai || userAIStatus.is_admin;
+      if (hasAccess) {
         if (approvalSection) approvalSection.classList.add('hidden');
         if (agentBody) agentBody.classList.remove('hidden');
+        if (tabApproval) tabApproval.classList.add('hidden');
+        if (tabBody) tabBody.classList.remove('hidden');
       } else {
         if (approvalSection) approvalSection.classList.remove('hidden');
         if (agentBody) agentBody.classList.add('hidden');
+        if (tabApproval) tabApproval.classList.remove('hidden');
+        if (tabBody) tabBody.classList.add('hidden');
         updateApprovalBannerUI(userAIStatus.status);
       }
     }
@@ -255,49 +399,76 @@ async function checkAIAccessPermission() {
 }
 
 function updateApprovalBannerUI(status) {
-  const badge = document.getElementById('voice-approval-status-badge');
-  const reqBtn = document.getElementById('voice-request-access-btn');
-  const desc = document.getElementById('voice-approval-desc');
+  const badges = [
+    document.getElementById('voice-approval-status-badge'),
+    document.getElementById('tab-voice-approval-status-badge')
+  ];
+  const reqBtns = [
+    document.getElementById('voice-request-access-btn'),
+    document.getElementById('tab-voice-request-access-btn')
+  ];
+  const descs = [
+    document.getElementById('voice-approval-desc'),
+    document.getElementById('tab-voice-approval-desc')
+  ];
 
   if (status === 'pending') {
-    if (badge) {
-      badge.innerText = 'Approval Pending';
-      badge.className = 'px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-full text-xs';
-    }
-    if (reqBtn) {
-      reqBtn.disabled = true;
-      reqBtn.innerText = 'Request Sent (Pending Admin Review)';
-      reqBtn.className = 'w-full py-2.5 bg-slate-800 text-slate-400 font-medium rounded-xl text-xs cursor-not-allowed';
-    }
-    if (desc) desc.innerText = 'Your request has been submitted to the admin (keerthivasan.220722@gmail.com). You will get access once approved!';
+    badges.forEach(b => {
+      if (!b) return;
+      b.innerText = 'Approval Pending';
+      b.className = 'px-3 py-1 bg-amber-500/20 border border-amber-500/30 text-amber-400 font-bold rounded-full text-xs';
+    });
+    reqBtns.forEach(b => {
+      if (!b) return;
+      b.disabled = true;
+      b.innerText = 'Request Sent (Pending Admin Review)';
+      b.className = 'w-full py-2.5 bg-slate-800 text-slate-400 font-medium rounded-xl text-xs cursor-not-allowed';
+    });
+    descs.forEach(d => {
+      if (!d) return;
+      d.innerText = 'Your request has been submitted to the admin (keerthivasan.220722@gmail.com). You will get access once approved!';
+    });
   } else if (status === 'revoked') {
-    if (badge) {
-      badge.innerText = 'Access Revoked';
-      badge.className = 'px-3 py-1 bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold rounded-full text-xs';
-    }
-    if (reqBtn) {
-      reqBtn.disabled = false;
-      reqBtn.innerText = 'Re-request Access';
-      reqBtn.className = 'w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs transition-colors';
-    }
-    if (desc) desc.innerText = 'Your AI access was revoked. Contact admin to re-enable.';
+    badges.forEach(b => {
+      if (!b) return;
+      b.innerText = 'Access Revoked';
+      b.className = 'px-3 py-1 bg-rose-500/20 border border-rose-500/30 text-rose-400 font-bold rounded-full text-xs';
+    });
+    reqBtns.forEach(b => {
+      if (!b) return;
+      b.disabled = false;
+      b.innerText = 'Re-request Access';
+      b.className = 'w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs transition-colors';
+    });
+    descs.forEach(d => {
+      if (!d) return;
+      d.innerText = 'Your AI access was revoked. Contact admin to re-enable.';
+    });
   } else {
-    if (badge) {
-      badge.innerText = 'Approval Required';
-      badge.className = 'px-3 py-1 bg-violet-500/20 border border-violet-500/30 text-violet-400 font-bold rounded-full text-xs';
-    }
-    if (reqBtn) {
-      reqBtn.disabled = false;
-      reqBtn.innerText = 'Request AI Access from Admin';
-      reqBtn.className = 'w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs transition-colors shadow-md';
-    }
-    if (desc) desc.innerText = 'To manage token consumption and free credits, AI features require one-time approval from admin.';
+    badges.forEach(b => {
+      if (!b) return;
+      b.innerText = 'Approval Required';
+      b.className = 'px-3 py-1 bg-violet-500/20 border border-violet-500/30 text-violet-400 font-bold rounded-full text-xs';
+    });
+    reqBtns.forEach(b => {
+      if (!b) return;
+      b.disabled = false;
+      b.innerText = 'Request AI Access from Admin';
+      b.className = 'w-full py-2.5 bg-violet-600 hover:bg-violet-500 text-white font-medium rounded-xl text-xs transition-colors shadow-md';
+    });
+    descs.forEach(d => {
+      if (!d) return;
+      d.innerText = 'To manage token consumption and free credits, AI features require one-time approval from admin.';
+    });
   }
 }
 
 async function requestAIAccessSubmit() {
-  const reqBtn = document.getElementById('voice-request-access-btn');
-  if (reqBtn) reqBtn.disabled = true;
+  const reqBtns = [
+    document.getElementById('voice-request-access-btn'),
+    document.getElementById('tab-voice-request-access-btn')
+  ];
+  reqBtns.forEach(b => b && (b.disabled = true));
 
   try {
     const res = await fetch(`${API_BASE}/ai/access/request`, {
@@ -315,7 +486,7 @@ async function requestAIAccessSubmit() {
   } catch (e) {
     showToast('Network error while requesting AI access', 'error');
   } finally {
-    if (reqBtn) reqBtn.disabled = false;
+    reqBtns.forEach(b => b && (b.disabled = false));
   }
 }
 
@@ -330,8 +501,26 @@ function saveGeminiAPIKeyFromUI() {
     localStorage.removeItem('gemini_api_key');
     showToast('Gemini API Key cleared.', 'info');
   }
+  const tabInput = document.getElementById('tab-gemini-key-input');
+  if (tabInput) tabInput.value = key;
 }
 
+function saveGeminiKeyFromTab() {
+  const input = document.getElementById('tab-gemini-key-input');
+  if (!input) return;
+  const key = input.value.trim();
+  if (key) {
+    localStorage.setItem('gemini_api_key', key);
+    showToast('Gemini API Key saved locally for this browser!', 'success');
+  } else {
+    localStorage.removeItem('gemini_api_key');
+    showToast('Gemini API Key cleared.', 'info');
+  }
+  const modalInput = document.getElementById('voice-gemini-key-input');
+  if (modalInput) modalInput.value = key;
+}
+
+// ================= MULTI-TURN VOICE & TEXT NARRATION HANDLER =================
 async function handleVoiceNarrationSubmit(e) {
   if (e) e.preventDefault();
   const inputEl = document.getElementById('voice-input-text');
@@ -342,28 +531,42 @@ async function handleVoiceNarrationSubmit(e) {
     return;
   }
 
+  // Push user turn to conversation history and render bubble immediately
+  conversationHistory.push({
+    role: 'user',
+    content: narration,
+    time: formatTimeNow()
+  });
+  renderChatMessages();
+  showAiThinkingIndicator();
+
   const sendBtn = document.getElementById('voice-send-btn');
-  const chatReply = document.getElementById('voice-agent-chat-reply');
   const originalBtnHTML = sendBtn ? sendBtn.innerHTML : '';
-  
   if (sendBtn) {
     sendBtn.disabled = true;
     sendBtn.innerHTML = `<span>Analyzing...</span> <span class="animate-spin text-xs">✨</span>`;
   }
-  if (chatReply) chatReply.innerHTML = `<span class="animate-pulse">Thinking & parsing your narration with Gemini AI...</span>`;
 
   try {
-    const inputKey = document.getElementById('voice-gemini-key-input')?.value.trim();
-    const customKey = inputKey || localStorage.getItem('gemini_api_key') || '';
-    if (inputKey && inputKey !== localStorage.getItem('gemini_api_key')) {
-      localStorage.setItem('gemini_api_key', inputKey);
+    const tabKeyInput = document.getElementById('tab-gemini-key-input')?.value.trim();
+    const modalKeyInput = document.getElementById('voice-gemini-key-input')?.value.trim();
+    const customKey = tabKeyInput || modalKeyInput || localStorage.getItem('gemini_api_key') || '';
+    if (tabKeyInput && tabKeyInput !== localStorage.getItem('gemini_api_key')) {
+      localStorage.setItem('gemini_api_key', tabKeyInput);
     }
 
     const catList = (state.categories || []).map(c => typeof c === 'string' ? c : (c && c.name ? c.name : '')).filter(Boolean);
     const pmList = (state.paymentMethods || []).map(p => typeof p === 'string' ? p : (p && p.name ? p.name : '')).filter(Boolean);
 
+    // Format history for backend
+    const historyPayload = conversationHistory.map(m => ({
+      role: m.role,
+      content: m.content
+    }));
+
     const payload = {
       narration: narration,
+      conversation_history: historyPayload,
       existing_drafts: currentDraftExpenses || [],
       categories: catList.length > 0 ? catList : ["Food", "Grocery", "Fuel", "Shopping", "Entertainment", "Transport", "Rent", "Medical", "Utilities", "Travel", "Other"],
       payment_methods: pmList.length > 0 ? pmList : ["Cash", "UPI", "Credit Card", "Debit Card", "Bank Transfer", "Wallet"],
@@ -380,13 +583,25 @@ async function handleVoiceNarrationSubmit(e) {
       body: JSON.stringify(payload)
     });
 
+    hideAiThinkingIndicator();
+
     if (res.ok) {
       const data = await res.json();
       currentDraftExpenses = data.extracted_expenses || [];
-      if (chatReply) chatReply.innerText = data.reply_message || "Extracted expenses successfully.";
+      const replyMsg = data.reply_message || "Extracted and updated expenses successfully.";
+      
+      // Push AI reply to conversation history
+      conversationHistory.push({
+        role: 'assistant',
+        content: replyMsg,
+        time: formatTimeNow()
+      });
+      renderChatMessages();
       renderVoiceDraftCards();
-      // Keep prompt text in the input box so the user can continue editing or correcting their prompt directly!
+      
+      // Keep prompt text accessible for quick follow-up or refinement
       updateVoiceClearBtn();
+      showToast("Updated draft expenses!", "success");
     } else {
       const err = await res.json();
       let errorDetail = 'Failed to process narration';
@@ -397,11 +612,23 @@ async function handleVoiceNarrationSubmit(e) {
       } else if (err.detail && typeof err.detail === 'object') {
         errorDetail = JSON.stringify(err.detail);
       }
-      if (chatReply) chatReply.innerText = `Error: ${errorDetail}`;
+      
+      conversationHistory.push({
+        role: 'assistant',
+        content: `Error: ${errorDetail}`,
+        time: formatTimeNow()
+      });
+      renderChatMessages();
     }
   } catch (err) {
     console.error(err);
-    if (chatReply) chatReply.innerText = "Connection error while reaching Voice AI Agent service.";
+    hideAiThinkingIndicator();
+    conversationHistory.push({
+      role: 'assistant',
+      content: "Network error while connecting to Voice AI Agent service.",
+      time: formatTimeNow()
+    });
+    renderChatMessages();
   } finally {
     if (sendBtn) {
       sendBtn.disabled = false;
@@ -431,10 +658,16 @@ function clearVoiceInputText() {
   updateVoiceClearBtn();
 }
 
+// ================= DRAFT EXPENSE CARDS =================
 function renderVoiceDraftCards() {
   const container = document.getElementById('voice-drafts-container');
   const saveAllBtn = document.getElementById('voice-save-all-btn');
   const emptyState = document.getElementById('voice-drafts-empty');
+  const countBadge = document.getElementById('voice-drafts-count');
+
+  if (countBadge) {
+    countBadge.innerText = currentDraftExpenses.length;
+  }
 
   if (!container) return;
 
@@ -459,7 +692,7 @@ function renderVoiceDraftCards() {
   const curr = state.settings?.currency || '₹';
 
   container.innerHTML = currentDraftExpenses.map((item, idx) => {
-    // Ensure the item's category and payment method are available in dropdown
+    // Ensure item category & payment method are present in lists
     const itemCats = [...categories];
     if (item.category && !itemCats.includes(item.category)) itemCats.unshift(item.category);
 
@@ -471,11 +704,11 @@ function renderVoiceDraftCards() {
       <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-2 flex-1 min-w-0">
           <span class="w-6 h-6 rounded-full bg-brand-500/20 text-brand-400 font-bold text-xs flex items-center justify-center shrink-0">${idx + 1}</span>
-          <input type="text" value="${escapeHTML(item.title)}" oninput="updateVoiceDraft(${idx}, 'title', this.value)" placeholder="Expense title" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-semibold text-white focus:border-brand-500 focus:outline-none" />
+          <input type="text" value="${escapeHTML(item.title || '')}" oninput="updateVoiceDraft(${idx}, 'title', this.value)" placeholder="Expense title" class="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-semibold text-white focus:border-brand-500 focus:outline-none" />
         </div>
         <div class="flex items-center gap-1 shrink-0">
           <span class="text-xs text-slate-400 font-bold">${curr}</span>
-          <input type="number" step="0.01" value="${item.amount}" oninput="updateVoiceDraft(${idx}, 'amount', parseFloat(this.value) || 0)" placeholder="Amount" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-bold text-brand-400 focus:border-brand-500 focus:outline-none text-right" />
+          <input type="number" step="0.01" value="${item.amount || 0}" oninput="updateVoiceDraft(${idx}, 'amount', parseFloat(this.value) || 0)" placeholder="Amount" class="w-24 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-sm font-bold text-brand-400 focus:border-brand-500 focus:outline-none text-right" />
         </div>
       </div>
 
@@ -494,9 +727,20 @@ function renderVoiceDraftCards() {
         </div>
       </div>
 
-      <div class="flex items-center justify-between text-xs pt-1 border-t border-slate-800/60">
-        <span class="text-[11px] text-slate-400">Date: ${item.date || new Date().toISOString().split('T')[0]}</span>
-        <button onclick="removeVoiceDraft(${idx})" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 py-0.5 px-2 rounded hover:bg-rose-500/10 transition-colors">
+      <!-- Date, Timing, & Meal Badge -->
+      <div class="flex flex-wrap items-center justify-between text-xs pt-1.5 border-t border-slate-800/60 gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <div class="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800/60">
+            <i data-lucide="calendar" class="w-3 h-3 text-slate-500"></i>
+            <input type="date" value="${item.date || new Date().toISOString().split('T')[0]}" onchange="updateVoiceDraft(${idx}, 'date', this.value)" class="bg-transparent border-0 text-[11px] text-slate-300 focus:outline-none p-0 cursor-pointer" />
+          </div>
+          <div class="flex items-center gap-1 text-[11px] text-slate-400 bg-slate-950/60 px-2 py-0.5 rounded border border-slate-800/60">
+            <i data-lucide="clock" class="w-3 h-3 text-slate-500"></i>
+            <input type="time" value="${item.time || ''}" onchange="updateVoiceDraft(${idx}, 'time', this.value)" placeholder="--:--" class="bg-transparent border-0 text-[11px] text-slate-300 focus:outline-none p-0 w-16 cursor-pointer" />
+          </div>
+          ${item.description ? `<span class="text-[10px] px-2 py-0.5 rounded bg-violet-500/15 text-violet-300 border border-violet-500/25 truncate max-w-[150px]" title="${escapeHTML(item.description)}">${escapeHTML(item.description)}</span>` : ''}
+        </div>
+        <button type="button" onclick="removeVoiceDraft(${idx})" class="text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 py-0.5 px-2 rounded hover:bg-rose-500/10 transition-colors">
           <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
           <span>Remove</span>
         </button>
@@ -557,6 +801,17 @@ async function confirmSaveAllVoiceDrafts() {
     if (savedCount > 0) {
       if (typeof confetti === 'function') confetti({ particleCount: 80, spread: 70, origin: { y: 0.7 } });
       showToast(`Successfully saved ${savedCount} expense(s) to MyMoney!`, 'success');
+      currentDraftExpenses = [];
+      renderVoiceDraftCards();
+      
+      // Add completion note to conversation history
+      conversationHistory.push({
+        role: 'assistant',
+        content: `All ${savedCount} expense(s) have been saved to your dashboard and records!`,
+        time: formatTimeNow()
+      });
+      renderChatMessages();
+
       closeVoiceAgentModal();
       if (typeof fetchAllData === 'function') fetchAllData();
     } else {

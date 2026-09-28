@@ -153,6 +153,7 @@ class VoiceAgentExpenseItem(BaseModel):
 
 class VoiceAgentRequest(BaseModel):
     narration: str
+    conversation_history: Optional[List[Any]] = []
     existing_drafts: Optional[List[Any]] = []
     categories: Optional[List[Any]] = []
     payment_methods: Optional[List[Any]] = []

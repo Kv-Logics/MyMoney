@@ -312,6 +312,7 @@ function switchTab(tabId) {
 
   let title = tabId.charAt(0).toUpperCase() + tabId.slice(1).replace('-', ' ');
   if (tabId === 'budgets') title = 'Budgets & Savings';
+  if (tabId === 'ai-agent') title = 'Agentic MyMoney (AI Mode)';
   
   document.getElementById('page-title').innerHTML = state.activeOwner 
     ? `Viewing ${state.activeOwner.owner_name}'s Tracker <span class="text-xs px-2 py-0.5 bg-rose-500/20 border border-rose-500/30 text-rose-400 font-medium rounded-full ml-2">Read Only</span>`
@@ -322,6 +323,7 @@ function switchTab(tabId) {
 
 function renderTabContent() {
   if (state.currentTab === 'dashboard') renderDashboard();
+  else if (state.currentTab === 'ai-agent') initVoiceAgentPage();
   else if (state.currentTab === 'expenses') renderExpensesList();
   else if (state.currentTab === 'budgets') {
     renderBudgets();
