@@ -137,7 +137,11 @@ async def voice_agent_narration(
             currency=req.currency,
             custom_gemini_key=req.gemini_api_key
         )
-        record_ai_usage(current_user["id"], current_user["email"], action="voice_narration", estimated_tokens=350)
+        try:
+            record_ai_usage(current_user["id"], current_user["email"], action="voice_narration", estimated_tokens=350)
+        except Exception as log_err:
+            import logging
+            logging.getLogger(__name__).warning(f"Could not record AI usage log: {log_err}")
         return VoiceAgentResponse(**result)
     except HTTPException:
         raise

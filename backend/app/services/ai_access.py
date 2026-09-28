@@ -113,29 +113,33 @@ def check_can_use_ai(user_id: str, email: str) -> bool:
     return bool(record and record.get("status") == "approved")
 
 def record_ai_usage(user_id: str, email: str, action: str = "voice_narration", estimated_tokens: int = 350):
-    ai_access_col = get_collection("ai_access")
-    ai_logs_col = get_collection("ai_usage_logs")
+    try:
+        ai_access_col = get_collection("ai_access")
+        ai_logs_col = get_collection("ai_usage_logs")
 
-    now = datetime.utcnow()
+        now = datetime.utcnow()
 
-    # Insert usage log
-    ai_logs_col.insert_one({
-        "user_id": user_id,
-        "email": email,
-        "action": action,
-        "tokens": estimated_tokens,
-        "created_at": now
-    })
+        # Insert usage log
+        ai_logs_col.insert_one({
+            "user_id": user_id,
+            "email": email,
+            "action": action,
+            "tokens": estimated_tokens,
+            "created_at": now
+        })
 
-    # Increment user totals
-    ai_access_col.update_one(
-        {"user_id": user_id},
-        {
-            "$inc": {"total_requests": 1, "total_tokens": estimated_tokens},
-            "$set": {"last_used_at": now, "email": email}
-        },
-        upsert=True
-    )
+        # Increment user totals
+        ai_access_col.update_one(
+            {"user_id": user_id},
+            {
+                "$inc": {"total_requests": 1, "total_tokens": estimated_tokens},
+                "$set": {"last_used_at": now, "email": email}
+            },
+            upsert=True
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Could not record AI usage log: {e}")
 
 def get_admin_ai_dashboard() -> dict:
     ai_access_col = get_collection("ai_access")
