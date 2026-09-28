@@ -23,31 +23,32 @@ async def call_gemini_vision(image_bytes: bytes, prompt: str, custom_key: str = 
     if not init_gemini(custom_key):
         raise Exception("Gemini API is not configured. Missing GEMINI_API_KEY.")
 
-    # Use Gemini 1.5 Flash as it is fast and excellent for this use case
-    model = genai.GenerativeModel('gemini-1.5-flash')
-    
-    # Prepare the image parts for Gemini API
+    # Try modern vision models
     image_parts = [
         {
-            "mime_type": "image/jpeg",  # Assuming JPEG for simplicity, can handle PNG too
+            "mime_type": "image/jpeg",
             "data": image_bytes
         }
     ]
 
-    try:
-        response = model.generate_content([prompt, image_parts[0]])
-        text = response.text
-        
-        # Strip out markdown formatting if the model returns it (e.g., ```json ... ```)
-        if "```json" in text:
-            text = text.split("```json")[1].split("```")[0].strip()
-        elif "```" in text:
-            text = text.split("```")[1].strip()
+    for model_name in ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash']:
+        try:
+            model = genai.GenerativeModel(model_name)
+            response = model.generate_content([prompt, image_parts[0]])
+            text = response.text
             
-        return json.loads(text)
-    except Exception as e:
-        logger.error(f"Failed to process image with Gemini: {str(e)}")
-        raise Exception("Failed to extract data from image. Please try again.")
+            # Strip out markdown formatting if the model returns it (e.g., ```json ... ```)
+            if "```json" in text:
+                text = text.split("```json")[1].split("```")[0].strip()
+            elif "```" in text:
+                text = text.split("```")[1].strip()
+                
+            return json.loads(text)
+        except Exception as e:
+            logger.warning(f"Vision model {model_name} failed: {e}. Trying next.")
+            
+    logger.error("All Gemini vision models failed.")
+    raise Exception("Failed to extract data from image. Please try again.")
 
 async def process_voice_narration(
     narration: str,
@@ -62,23 +63,34 @@ async def process_voice_narration(
     Extracts multi-item expense details, maps categories and payment methods,
     and returns a structured JSON payload with agent response.
     """
-    if existing_drafts is None:
-        existing_drafts = []
-    if categories is None or not categories:
-        categories = ["Food", "Grocery", "Fuel", "Shopping", "Entertainment", "Transport", "Rent", "Medical", "Utilities", "Travel", "Other"]
-    if payment_methods is None or not payment_methods:
-        payment_methods = ["Cash", "UPI", "Credit Card", "Debit Card", "Bank Transfer", "Wallet"]
+    # Clean and normalize categories and payment methods
+    clean_cats = []
+    for c in (categories or []):
+        if isinstance(c, str) and c.strip():
+            clean_cats.append(c.strip())
+        elif isinstance(c, dict) and c.get("name"):
+            clean_cats.append(c["name"].strip())
+    categories = clean_cats if clean_cats else ["Food", "Grocery", "Fuel", "Shopping", "Entertainment", "Transport", "Rent", "Medical", "Utilities", "Travel", "Other"]
+
+    clean_pms = []
+    for p in (payment_methods or []):
+        if isinstance(p, str) and p.strip():
+            clean_pms.append(p.strip())
+        elif isinstance(p, dict) and p.get("name"):
+            clean_pms.append(p["name"].strip())
+    payment_methods = clean_pms if clean_pms else ["Cash", "UPI", "Credit Card", "Debit Card", "Bank Transfer", "Wallet"]
 
     today_str = datetime.now().strftime("%Y-%m-%d")
 
     # Try Gemini API if key is available in env or passed explicitly
     api_key = custom_gemini_key or os.environ.get("GEMINI_API_KEY")
     if api_key:
-        try:
-            genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
-            prompt = f"""
+        for model_name in ['gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.8-flash']:
+            try:
+                genai.configure(api_key=api_key)
+                model = genai.GenerativeModel(model_name)
+                
+                prompt = f"""
 You are an intelligent, friendly AI Voice Expense Agent for the MyMoney personal finance app.
 Today's Date: {today_str}
 Default Currency: {currency}
@@ -117,18 +129,19 @@ INSTRUCTIONS:
   "requires_clarification": false
 }}
 """
-            response = model.generate_content(prompt)
-            text = response.text.strip()
+                response = model.generate_content(prompt)
+                text = response.text.strip()
 
-            if "```json" in text:
-                text = text.split("```json")[1].split("```")[0].strip()
-            elif "```" in text:
-                text = text.split("```")[1].strip()
+                if "```json" in text:
+                    text = text.split("```json")[1].split("```")[0].strip()
+                elif "```" in text:
+                    text = text.split("```")[1].strip()
 
-            result = json.loads(text)
-            return result
-        except Exception as e:
-            logger.error(f"Gemini API error during voice extraction: {str(e)}")
+                result = json.loads(text)
+                if isinstance(result, dict) and "extracted_expenses" in result:
+                    return result
+            except Exception as e:
+                logger.warning(f"Model {model_name} failed: {e}. Trying next or fallback.")
 
     # Smart Rule-Based NLP Fallback if Gemini API is offline or unconfigured
     import re
@@ -152,15 +165,15 @@ INSTRUCTIONS:
         # Detect category
         matched_cat = "Other"
         clause_lower = clause.lower()
-        if any(w in clause_lower for w in ["eat", "ate", "food", "lunch", "dinner", "breakfast", "restaurant", "hotel", "snack", "biryani", "coffee", "tea", "swiggy", "zomato"]):
+        if any(w in clause_lower for w in ["dosa", "idli", "vada", "biryani", "meals", "coffee", "tea", "roti", "paratha", "paneer", "pizza", "burger", "sandwich", "thali", "curry", "rice", "eat", "ate", "food", "lunch", "dinner", "breakfast", "restaurant", "hotel", "snack", "swiggy", "zomato"]):
             matched_cat = "Food" if "Food" in categories else categories[0]
-        elif any(w in clause_lower for w in ["grocery", "supermarket", "mart", "vegetable", "milk", "biscuit", "reliance", "smart", "dmart"]):
+        elif any(w in clause_lower for w in ["grocery", "supermarket", "mart", "vegetable", "milk", "biscuit", "reliance", "smart", "dmart", "provisions"]):
             matched_cat = "Grocery" if "Grocery" in categories else categories[0]
         elif any(w in clause_lower for w in ["fuel", "petrol", "diesel", "gas", "bunk"]):
             matched_cat = "Fuel" if "Fuel" in categories else categories[0]
         elif any(w in clause_lower for w in ["auto", "cab", "uber", "ola", "bus", "train", "flight", "taxi", "travel", "ticket"]):
             matched_cat = "Transport" if "Transport" in categories else categories[0]
-        elif any(w in clause_lower for w in ["shopping", "dress", "clothes", "shirt", "pant", "amazon", "flipkart"]):
+        elif any(w in clause_lower for w in ["shopping", "dress", "clothes", "shirt", "pant", "amazon", "flipkart", "myntra"]):
             matched_cat = "Shopping" if "Shopping" in categories else categories[0]
             
         # Detect payment method
@@ -172,10 +185,15 @@ INSTRUCTIONS:
             
         # Extract title cleanly
         clean_title = re.sub(r'(?:rs\.?|₹|\$|eur|inr)?\s*\d+(?:\.\d{1,2})?', '', clause, flags=re.IGNORECASE).strip()
-        clean_title = re.sub(r'^(?:i|spent|paid|for|ate|had|bought|bought at)\s+', '', clean_title, flags=re.IGNORECASE).strip()
+        prev_t = ""
+        while prev_t != clean_title:
+            prev_t = clean_title
+            clean_title = re.sub(r'^(?:i|we|my|have|spent|paid|for|ate|had|bought|bought at|gave|transferred|on|at|got)\s+', '', clean_title, flags=re.IGNORECASE).strip()
+            clean_title = re.sub(r'\s+(?:using|by|via|through|with|cash|upi|card)\b.*$', '', clean_title, flags=re.IGNORECASE).strip()
+            
         if not clean_title or len(clean_title) < 2:
             clean_title = f"{matched_cat} Expense"
-        clean_title = clean_title.capitalize()
+        clean_title = clean_title.title()
 
         extracted.append({
             "title": clean_title,

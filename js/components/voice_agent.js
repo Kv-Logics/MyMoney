@@ -238,17 +238,29 @@ async function handleVoiceNarrationSubmit(e) {
 
   const sendBtn = document.getElementById('voice-send-btn');
   const chatReply = document.getElementById('voice-agent-chat-reply');
+  const originalBtnHTML = sendBtn ? sendBtn.innerHTML : '';
   
-  if (sendBtn) sendBtn.disabled = true;
+  if (sendBtn) {
+    sendBtn.disabled = true;
+    sendBtn.innerHTML = `<span>Analyzing...</span> <span class="animate-spin text-xs">✨</span>`;
+  }
   if (chatReply) chatReply.innerHTML = `<span class="animate-pulse">Thinking & parsing your narration with Gemini AI...</span>`;
 
   try {
-    const customKey = localStorage.getItem('gemini_api_key') || '';
+    const inputKey = document.getElementById('voice-gemini-key-input')?.value.trim();
+    const customKey = inputKey || localStorage.getItem('gemini_api_key') || '';
+    if (inputKey && inputKey !== localStorage.getItem('gemini_api_key')) {
+      localStorage.setItem('gemini_api_key', inputKey);
+    }
+
+    const catList = (state.categories || []).map(c => typeof c === 'string' ? c : (c && c.name ? c.name : '')).filter(Boolean);
+    const pmList = (state.paymentMethods || []).map(p => typeof p === 'string' ? p : (p && p.name ? p.name : '')).filter(Boolean);
+
     const payload = {
       narration: narration,
-      existing_drafts: currentDraftExpenses,
-      categories: state.categories.map(c => c.name),
-      payment_methods: state.paymentMethods.map(p => p.name),
+      existing_drafts: currentDraftExpenses || [],
+      categories: catList.length > 0 ? catList : ["Food", "Grocery", "Fuel", "Shopping", "Entertainment", "Transport", "Rent", "Medical", "Utilities", "Travel", "Other"],
+      payment_methods: pmList.length > 0 ? pmList : ["Cash", "UPI", "Credit Card", "Debit Card", "Bank Transfer", "Wallet"],
       currency: state.settings?.currency || '₹',
       gemini_api_key: customKey || null
     };
@@ -270,13 +282,24 @@ async function handleVoiceNarrationSubmit(e) {
       if (inputEl) inputEl.value = '';
     } else {
       const err = await res.json();
-      if (chatReply) chatReply.innerText = `Error: ${err.detail || 'Failed to process narration'}`;
+      let errorDetail = 'Failed to process narration';
+      if (typeof err.detail === 'string') {
+        errorDetail = err.detail;
+      } else if (Array.isArray(err.detail)) {
+        errorDetail = err.detail.map(d => `${d.loc ? d.loc.slice(-1)[0] : ''}: ${d.msg}`).join(', ');
+      } else if (err.detail && typeof err.detail === 'object') {
+        errorDetail = JSON.stringify(err.detail);
+      }
+      if (chatReply) chatReply.innerText = `Error: ${errorDetail}`;
     }
   } catch (err) {
     console.error(err);
     if (chatReply) chatReply.innerText = "Connection error while reaching Voice AI Agent service.";
   } finally {
-    if (sendBtn) sendBtn.disabled = false;
+    if (sendBtn) {
+      sendBtn.disabled = false;
+      sendBtn.innerHTML = originalBtnHTML;
+    }
   }
 }
 

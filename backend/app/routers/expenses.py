@@ -128,7 +128,7 @@ async def voice_agent_narration(
         )
 
     try:
-        drafts_dict = [d.model_dump() for d in req.existing_drafts] if req.existing_drafts else []
+        drafts_dict = [d.model_dump() if hasattr(d, "model_dump") else d for d in req.existing_drafts] if req.existing_drafts else []
         result = await process_voice_narration(
             narration=req.narration,
             existing_drafts=drafts_dict,

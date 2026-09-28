@@ -150,7 +150,72 @@ html:not(.dark) .bg-slate-950 {
 }
 
 html:not(.dark) .bg-slate-950\/40 {
-  background-color: rgba(15, 23, 42, 0.15) !important;
+  background-color: rgba(15, 23, 42, 0.05) !important;
+}
+
+html:not(.dark) .bg-slate-900\/40,
+html:not(.dark) .bg-slate-900\/60,
+html:not(.dark) .bg-slate-900\/20 {
+  background-color: #f1f5f9 !important;
+  border-color: #e2e8f0 !important;
+}
+
+/* AI Voice Agent & Token Monitoring Panel in Light Mode */
+html:not(.dark) #admin-ai-panel {
+  background: #ffffff !important;
+  border-color: rgba(124, 58, 237, 0.2) !important;
+  box-shadow: 0 4px 20px -2px rgba(124, 58, 237, 0.06) !important;
+}
+
+html:not(.dark) #admin-ai-panel .bg-slate-900\/40 {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+html:not(.dark) #admin-ai-panel span.text-slate-400 {
+  color: #64748b !important;
+}
+
+html:not(.dark) #admin-ai-panel span.text-slate-500 {
+  color: #475569 !important;
+}
+
+html:not(.dark) #admin-ai-panel h4.text-white {
+  color: #0f172a !important;
+}
+
+html:not(.dark) #admin-ai-panel .text-brand-400 {
+  color: #059669 !important;
+}
+
+html:not(.dark) #admin-ai-panel .text-violet-300 {
+  color: #6d28d9 !important;
+}
+
+html:not(.dark) #modal-voice-agent .glass {
+  background: #ffffff !important;
+  border-color: rgba(124, 58, 237, 0.25) !important;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.2) !important;
+}
+
+html:not(.dark) #modal-voice-agent .bg-slate-950\/90 {
+  background-color: #ffffff !important;
+}
+
+html:not(.dark) #modal-voice-agent .text-white {
+  color: #0f172a !important;
+}
+
+html:not(.dark) #modal-voice-agent .bg-slate-900\/60,
+html:not(.dark) #modal-voice-agent .bg-slate-900\/40 {
+  background-color: #f8fafc !important;
+  border-color: #e2e8f0 !important;
+}
+
+html:not(.dark) #modal-voice-agent #voice-agent-chat-reply {
+  background-color: #f5f3ff !important;
+  border-color: #ddd6fe !important;
+  color: #5b21b6 !important;
 }
 
 /* Chart center total color */

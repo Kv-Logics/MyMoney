@@ -153,9 +153,9 @@ class VoiceAgentExpenseItem(BaseModel):
 
 class VoiceAgentRequest(BaseModel):
     narration: str
-    existing_drafts: Optional[List[VoiceAgentExpenseItem]] = []
-    categories: Optional[List[str]] = []
-    payment_methods: Optional[List[str]] = []
+    existing_drafts: Optional[List[Any]] = []
+    categories: Optional[List[Any]] = []
+    payment_methods: Optional[List[Any]] = []
     currency: Optional[str] = "₹"
     gemini_api_key: Optional[str] = None
 
