@@ -48,3 +48,30 @@ def create_or_update_budget(budget: BudgetCreate, current_user: dict = Depends(g
         res = budgets_col.insert_one(new_budget)
         new_budget["_id"] = res.inserted_id
         return serialize_doc(new_budget)
+
+@router.delete("/{budget_id}")
+def delete_budget(budget_id: str, current_user: dict = Depends(get_current_user)):
+    from bson import ObjectId
+    budgets_col = get_collection("budgets")
+    
+    try:
+        obj_id = ObjectId(budget_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid budget ID format")
+
+    result = budgets_col.delete_one({"_id": obj_id, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        # Try finding by category if budget_id matches a category string
+        result = budgets_col.delete_one({"category": budget_id, "user_id": current_user["id"]})
+        if result.deleted_count == 0:
+            raise HTTPException(status_code=404, detail="Budget not found")
+
+    return {"status": "success", "message": "Budget deleted successfully"}
+
+@router.delete("/category/{category}")
+def delete_budget_by_category(category: str, current_user: dict = Depends(get_current_user)):
+    budgets_col = get_collection("budgets")
+    result = budgets_col.delete_one({"category": category, "user_id": current_user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Budget not found for this category")
+    return {"status": "success", "message": f"Budget limit for {category} deleted successfully"}

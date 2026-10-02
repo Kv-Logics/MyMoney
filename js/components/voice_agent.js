@@ -60,14 +60,30 @@ function initSpeechRecognition() {
   recognition.onerror = (event) => {
     console.error("Speech recognition error:", event.error);
     if (event.error === 'no-speech') {
-      // Don't kill recording session on brief silence; user explicitly controls start/stop
       if (isUserRecording) return;
     }
-    if (typeof showToast === 'function' && event.error !== 'no-speech') {
-      showToast(`Voice capture error: ${event.error}`, 'error');
-    }
+    
     isUserRecording = false;
     updateMicUI(false);
+
+    let errorMsg = `Voice capture error: ${event.error}`;
+    if (event.error === 'network') {
+      errorMsg = "Speech-to-Text service unavailable (network/browser shield block). You can type your narration in the chat box below!";
+    } else if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+      errorMsg = "Microphone access blocked. Please check browser permissions or type your expense narration below.";
+    } else if (event.error === 'audio-capture') {
+      errorMsg = "No microphone found. Type your expense narration in the input box below.";
+    }
+
+    if (typeof showToast === 'function' && event.error !== 'no-speech') {
+      showToast(errorMsg, 'error', 6000);
+    }
+
+    // Auto-focus the text input for immediate typing fallback
+    const inputEl = document.getElementById('voice-input-text');
+    if (inputEl) {
+      inputEl.focus();
+    }
   };
 
   recognition.onend = () => {

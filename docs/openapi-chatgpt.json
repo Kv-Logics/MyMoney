@@ -1,0 +1,628 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "MyMoney Expense Tracker API for ChatGPT Custom Actions",
+    "description": "Secure API endpoints allowing ChatGPT to manage expenses, budgets, savings goals, and spending analytics for the authenticated MyMoney user.",
+    "version": "1.0.0"
+  },
+  "servers": [
+    {
+      "url": "https://mymoney-jd0n.onrender.com",
+      "description": "Production MyMoney API Server"
+    }
+  ],
+  "security": [
+    {
+      "BearerAuth": []
+    }
+  ],
+  "paths": {
+    "/api/expenses": {
+      "get": {
+        "summary": "List and filter user expenses",
+        "description": "Retrieve expenses belonging strictly to the authenticated MyMoney user. Supports filtering by date range, category, payment method, amount range, or text search.",
+        "operationId": "listExpenses",
+        "parameters": [
+          {
+            "name": "category",
+            "in": "query",
+            "required": false,
+            "description": "Filter expenses by category (e.g. Food, Fuel, Shopping, Electricity, Entertainment, Transport, Rent, Medical, Education, Utilities, Travel, Other).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "payment_method",
+            "in": "query",
+            "required": false,
+            "description": "Filter by payment method (e.g. Cash, UPI, Credit Card, Debit Card, Bank Transfer, Wallet).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "start_date",
+            "in": "query",
+            "required": false,
+            "description": "Start date for filtering in YYYY-MM-DD format.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "end_date",
+            "in": "query",
+            "required": false,
+            "description": "End date for filtering in YYYY-MM-DD format.",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "min_amount",
+            "in": "query",
+            "required": false,
+            "description": "Filter expenses with amount >= min_amount.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "max_amount",
+            "in": "query",
+            "required": false,
+            "description": "Filter expenses with amount <= max_amount.",
+            "schema": {
+              "type": "number"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "required": false,
+            "description": "Text search across title, description, and notes.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort_by",
+            "in": "query",
+            "required": false,
+            "description": "Sorting order: date_desc, date_asc, amount_desc, or amount_asc.",
+            "schema": {
+              "type": "string",
+              "default": "date_desc"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of user expense objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ExpenseItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized - Missing or invalid API key"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create a new expense",
+        "description": "Add a new expense item for the authenticated MyMoney user.",
+        "operationId": "createExpense",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Expense created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseItem"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation error"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/expenses/{id}": {
+      "put": {
+        "summary": "Update an existing expense",
+        "description": "Modify details of an existing expense belonging to the authenticated user by expense ID.",
+        "operationId": "updateExpense",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique MongoDB ID string of the expense.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExpenseUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Updated expense object",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExpenseItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expense not found or unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "summary": "Delete an expense",
+        "description": "Delete an existing expense item belonging to the authenticated user by expense ID.",
+        "operationId": "deleteExpense",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "Unique MongoDB ID string of the expense.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Expense deleted confirmation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "type": "string",
+                      "example": "Expense deleted"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Expense not found or unauthorized"
+          }
+        }
+      }
+    },
+    "/api/analytics": {
+      "get": {
+        "summary": "Get spending summary and analytics",
+        "description": "Retrieve comprehensive spending summaries including monthly totals, today's spending, category distributions, payment method breakdowns, and 30-day spending trends.",
+        "operationId": "getExpenseSummary",
+        "responses": {
+          "200": {
+            "description": "Summary and analytics breakdown",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnalyticsSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/budgets": {
+      "get": {
+        "summary": "List user budgets",
+        "description": "Retrieve monthly budget limits set by the authenticated user for overall spending and specific categories.",
+        "operationId": "listBudgets",
+        "responses": {
+          "200": {
+            "description": "List of budget objects",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BudgetItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "post": {
+        "summary": "Create or update a budget limit",
+        "description": "Set or update a monthly budget limit for a category (or 'Overall') for the authenticated user.",
+        "operationId": "createOrUpdateBudget",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BudgetCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Created or updated budget item",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BudgetItem"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/savings": {
+      "get": {
+        "summary": "List savings goals",
+        "description": "Retrieve savings goals and current saved amounts belonging to the authenticated user.",
+        "operationId": "listSavings",
+        "responses": {
+          "200": {
+            "description": "List of savings goals",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SavingsGoalItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "securitySchemes": {
+      "BearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "API Key (mm_live_...)",
+        "description": "Pass your MyMoney API Key generated from Settings (Authorization: Bearer mm_live_...)"
+      }
+    },
+    "schemas": {
+      "ExpenseItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string",
+            "example": "651f8a2b3c4d5e6f7a8b9c0d"
+          },
+          "title": {
+            "type": "string",
+            "example": "Dinner at Restaurant"
+          },
+          "amount": {
+            "type": "number",
+            "example": 450.0
+          },
+          "category": {
+            "type": "string",
+            "example": "Food"
+          },
+          "payment_method": {
+            "type": "string",
+            "example": "UPI"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-10-02"
+          },
+          "description": {
+            "type": "string",
+            "example": "Family dinner"
+          },
+          "time": {
+            "type": "string",
+            "example": "20:30"
+          },
+          "location": {
+            "type": "string",
+            "example": "Downtown"
+          },
+          "notes": {
+            "type": "string",
+            "example": "Paid via Google Pay"
+          }
+        }
+      },
+      "ExpenseCreate": {
+        "type": "object",
+        "required": [
+          "amount",
+          "title",
+          "category",
+          "payment_method",
+          "date"
+        ],
+        "properties": {
+          "title": {
+            "type": "string",
+            "description": "Short title describing the expense.",
+            "example": "Grocery shopping"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.01,
+            "description": "Total monetary amount of the expense.",
+            "example": 1250.5
+          },
+          "category": {
+            "type": "string",
+            "description": "Category name (e.g., Food, Grocery, Fuel, Shopping, Electricity, Entertainment, Transport, Rent, Medical, Education, Utilities, Travel, Other).",
+            "example": "Grocery"
+          },
+          "payment_method": {
+            "type": "string",
+            "description": "Payment method used (e.g., Cash, UPI, Credit Card, Debit Card, Bank Transfer, Wallet).",
+            "example": "UPI"
+          },
+          "date": {
+            "type": "string",
+            "format": "date",
+            "description": "Date of expense in YYYY-MM-DD format.",
+            "example": "2026-10-02"
+          },
+          "description": {
+            "type": "string",
+            "description": "Optional detailed description.",
+            "example": "Monthly grocery restocking"
+          },
+          "time": {
+            "type": "string",
+            "description": "Optional time of expense (e.g. 14:30 or 'morning').",
+            "example": "10:15"
+          },
+          "location": {
+            "type": "string",
+            "description": "Optional store or location name.",
+            "example": "Supermarket"
+          },
+          "notes": {
+            "type": "string",
+            "description": "Optional additional notes.",
+            "example": "Included vegetables and fruits"
+          }
+        }
+      },
+      "ExpenseUpdate": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.01
+          },
+          "category": {
+            "type": "string"
+          },
+          "payment_method": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "description": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string"
+          },
+          "location": {
+            "type": "string"
+          },
+          "notes": {
+            "type": "string"
+          }
+        }
+      },
+      "AnalyticsSummary": {
+        "type": "object",
+        "properties": {
+          "summary": {
+            "type": "object",
+            "properties": {
+              "current_month_spending": {
+                "type": "number",
+                "example": 14500.0
+              },
+              "today_spending": {
+                "type": "number",
+                "example": 450.0
+              }
+            }
+          },
+          "category_distribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "category": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "payment_method_distribution": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "method": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                },
+                "count": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "daily_trend": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "date": {
+                  "type": "string"
+                },
+                "amount": {
+                  "type": "number"
+                }
+              }
+            }
+          },
+          "statistics": {
+            "type": "object",
+            "properties": {
+              "max_expense": {
+                "type": "number"
+              },
+              "min_expense": {
+                "type": "number"
+              },
+              "avg_expense": {
+                "type": "number"
+              },
+              "total_count": {
+                "type": "integer"
+              }
+            }
+          }
+        }
+      },
+      "BudgetItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string",
+            "example": "Food"
+          },
+          "amount": {
+            "type": "number",
+            "example": 5000.0
+          }
+        }
+      },
+      "BudgetCreate": {
+        "type": "object",
+        "required": [
+          "category",
+          "amount"
+        ],
+        "properties": {
+          "category": {
+            "type": "string",
+            "description": "Category name or 'Overall'",
+            "example": "Food"
+          },
+          "amount": {
+            "type": "number",
+            "minimum": 0.01,
+            "description": "Monthly budget limit amount",
+            "example": 5000.0
+          }
+        }
+      },
+      "SavingsGoalItem": {
+        "type": "object",
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string",
+            "example": "Emergency Fund"
+          },
+          "target_amount": {
+            "type": "number",
+            "example": 50000.0
+          },
+          "saved_amount": {
+            "type": "number",
+            "example": 15000.0
+          }
+        }
+      }
+    }
+  }
+}

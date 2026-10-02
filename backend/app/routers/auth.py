@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import datetime, timedelta
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from bson import ObjectId
 from app.database import get_collection
@@ -7,7 +8,9 @@ from app.auth import (
     verify_password,
     create_access_token,
     create_refresh_token,
-    get_current_user
+    get_current_user,
+    generate_api_key,
+    hash_api_key
 )
 from app.models import (
     UserRegister,
@@ -15,7 +18,9 @@ from app.models import (
     AdminSetPasswordRequest,
     UserResponse,
     SettingsUpdate,
-    RefreshTokenRequest
+    RefreshTokenRequest,
+    APIKeyGenerateRequest,
+    APIKeyResponse
 )
 from app.utils import serialize_doc, DEFAULT_PAYMENT_METHODS, log_audit_action
 
@@ -202,3 +207,81 @@ def admin_stats(current_user: dict = Depends(get_current_user)):
         "total_expenses": total_expenses,
         "total_amount": total_amount
     }
+
+# --- ChatGPT API Key Management ---
+@router.post("/api-key", response_model=APIKeyResponse)
+def generate_user_api_key(
+    request: Optional[APIKeyGenerateRequest] = None,
+    current_user: dict = Depends(get_current_user)
+):
+    users_col = get_collection("users")
+    raw_key, hashed_key = generate_api_key()
+    
+    days_valid = request.days_valid if request and request.days_valid else 365
+    created_at = datetime.utcnow()
+    expires_at = created_at + timedelta(days=days_valid)
+    prefix = f"{raw_key[:12]}...{raw_key[-4:]}"
+
+    users_col.update_one(
+        {"_id": ObjectId(current_user["id"])},
+        {"$set": {
+            "api_key_hash": hashed_key,
+            "api_key_prefix": prefix,
+            "api_key_active": True,
+            "api_key_created_at": created_at,
+            "api_key_expires_at": expires_at,
+            "api_key_last_used": None
+        }}
+    )
+    
+    log_audit_action(
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        action="generate_api_key",
+        details="Generated new ChatGPT API key."
+    )
+
+    return APIKeyResponse(
+        api_key=raw_key,
+        prefix=prefix,
+        created_at=created_at,
+        expires_at=expires_at,
+        is_active=True,
+        message="Save this API key securely. It will not be shown again."
+    )
+
+@router.delete("/api-key")
+def revoke_user_api_key(current_user: dict = Depends(get_current_user)):
+    users_col = get_collection("users")
+    users_col.update_one(
+        {"_id": ObjectId(current_user["id"])},
+        {"$set": {
+            "api_key_active": False,
+            "api_key_revoked_at": datetime.utcnow()
+        }}
+    )
+    log_audit_action(
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        action="revoke_api_key",
+        details="Revoked ChatGPT API key."
+    )
+    return {"status": "success", "message": "API key revoked successfully"}
+
+@router.get("/api-key", response_model=APIKeyResponse)
+def get_user_api_key_info(current_user: dict = Depends(get_current_user)):
+    users_col = get_collection("users")
+    user = users_col.find_one({"_id": ObjectId(current_user["id"])})
+    if not user or not user.get("api_key_hash"):
+        return APIKeyResponse(
+            is_active=False,
+            message="No API key created yet"
+        )
+    
+    return APIKeyResponse(
+        prefix=user.get("api_key_prefix"),
+        created_at=user.get("api_key_created_at"),
+        expires_at=user.get("api_key_expires_at"),
+        last_used=user.get("api_key_last_used"),
+        is_active=user.get("api_key_active", False)
+    )

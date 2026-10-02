@@ -25,6 +25,19 @@ class UserResponse(BaseModel):
     language: str = "en"
     timezone: str = "UTC"
 
+class APIKeyGenerateRequest(BaseModel):
+    name: Optional[str] = "ChatGPT Key"
+    days_valid: Optional[int] = 365
+
+class APIKeyResponse(BaseModel):
+    api_key: Optional[str] = None
+    prefix: Optional[str] = None
+    created_at: Optional[datetime] = None
+    expires_at: Optional[datetime] = None
+    last_used: Optional[datetime] = None
+    is_active: bool = True
+    message: Optional[str] = None
+
 # Expense schemas
 class ExpenseCreate(BaseModel):
     amount: float = Field(..., gt=0)
