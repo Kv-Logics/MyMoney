@@ -15,7 +15,9 @@ from app.routers import (
     savings,
     misc,
     tasks,
-    ai
+    ai,
+    oauth,
+    mcp
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -72,6 +74,8 @@ app.include_router(savings.router)
 app.include_router(misc.router)
 app.include_router(tasks.router)
 app.include_router(ai.router)
+app.include_router(oauth.router)
+app.include_router(mcp.router)
 
 # Mount receipt uploads folder statically
 upload_dir = "/home/kv/Projects/MyMoney/backend/uploads"
