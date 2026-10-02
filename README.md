@@ -1,248 +1,179 @@
-# 💸 MyMoney — Personal Expense Tracker
+# 💸 MyMoney — Agentic Financial Infrastructure & Personal Tracker
 
-> A modern, full-stack personal finance tracker with multi-user sharing, budget alerts, savings goals, task management, admin controls, and real-time analytics — built by [Kv-Logics](https://github.com/Kv-Logics/MyMoney).
-
----
-
-## 🚀 What Is This Project?
-
-**MyMoney** is a sleek, glassmorphic expense tracking web application designed for personal and family-level financial management. It lets you log daily expenses, track budgets by category, set savings goals, manage tasks, share your tracker with family members, and view rich analytics — all from a single-page, responsive dashboard.
-
-The app is fully self-contained: a **vanilla HTML/CSS/JS frontend** backed by a **FastAPI + MongoDB Atlas** REST API, deployable via Docker or cloud platforms.
+> A modern, full-stack personal finance platform equipped with **Streamable HTTP MCP (Model Context Protocol)**, **OAuth 2.1 PKCE Security**, **ChatGPT Custom Actions**, **Gemini 2.0 Flash Voice AI Agent**, multi-user sharing, budget alerts, and real-time analytics — built by **[Kv-Logics](https://github.com/Kv-Logics/MyMoney)**.
 
 ---
 
-## 🛠️ Tech Stack
+## 🌟 Modern Highlights & AI Agentic Architecture
+
+MyMoney is an advanced financial management application bridging **traditional web applications** with **next-generation AI agents**. 
+
+```text
+ChatGPT / AI Clients                  Web & Mobile Frontend
+        │                                      │
+  OAuth 2.1 (PKCE S256)                   Vanilla JS SPA
+  CIMD Discovery                          Web Speech & Gemini 2.0
+        │                                      │
+        ▼                                      ▼
+Streamable HTTP MCP (/mcp) ──► FastAPI Backend Server ◄── REST APIs (/api/*)
+                                      │
+                         MongoDB Atlas (User Isolation)
+```
+
+### 🤖 1. Model Context Protocol (MCP) Server (`/mcp`)
+- **Streamable HTTP Server**: Complies with RFC 9728 (Protected Resource Metadata) and RFC 8414 (Authorization Server Discovery).
+- **9 Native MCP Tools**:
+  - `get_user_profile` (`_meta["openai/profile"]: true`)
+  - `list_expenses`, `create_expense`, `update_expense`, `delete_expense`
+  - `get_expense_summary`, `list_budgets`, `create_or_update_budget`, `list_savings_goals`
+- **Security & Scopes**: Every MCP tool explicitly declares its required scopes (`profile:read`, `expenses:read`, `expenses:write`, etc.) with `securitySchemes` and `_meta["mcp/www_authenticate"]` challenge mechanisms.
+
+### 🔐 2. OAuth 2.1 (PKCE S256) & ChatGPT Account Linking
+- **CIMD (Client ID Metadata Document)**: Built-in support for ChatGPT's identity (`https://chatgpt.com/oauth/client.json`) and stable redirect (`https://chatgpt.com/connector_platform_oauth_redirect`).
+- **Resource Indicator Binding**: All access tokens explicitly bind `iss` and `aud` claims to `https://mymoney-jd0n.onrender.com`.
+- **Per-User API Keys**: Generates cryptographically secure `mm_live_...` API keys (stored only as SHA-256 hashes in MongoDB) for direct REST integration.
+
+### 🎙️ 3. Voice AI Agent (Gemini 2.0 Flash)
+- **Multi-Turn Voice & Text Chat**: Speak naturally (e.g. *"I ate dosa in the morning for 150 online, and biryani at night for 350 cash"*) to automatically extract structured expense items.
+- **Meal Duration & Time Parsing**: Maps spending to `morning`, `afternoon`, `night`, or `snacks`.
+- **Manual Mic Control & Retained Prompts**: User controls recording start/stop with continuous transcript editing.
+
+---
+
+## 🛠️ Technology Stack
 
 | Layer | Technology |
 |---|---|
-| **Frontend** | Vanilla HTML5, Tailwind CSS (CDN), Lucide Icons, Flatpickr |
-| **Backend** | Python 3.12, FastAPI, Uvicorn |
-| **Database** | MongoDB Atlas (cloud) |
-| **Auth** | JWT (access + refresh tokens), stored in cookies |
-| **Deployment** | Docker, Render (backend), Vercel (frontend) |
-| **Password Hashing** | bcrypt |
+| **Frontend** | Vanilla HTML5, CSS3 (Glassmorphism design system), Modular ES6 JS, Lucide Icons, Flatpickr |
+| **Backend** | Python 3.14+, FastAPI, PyMongo, Uvicorn, PyJWT, Cryptography, Pydantic v2 |
+| **AI Services** | Google Gemini 2.0 Flash (`google-generativeai`), Streamable HTTP MCP Protocol (`JSON-RPC 2.0`) |
+| **Database** | MongoDB Atlas (Cloud) with single-tenant `user_id` query isolation |
+| **Authentication** | OAuth 2.1 PKCE (S256), SHA-256 API Keys (`mm_live_...`), JWT Bearer Cookies |
+| **Deployment** | Docker, Render (`https://mymoney-jd0n.onrender.com`), Vercel (`https://my-money-avv.vercel.app`) |
 
 ---
 
-## ✨ Features
+## ✨ Full Feature Overview
 
-### 💰 Expense Management
-- Add, edit, and delete expenses with title, amount, category, payment method, date, time, location, description, and notes
-- Rich filtering: by category, payment method, date range, amount range, and keyword search
-- Sort expenses by date or amount (ascending/descending)
-- Attach receipt images to expenses
-- Offline mode with sync queue — expenses queued locally and synced when back online
-- **DD/MM/YYYY date format** across the entire application (Flatpickr integration)
+### 💰 Expense & Data Management
+- **CRUD Operations**: Log, edit, and delete expenses with title, amount, category, payment method, date, time, location, description, and notes.
+- **Advanced Filtering**: Filter by category, payment method, date range, amount bounds, and fuzzy search.
+- **Rent Isolation**: Rent expenses are isolated in a dedicated card so discretionary spending metrics remain accurate.
+- **DD/MM/YYYY Format**: Standardized date formatting across forms, tables, and date pickers.
 
-### 📊 Dashboard & Analytics
-- **This Month's Spending** and **Today's Spending** summary cards (excluding Rent)
-- **Dedicated Monthly Rent card** — rent expenses are isolated from all other metrics and displayed in their own tracker card
-- **Animated donut pie chart** — category-wise spending breakdown with color legend
-- **Weekly spending trend bar chart** with `< >` navigation to browse previous/future weeks, week total badge, and date range label
-- Clickable day bars — click a day to filter Recent Transactions to that specific date
-- **Recent Transactions** quick-view table on the dashboard
-- Overall budget progress bar with color-coded alerts (green → amber → red)
-- 4-column responsive summary grid (Month Spending, Today Spending, Monthly Rent, Remaining Budget)
+### 📊 Dashboard & Visual Analytics
+- **Parallel Data Hydration**: Concurrent data fetching for fast rendering.
+- **Interactive Daily & Weekly Bar Graphs**: Week-by-week navigation (`< >`), week totals, and click-to-filter date bars.
+- **Category Donut Charts**: Spending distribution per category with color legends.
+- **Previous Period Comparison**: Quick badges for previous week and previous month spending trends.
 
-### 🏠 Rent Isolation
-- **Rent category is completely excluded** from Month Spending, Today Spending, Weekly Trend, Category Breakdown, Budget calculations, and Reports
-- Rent expenses are displayed in a **dedicated "Monthly Rent" dashboard card**
-- Keeps your discretionary spending metrics clean and accurate
+### 🗂️ Budgets & Savings Goals
+- **Category & Overall Budgets**: Set spending limits per category or overall monthly spending.
+- **Threshold Alerts**: Automated notifications when spending reaches 50%, 75%, 90%, or 100% of limits.
+- **Delete Budget Support**: Clear or update budget limits directly from the UI.
+- **Savings Goals**: Track savings progress with quick "Add Money" shortcuts on goal cards.
 
-### 🗂️ Budget Management
-- Set monthly spending limits per category (Food, Fuel, Grocery, etc.) or an Overall limit
-- Rent category is excluded from budget lists and Overall budget calculations
-- Live progress bars per budget showing % used and status (Within Budget / Approaching Limit / Exceeded)
-- **Automatic budget alert notifications** at 50%, 75%, 90%, and 100% thresholds
-
-### 🎯 Savings Goals
-- Create savings goals with a title and target amount
-- Track current saved amount with a progress bar
-- **Quick "Add Money" shortcut** directly on each goal card — no need to open the full edit form
-- Completion badge (🎉) when a goal is reached
-- Full edit and delete support
-
-### ✅ Task Manager
-- Create tasks with title, description, category, start/end dates, and notes
-- Kanban-style task cards with checklist items
-- Track task completion with progress indicators
-- Full CRUD support with server-side persistence
-
-### 🏷️ Categories
-- 13 built-in default categories (Food, Rent, Grocery, Electricity, Fuel, Shopping, Entertainment, etc.)
-- Create custom categories with custom name, color, and icon
-- Delete custom categories
-
-### 💳 Payment Methods
-- 6 built-in defaults: Cash, UPI, Credit Card, Debit Card, Bank Transfer, Wallet
-- Add your own custom payment methods
-
-### 👨‍👩‍👧 Family / Multi-User Sharing
-- Share your expense tracker with any registered user by email
-- Shared users can view your dashboard, expenses, budgets, savings, and analytics in read-only mode
-- **Family panel** in the sidebar — one-click switch between your tracker and a shared tracker
-- **"Shared View [×]" badge** — click to instantly exit back to your own tracker
-- Revoke access at any time from the Sharing settings tab
-- Notifications sent to the invited user on new share
-
-### 🔔 Notifications
-- In-app notification bell with unread dot indicator
-- Budget threshold alerts (category-level and overall)
-- Sharing invite notifications
-- Mark all as read
-- Bell dropdown **auto-closes** when clicking anywhere else on the page
-
-### 📋 Audit Logs
-- Full activity timeline: every expense added, edited, or deleted; every sharing invite sent or revoked; every goal created or updated
-- Viewable under the Audit Log tab
-- Supports viewing audit logs for a shared tracker
-
-### 📈 Reports
-- Generate expense reports for any custom date range
-- Summary: total spent, average expense, transaction count, highest/lowest spending category
-- Rent category is excluded from report totals and exports
-- **Export to CSV** — downloadable report file
-
-### 🔐 Authentication
-- Register and login with email + password
-- Tokens stored in **secure HTTP cookies** (access token: 15 min, refresh token: 7 days)
-- **Automatic token refresh** — transparent background refresh, no forced logouts
-- Global fetch interceptor handles 401s and retries requests seamlessly
-- **Immersive login loading screen** — animated floating orbs, live elapsed timer, and cycling status messages while waiting for server cold-start
-
-### 👑 Admin Dashboard
-- Dedicated admin view for the system administrator (gated by email)
-- **System-wide stats**: Total Users, Total Expenses, Total Amount Tracked
-- **User management table**: View all registered users with name, email, and currency
-- **Credentials Control**: Upsert/reset passwords for any user directly from the dashboard
-- Custom glassmorphic toast notifications for admin actions
-
-### ⚙️ Settings
-- Change currency display (INR, USD, EUR, GBP, etc.)
-- Theme preference (dark/light) — selectable on login screen
-- Timezone selection
-- Configure custom API base URL (for self-hosting)
-
-### 📱 Responsive Design
-- **Collapsible left sidebar** on desktop, expandable on mobile
-- Clean, dark glassmorphism design language with light theme support
-- Sticky top header with sync status indicator
-- Mobile-optimised layouts with responsive grid breakpoints
+### 👨‍👩‍👧 Family Sharing & Audit Logs
+- **Multi-User Sharing**: Share read-only tracker access with family members via email.
+- **One-Click View Switch**: Switch between your personal tracker and shared family trackers with an instant exit badge.
+- **Activity Timeline**: Full audit logging for additions, edits, deletions, and sharing events.
 
 ---
 
-## 🗂️ Project Structure
+## 🗂️ Project Directory Structure
 
-```
+```text
 MyMoney/
-├── index.html                  # Single-page frontend app
+├── .agents/                    # Workspace agent guidelines & developer skills
+│   ├── AGENTS.md               # Workspace rules for AI assistants
+│   └── skills/                 # Developer skill manuals
+├── docs/                       # Technical architecture documents
+│   ├── 01-ARCHITECTURE-OVERVIEW.md
+│   ├── 02-BACKEND-API-AND-DATABASE-SCHEMA.md
+│   ├── 03-FRONTEND-COMPONENT-SYSTEM.md
+│   ├── 04-VOICE-AI-AGENT-SPECIFICATION.md
+│   ├── 05-GEMINI-API-KEY-SETUP-GUIDE.md
+│   ├── 06-AI-APPROVALS-AND-TOKEN-MONITORING.md
+│   ├── 07-FUTURE-AGENT-DEVELOPMENT-AND-TROUBLESHOOTING.md
+│   └── openapi-chatgpt.json    # OpenAPI 3.0.3 specification for ChatGPT Actions
+├── index.html                  # Main SPA frontend
 ├── css/
-│   └── style.css               # Global styles, glassmorphism, animations
+│   └── style.css               # Glassmorphic design system
 ├── js/
-│   ├── app.js                  # State, fetch interceptor, cookie helpers, toast, core logic
-│   ├── api.js                  # API fetch calls (fetchUserData, fetchAllData, etc.)
-│   ├── auth.js                 # Login, register, logout, token management, login loading
-│   ├── ui.js                   # UI render functions (expenses, budgets, sharing, etc.)
+│   ├── app.js                  # State management & fetch interceptors
+│   ├── api.js                  # Hydration and parallel API calls
+│   ├── auth.js                 # Authentication & login screen handlers
 │   └── components/
-│       ├── dashboard.js        # Dashboard render logic (charts, stats, trends, admin)
-│       ├── expenses.js         # Expense form handling and CRUD
-│       ├── budgets.js          # Budget modal and form submissions
-│       ├── savings.js          # Savings goal CRUD and quick-add
-│       ├── tasks.js            # Task manager CRUD and rendering
-│       ├── reports.js          # Report generation and CSV export
-│       └── sharing.js          # Family sharing UI logic
-├── backend/
-│   ├── Dockerfile
-│   ├── requirements.txt
-│   └── app/
-│       ├── main.py             # FastAPI app entry — mounts all routers
-│       ├── auth.py             # JWT creation, verification, get_current_user
-│       ├── database.py         # MongoDB Atlas connection
-│       ├── models.py           # Pydantic schemas
-│       ├── utils.py            # serialize_doc, log_audit_action, verify_sharing_access
-│       └── routers/
-│           ├── auth.py         # /api/auth/* — register, login, refresh, me, settings, admin
-│           ├── expenses.py     # /api/expenses — CRUD + filters
-│           ├── budgets.py      # /api/budgets — get & upsert budgets
-│           ├── savings.py      # /api/savings — savings goals CRUD
-│           ├── categories.py   # /api/categories — default + custom categories
-│           ├── payment_methods.py  # /api/payment-methods
-│           ├── sharing.py      # /api/sharing — invite, shared-with, shared-by, revoke
-│           └── misc.py         # /api/analytics, /api/reports, /api/notifications, /api/audit-logs
-├── robots.txt                  # SEO robots configuration
-├── sitemap.xml                 # SEO sitemap
-├── favicon.svg                 # App favicon
-└── vercel.json                 # Frontend deployment config
+│       ├── voice_agent.js      # Gemini 2.0 Flash Voice AI & AI Mode page
+│       ├── dashboard.js        # Daily/weekly charts & summary cards
+│       ├── expenses.js         # Expense CRUD logic
+│       ├── budgets.js          # Budget limit modals & deletion
+│       ├── savings.js          # Savings goal CRUD
+│       ├── reports.js          # Custom report generator & CSV export
+│       ├── tasks.js            # Task manager & checklist cards
+│       └── sharing.js          # Family sharing controls
+└── backend/
+    ├── Dockerfile
+    ├── requirements.txt        # Dependencies (Python 3.14 compatible)
+    ├── tests/                  # Automated PyTest suite
+    │   ├── test_api_key_auth.py
+    │   └── test_mcp_oauth_full.py
+    └── app/
+        ├── main.py             # FastAPI entry point
+        ├── auth.py             # JWT & API key verification
+        ├── database.py         # MongoDB Atlas connection & URI cleaner
+        ├── models.py           # Pydantic v2 schemas
+        └── routers/
+            ├── oauth.py        # RFC 9728, RFC 8414, PKCE S256, /oauth/*
+            ├── mcp.py          # Streamable HTTP MCP server (/mcp)
+            ├── auth.py         # /api/auth/* & /api/auth/api-key
+            ├── expenses.py     # /api/expenses/*
+            ├── budgets.py      # /api/budgets/*
+            ├── savings.py      # /api/savings/*
+            └── misc.py         # /api/analytics, /api/reports, etc.
 ```
 
 ---
 
-## ⚙️ Setup & Running
+## ⚙️ Local Development & Testing
 
-### Prerequisites
-- Python 3.11+
-- MongoDB Atlas cluster (free tier works)
-- A `.env` file in `backend/`
+### 1. Prerequisites
+- Python 3.12 or 3.14+
+- MongoDB Atlas database cluster
 
-### Backend `.env`
+### 2. Environment Setup (`backend/.env`)
 ```env
-MONGO_URI=mongodb+srv://<user>:<pass>@cluster.mongodb.net/mymoney
-JWT_SECRET=your_secret_key_here
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/?appName=mymoney
+JWT_SECRET=your_super_secret_jwt_key
+PORT=8000
 ```
 
-### Run Locally
-
+### 3. Run Backend Locally
 ```bash
-# Backend
 cd backend
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+PYTHONPATH=. venv/bin/python3 -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Open `index.html` directly in your browser — the frontend auto-detects localhost and points to `http://localhost:8000/api`.
-
-### Run with Docker
-
+### 4. Run Automated Test Suite
 ```bash
 cd backend
-docker build -t mymoney-backend .
-docker run -p 8000:8000 --env-file .env mymoney-backend
+PYTHONPATH=. venv/bin/pytest tests/test_api_key_auth.py tests/test_mcp_oauth_full.py -v
 ```
 
 ---
 
-## 🌐 Deployment
+## 🌐 Production Deployments
 
-| Part | Platform | Notes |
+| Component | Platform | Live URL / Endpoint |
 |---|---|---|
-| Frontend | **Vercel** | Deploy root folder; `vercel.json` rewrites all routes to `index.html` |
-| Backend | **Render** | Deploy `backend/` with Docker; set env vars in Render dashboard |
-
----
-
-## 🔧 Development Log
-
-| Area | What Was Done |
-|---|---|
-| **Auth** | Switched from localStorage tokens to secure cookies; added refresh token endpoint; global fetch interceptor for transparent token refresh |
-| **Login UX** | Immersive loading screen with animated orbs, live timer, and cycling status messages during server cold-start |
-| **Admin Dashboard** | Dedicated admin view with system stats, user management table, and password reset controls |
-| **Rent Isolation** | Rent category fully excluded from all spending totals, budgets, trends, and reports; shown in dedicated card |
-| **Weekly Trend** | Added `< >` week navigation, week total badge, and date range display |
-| **Task Manager** | Full task CRUD with checklist items, categories, date ranges, and kanban-style cards |
-| **Date Formatting** | DD/MM/YYYY format across the entire application using Flatpickr |
-| **Toast Notifications** | Custom glassmorphic toast system replacing browser `alert()` calls |
-| **Family Sharing** | Fixed shared tracker view (owner_email query fix); added clickable "Shared View" exit badge |
-| **Notifications** | Bell dropdown auto-closes on outside click |
-| **Responsive UI** | Collapsible sidebar on desktop/mobile; 4-column summary grid; responsive breakpoints |
-| **Backend Refactor** | Split monolithic 984-line `main.py` into 8 focused `APIRouter` modules under `app/routers/`; added `utils.py` for shared helpers |
-| **Frontend Refactor** | Split rendering into modular component files under `js/components/` |
-| **API Detection** | Improved `API_BASE` detection to support LAN IPs (192.168.x, 10.x, 172.x) for local network access |
-| **SEO** | Added `robots.txt`, `sitemap.xml`, meta tags, and semantic HTML structure |
-| **Quick Add Money** | "Add Money" shortcut button directly on savings goal cards |
+| **Frontend** | Vercel | `https://my-money-avv.vercel.app` |
+| **Backend REST API** | Render | `https://mymoney-jd0n.onrender.com/api` |
+| **Streamable MCP Server** | Render | `https://mymoney-jd0n.onrender.com/mcp` |
+| **Protected Resource Metadata** | Render | `https://mymoney-jd0n.onrender.com/.well-known/oauth-protected-resource` |
+| **OAuth Authorization Server** | Render | `https://mymoney-jd0n.onrender.com/.well-known/oauth-authorization-server` |
 
 ---
 
