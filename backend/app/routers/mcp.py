@@ -10,6 +10,7 @@ import jwt
 from app.database import get_collection
 from app.auth import JWT_SECRET, JWT_ALGORITHM, hash_api_key, API_KEY_PREFIX
 from app.utils import serialize_doc, serialize_docs
+from app.profit_tracker.service import profit_service
 
 router = APIRouter(tags=["MCP Server"])
 
@@ -212,6 +213,88 @@ MCP_TOOLS = [
         "inputSchema": { "type": "object", "properties": {} },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["savings:read"] }],
         "annotations": { "readOnlyHint": True }
+    },
+    {
+        "name": "record_daily_profit",
+        "description": "Record or update the authenticated user's daily profit amount for a specific date (amount > 0 for profit, 0 for no-profit, < 0 for loss). Updates existing record if date already exists.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["date", "amount"],
+            "properties": {
+                "date": { "type": "string", "description": "YYYY-MM-DD" },
+                "amount": { "type": "number", "description": "Profit amount (>0 for profit, 0 for no profit, <0 for loss)" },
+                "note": { "type": "string", "description": "Optional notes or details" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:write"] }],
+        "annotations": { "destructiveHint": False }
+    },
+    {
+        "name": "get_daily_profit",
+        "description": "Retrieve the daily profit record for a specific date.",
+        "inputSchema": {
+            "type": "object",
+            "required": ["date"],
+            "properties": {
+                "date": { "type": "string", "description": "YYYY-MM-DD" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:read"] }],
+        "annotations": { "readOnlyHint": True }
+    },
+    {
+        "name": "list_daily_profits",
+        "description": "List daily profit records within a date range.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "start_date": { "type": "string", "description": "YYYY-MM-DD" },
+                "end_date": { "type": "string", "description": "YYYY-MM-DD" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:read"] }],
+        "annotations": { "readOnlyHint": True }
+    },
+    {
+        "name": "get_profit_summary",
+        "description": "Retrieve daily profit summary analytics including total_profit, profitable_days count, no_profit_days, loss_days count, average_profit_on_profitable_days, highest_profit, and lowest_profit.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "start_date": { "type": "string", "description": "YYYY-MM-DD" },
+                "end_date": { "type": "string", "description": "YYYY-MM-DD" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:read"] }],
+        "annotations": { "readOnlyHint": True }
+    },
+    {
+        "name": "update_daily_profit",
+        "description": "Update an existing daily profit record by ID or date.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": { "type": "string", "description": "MongoDB ID string or date string" },
+                "date": { "type": "string", "description": "YYYY-MM-DD" },
+                "amount": { "type": "number" },
+                "note": { "type": "string" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:write"] }],
+        "annotations": { "destructiveHint": False }
+    },
+    {
+        "name": "delete_daily_profit",
+        "description": "Delete a daily profit record by ID or date.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "id": { "type": "string", "description": "MongoDB ID string or date string" },
+                "date": { "type": "string", "description": "YYYY-MM-DD" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:write"] }],
+        "annotations": { "destructiveHint": True }
     }
 ]
 
@@ -478,5 +561,55 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
         savings_col = get_collection("savings")
         goals = list(savings_col.find({"user_id": user_id}))
         return serialize_docs(goals)
+
+    # 10. record_daily_profit
+    if name == "record_daily_profit":
+        date = args.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        amount = float(args.get("amount", 0.0))
+        note = args.get("note", "")
+        return profit_service.record_profit(user_id=user_id, date=date, amount=amount, note=note)
+
+    # 11. get_daily_profit
+    if name == "get_daily_profit":
+        date = args.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        res = profit_service.get_profit_by_date(user_id=user_id, date=date)
+        if not res:
+            return {"message": f"No daily profit record found for date {date}"}
+        return res
+
+    # 12. list_daily_profits
+    if name == "list_daily_profits":
+        return profit_service.list_profits(
+            user_id=user_id,
+            start_date=args.get("start_date"),
+            end_date=args.get("end_date")
+        )
+
+    # 13. get_profit_summary
+    if name == "get_profit_summary":
+        return profit_service.get_summary(
+            user_id=user_id,
+            start_date=args.get("start_date"),
+            end_date=args.get("end_date")
+        )
+
+    # 14. update_daily_profit
+    if name == "update_daily_profit":
+        key = args.get("id") or args.get("date")
+        if not key:
+            raise Exception("Must provide 'id' or 'date' to update daily profit record")
+        amount = float(args["amount"]) if "amount" in args and args["amount"] is not None else None
+        note = args.get("note")
+        return profit_service.update_profit(user_id=user_id, key=key, amount=amount, note=note)
+
+    # 15. delete_daily_profit
+    if name == "delete_daily_profit":
+        key = args.get("id") or args.get("date")
+        if not key:
+            raise Exception("Must provide 'id' or 'date' to delete daily profit record")
+        deleted = profit_service.delete_profit(user_id=user_id, key=key)
+        if not deleted:
+            raise Exception("Daily profit record not found or unauthorized")
+        return {"status": "success", "message": "Daily profit record deleted successfully"}
 
     raise Exception(f"Unknown MCP tool: {name}")

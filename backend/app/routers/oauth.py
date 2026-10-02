@@ -56,7 +56,9 @@ def get_oauth_protected_resource():
             "expenses:write",
             "budgets:read",
             "budgets:write",
-            "savings:read"
+            "savings:read",
+            "profit:read",
+            "profit:write"
         ],
         "bearer_methods_supported": [
             "header"
@@ -83,7 +85,9 @@ def get_oauth_authorization_server():
             "expenses:write",
             "budgets:read",
             "budgets:write",
-            "savings:read"
+            "savings:read",
+            "profit:read",
+            "profit:write"
         ],
         "resource_indicators_supported": True
     }
