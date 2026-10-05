@@ -1,0 +1,5 @@
+{
+  "name": "MyMoney MCP Plugin",
+  "version": "1.0.0",
+  "description": "Securely connect your MyMoney expense tracker and daily profit tracker to ChatGPT via the Model Context Protocol (MCP)."
+}
