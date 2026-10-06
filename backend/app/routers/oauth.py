@@ -272,47 +272,74 @@ async def oauth_token_endpoint(request: Request):
         form = await request.form()
         body = dict(form)
 
-    code = body.get("code")
-    code_verifier = body.get("code_verifier", "")
-    resource_req = body.get("resource")
-
-    if not code:
-        raise HTTPException(status_code=400, detail="Missing authorization code")
-
-    auth_codes_col = get_collection("auth_codes")
-    record = auth_codes_col.find_one({"auth_code": code})
-    if not record:
-        raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
-
-    if record.get("expires_at") and record["expires_at"] < datetime.utcnow():
-        auth_codes_col.delete_one({"_id": record["_id"]})
-        raise HTTPException(status_code=400, detail="Authorization code expired")
-
-    # Validate resource indicator if present
-    if resource_req and resource_req.rstrip("/") != RESOURCE_URI.rstrip("/"):
-        raise HTTPException(status_code=400, detail="Resource parameter mismatch")
-
-    # Validate PKCE S256
-    stored_challenge = record.get("code_challenge", "")
-    challenge_method = record.get("code_challenge_method", "S256")
-    if stored_challenge and code_verifier:
-        if not verify_pkce(code_verifier, stored_challenge, challenge_method):
-            raise HTTPException(status_code=400, detail="PKCE verifier verification failed")
-
-    # Invalidate authorization code once used
-    auth_codes_col.delete_one({"_id": record["_id"]})
+    grant_type = body.get("grant_type", "authorization_code")
 
     users_col = get_collection("users")
-    user = users_col.find_one({"_id": ObjectId(record["user_id"])})
-    if not user:
-        raise HTTPException(status_code=400, detail="User not found")
+    scope = "profile:read expenses:read expenses:write budgets:read budgets:write savings:read"
+    user = None
 
-    scope = record.get("scope", "profile:read expenses:read expenses:write budgets:read budgets:write savings:read")
+    if grant_type == "refresh_token":
+        refresh_token = body.get("refresh_token")
+        if not refresh_token:
+            raise HTTPException(status_code=400, detail="Missing refresh token")
+        try:
+            payload = jwt.decode(refresh_token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            if payload.get("token_type") != "mcp_refresh_token":
+                raise HTTPException(status_code=400, detail="Invalid token type")
+            user_id_str = payload.get("sub")
+            user = users_col.find_one({"_id": ObjectId(user_id_str)})
+            if not user:
+                raise HTTPException(status_code=400, detail="User not found")
+            scope = payload.get("scope", scope)
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid or expired refresh token")
+
+    elif grant_type == "authorization_code":
+        code = body.get("code")
+        code_verifier = body.get("code_verifier", "")
+        resource_req = body.get("resource")
+
+        if not code:
+            raise HTTPException(status_code=400, detail="Missing authorization code")
+
+        auth_codes_col = get_collection("auth_codes")
+        record = auth_codes_col.find_one({"auth_code": code})
+        if not record:
+            raise HTTPException(status_code=400, detail="Invalid or expired authorization code")
+
+        if record.get("expires_at") and record["expires_at"] < datetime.utcnow():
+            auth_codes_col.delete_one({"_id": record["_id"]})
+            raise HTTPException(status_code=400, detail="Authorization code expired")
+
+        # Validate resource indicator if present
+        if resource_req and resource_req.rstrip("/") != RESOURCE_URI.rstrip("/"):
+            raise HTTPException(status_code=400, detail="Resource parameter mismatch")
+
+        # Validate PKCE S256
+        stored_challenge = record.get("code_challenge", "")
+        challenge_method = record.get("code_challenge_method", "S256")
+        if stored_challenge and code_verifier:
+            if not verify_pkce(code_verifier, stored_challenge, challenge_method):
+                raise HTTPException(status_code=400, detail="PKCE verifier verification failed")
+
+        # Invalidate authorization code once used
+        auth_codes_col.delete_one({"_id": record["_id"]})
+
+        user = users_col.find_one({"_id": ObjectId(record["user_id"])})
+        if not user:
+            raise HTTPException(status_code=400, detail="User not found")
+
+        scope = record.get("scope", scope)
+        
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported grant_type")
     
     # Issue audience-bound OAuth Access Token with sub, iss, aud, exp, scope claims
     now = datetime.utcnow()
-    expires_delta = timedelta(days=1)
-    payload = {
+    access_expires_delta = timedelta(days=30)
+    refresh_expires_delta = timedelta(days=60)
+    
+    access_payload = {
         "sub": str(user["_id"]),
         "email": user["email"],
         "name": user.get("name", "User"),
@@ -321,14 +348,25 @@ async def oauth_token_endpoint(request: Request):
         "scope": scope,
         "token_type": "mcp_oauth_token",
         "iat": now,
-        "exp": now + expires_delta
+        "exp": now + access_expires_delta
     }
-    
-    access_token = jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+    access_token = jwt.encode(access_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
+
+    refresh_payload = {
+        "sub": str(user["_id"]),
+        "iss": ISSUER,
+        "aud": RESOURCE_URI,
+        "scope": scope,
+        "token_type": "mcp_refresh_token",
+        "iat": now,
+        "exp": now + refresh_expires_delta
+    }
+    refresh_token = jwt.encode(refresh_payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
     return {
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": "Bearer",
-        "expires_in": 86400,
+        "expires_in": 2592000,
         "scope": scope
     }
