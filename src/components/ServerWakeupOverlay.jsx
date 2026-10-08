@@ -9,7 +9,7 @@ export default function ServerWakeupOverlay() {
   const canvasRef = useRef(null);
 
   // Set this flag to false to disable the animation and go directly to the app/login
-  const SHOW_WAKEUP_ANIMATION = false;
+  const SHOW_WAKEUP_ANIMATION = true;
 
   // ── Effect 1: Particle Network Animation (mirrors startWakeupParticles in wakeup.js) ──
   useEffect(() => {

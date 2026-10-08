@@ -30,10 +30,11 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
 
   // Summary math
-  const monthTotal = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const nonRentExpenses = expenses.filter(e => e.category !== 'Rent');
+  const monthTotal = nonRentExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
   const todayTotal = 0;
   const rentExpense = expenses.find(e => e.category === 'Rent');
-  const rentTotal = rentExpense ? rentExpense.amount : 1888.89;
+  const rentTotal = rentExpense ? rentExpense.amount : 0;
 
   const overallBudget = budgets.find(b => b.category === 'Overall');
   const budgetAmount = overallBudget ? overallBudget.amount : 1500;
@@ -41,7 +42,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   // Category Breakdown Math
   const categoryTotals = {};
-  expenses.forEach(e => {
+  nonRentExpenses.forEach(e => {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
 
@@ -49,8 +50,28 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     name: cat,
     amount: amt,
     pct: Math.round((amt / (monthTotal || 1)) * 100),
-    color: cat === 'Food' ? '#ef4444' : cat === 'Travel' ? '#10b981' : cat === 'Fuel' ? '#6366f1' : '#8b5cf6'
+    color: cat === 'Food' ? '#ef4444' : cat === 'Travel' ? '#10b981' : cat === 'Fuel' ? '#6366f1' : '#f59e0b'
   }));
+
+  let currentAngle = 0;
+  const dynamicCircles = categoryBreakdown.map(c => {
+    const dashLength = (c.pct / 100) * 251.2;
+    const circle = (
+      <circle
+        key={c.name}
+        cx="50" cy="50" r="40"
+        fill="transparent"
+        stroke={c.color}
+        strokeWidth="10"
+        strokeDasharray={`${dashLength} 251.2`}
+        strokeDashoffset="0"
+        transform={`rotate(${currentAngle} 50 50)`}
+        className="transition-all duration-1000 ease-out"
+      />
+    );
+    currentAngle += (c.pct / 100) * 360;
+    return circle;
+  });
 
   return (
     <div className="space-y-6">
@@ -209,9 +230,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                 <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#e2e8f0" strokeWidth="10" />
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#ef4444" strokeWidth="10" strokeDasharray="251" strokeDashoffset="85" />
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#10b981" strokeWidth="10" strokeDasharray="251" strokeDashoffset="180" />
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#6366f1" strokeWidth="10" strokeDasharray="251" strokeDashoffset="230" />
+                    {dynamicCircles}
                   </svg>
                   <div className="absolute text-center">
                     <span className="text-[10px] uppercase font-semibold text-slate-400 block">TOTAL SPENT</span>
