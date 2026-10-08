@@ -216,14 +216,14 @@ MCP_TOOLS = [
     },
     {
         "name": "record_daily_profit",
-        "description": "Record or update the authenticated user's daily profit amount for a specific date (amount > 0 for profit, 0 for no-profit, < 0 for loss). Updates existing record if date already exists.",
+        "description": "Record today's or any specific date's daily profit (completely separate from expenses/budgets). ALWAYS use this tool when the user mentions today's profit, earnings, or revenue. If a record already exists for that date, it is automatically updated (upsert). amount > 0 means profitable day, amount == 0 means no-profit day, amount < 0 means loss day.",
         "inputSchema": {
             "type": "object",
             "required": ["date", "amount"],
             "properties": {
-                "date": { "type": "string", "description": "YYYY-MM-DD" },
-                "amount": { "type": "number", "description": "Profit amount (>0 for profit, 0 for no profit, <0 for loss)" },
-                "note": { "type": "string", "description": "Optional notes or details" }
+                "date": { "type": "string", "description": "YYYY-MM-DD. Use today's date if user says 'today'." },
+                "amount": { "type": "number", "description": "Profit amount in user's currency. >0 for profit, 0 for no profit, <0 for loss." },
+                "note": { "type": "string", "description": "Optional note or description about this day's profit." }
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:write"] }],
@@ -231,7 +231,7 @@ MCP_TOOLS = [
     },
     {
         "name": "get_daily_profit",
-        "description": "Retrieve the daily profit record for a specific date.",
+        "description": "Get the daily profit record for a specific date. Use this when the user asks about profit/earnings for a particular day.",
         "inputSchema": {
             "type": "object",
             "required": ["date"],
@@ -244,12 +244,12 @@ MCP_TOOLS = [
     },
     {
         "name": "list_daily_profits",
-        "description": "List daily profit records within a date range.",
+        "description": "List daily profit records. Defaults to the current calendar month if no date range is specified. Pass start_date and end_date to filter a custom range.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "start_date": { "type": "string", "description": "YYYY-MM-DD" },
-                "end_date": { "type": "string", "description": "YYYY-MM-DD" }
+                "start_date": { "type": "string", "description": "YYYY-MM-DD. Defaults to first day of current month." },
+                "end_date": { "type": "string", "description": "YYYY-MM-DD. Defaults to today." }
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:read"] }],
@@ -257,12 +257,12 @@ MCP_TOOLS = [
     },
     {
         "name": "get_profit_summary",
-        "description": "Retrieve daily profit summary analytics including total_profit, profitable_days count, no_profit_days, loss_days count, average_profit_on_profitable_days, highest_profit, and lowest_profit.",
+        "description": "Get daily profit analytics and summary stats: total_profit, profitable_days, no_profit_days, loss_days, average profit, highest and lowest profit. Defaults to current month if no date range given.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "start_date": { "type": "string", "description": "YYYY-MM-DD" },
-                "end_date": { "type": "string", "description": "YYYY-MM-DD" }
+                "start_date": { "type": "string", "description": "YYYY-MM-DD. Defaults to first day of current month." },
+                "end_date": { "type": "string", "description": "YYYY-MM-DD. Defaults to today." }
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:read"] }],
@@ -270,14 +270,14 @@ MCP_TOOLS = [
     },
     {
         "name": "update_daily_profit",
-        "description": "Update an existing daily profit record by ID or date.",
+        "description": "Update an existing daily profit record by its ID or date. Use this ONLY when the user explicitly says to update/correct/change an existing profit entry. For recording today's profit, use record_daily_profit instead.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "id": { "type": "string", "description": "MongoDB ID string or date string" },
-                "date": { "type": "string", "description": "YYYY-MM-DD" },
-                "amount": { "type": "number" },
-                "note": { "type": "string" }
+                "id": { "type": "string", "description": "MongoDB document ID of the profit record" },
+                "date": { "type": "string", "description": "YYYY-MM-DD of the record to update" },
+                "amount": { "type": "number", "description": "New profit amount" },
+                "note": { "type": "string", "description": "Updated note" }
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:write"] }],
@@ -285,12 +285,12 @@ MCP_TOOLS = [
     },
     {
         "name": "delete_daily_profit",
-        "description": "Delete a daily profit record by ID or date.",
+        "description": "Permanently delete a daily profit record by its ID or date. This action cannot be undone.",
         "inputSchema": {
             "type": "object",
             "properties": {
-                "id": { "type": "string", "description": "MongoDB ID string or date string" },
-                "date": { "type": "string", "description": "YYYY-MM-DD" }
+                "id": { "type": "string", "description": "MongoDB document ID of the profit record" },
+                "date": { "type": "string", "description": "YYYY-MM-DD of the record to delete" }
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["profit:write"] }],
@@ -564,33 +564,50 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
 
     # 10. record_daily_profit
     if name == "record_daily_profit":
-        date = args.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
-        amount = float(args.get("amount", 0.0))
+        date = args.get("date")
+        if not date:
+            date = datetime.utcnow().strftime("%Y-%m-%d")
+        if "amount" not in args or args["amount"] is None:
+            raise Exception("'amount' is required for record_daily_profit")
+        amount = float(args["amount"])
         note = args.get("note", "")
-        return profit_service.record_profit(user_id=user_id, date=date, amount=amount, note=note)
+        result = profit_service.record_profit(user_id=user_id, date=date, amount=amount, note=note)
+        action = result.get("action", "recorded")
+        result["message"] = f"Profit {action} for {date}: {amount}"
+        return result
 
     # 11. get_daily_profit
     if name == "get_daily_profit":
-        date = args.get("date", datetime.utcnow().strftime("%Y-%m-%d"))
+        date = args.get("date")
+        if not date:
+            raise Exception("'date' is required (YYYY-MM-DD)")
         res = profit_service.get_profit_by_date(user_id=user_id, date=date)
         if not res:
-            return {"message": f"No daily profit record found for date {date}"}
+            return {"found": False, "message": f"No daily profit record found for {date}"}
+        res["found"] = True
         return res
 
     # 12. list_daily_profits
     if name == "list_daily_profits":
-        return profit_service.list_profits(
+        now = datetime.utcnow()
+        start_date = args.get("start_date") or datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
+        end_date = args.get("end_date") or now.strftime("%Y-%m-%d")
+        records = profit_service.list_profits(
             user_id=user_id,
-            start_date=args.get("start_date"),
-            end_date=args.get("end_date")
+            start_date=start_date,
+            end_date=end_date
         )
+        return {"records": records, "count": len(records), "start_date": start_date, "end_date": end_date}
 
     # 13. get_profit_summary
     if name == "get_profit_summary":
+        now = datetime.utcnow()
+        start_date = args.get("start_date") or datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
+        end_date = args.get("end_date") or now.strftime("%Y-%m-%d")
         return profit_service.get_summary(
             user_id=user_id,
-            start_date=args.get("start_date"),
-            end_date=args.get("end_date")
+            start_date=start_date,
+            end_date=end_date
         )
 
     # 14. update_daily_profit
@@ -600,7 +617,9 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
             raise Exception("Must provide 'id' or 'date' to update daily profit record")
         amount = float(args["amount"]) if "amount" in args and args["amount"] is not None else None
         note = args.get("note")
-        return profit_service.update_profit(user_id=user_id, key=key, amount=amount, note=note)
+        result = profit_service.update_profit(user_id=user_id, key=key, amount=amount, note=note)
+        result["message"] = f"Profit record updated for {result.get('date', key)}"
+        return result
 
     # 15. delete_daily_profit
     if name == "delete_daily_profit":
@@ -609,7 +628,7 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
             raise Exception("Must provide 'id' or 'date' to delete daily profit record")
         deleted = profit_service.delete_profit(user_id=user_id, key=key)
         if not deleted:
-            raise Exception("Daily profit record not found or unauthorized")
-        return {"status": "success", "message": "Daily profit record deleted successfully"}
+            raise Exception(f"Daily profit record not found for '{key}' or unauthorized")
+        return {"status": "success", "deleted_key": key, "message": f"Daily profit record for '{key}' deleted successfully"}
 
     raise Exception(f"Unknown MCP tool: {name}")

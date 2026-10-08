@@ -35,7 +35,9 @@ class DailyProfitRepository:
                 }}
             )
             updated = col.find_one({"_id": existing["_id"]})
-            return serialize_doc(updated)
+            result = serialize_doc(updated)
+            result["action"] = "updated"
+            return result
         else:
             new_doc = {
                 "user_id": user_id,
@@ -47,7 +49,9 @@ class DailyProfitRepository:
             }
             res = col.insert_one(new_doc)
             new_doc["_id"] = res.inserted_id
-            return serialize_doc(new_doc)
+            result = serialize_doc(new_doc)
+            result["action"] = "created"
+            return result
 
     def get_by_date(self, user_id: str, date: str) -> Optional[Dict[str, Any]]:
         col = self._get_col()
