@@ -31,19 +31,33 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [selectedDay, setSelectedDay] = useState(null);
 
   // Summary math
+  const d = new Date();
+  const pad = (n) => n.toString().padStart(2, '0');
+  const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const currentMonthStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
+
   const nonRentExpenses = expenses.filter(e => e.category !== 'Rent');
-  const monthTotal = nonRentExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const todayTotal = 0;
-  const rentExpense = expenses.find(e => e.category === 'Rent');
+  const currentMonthExpenses = nonRentExpenses.filter(e => e.date && e.date.startsWith(currentMonthStr));
+  const monthTotal = currentMonthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  const todayTotal = nonRentExpenses
+    .filter(e => e.date === todayStr)
+    .reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  const rentExpense = expenses.find(e => e.category === 'Rent' && e.date && e.date.startsWith(currentMonthStr));
   const rentTotal = rentExpense ? rentExpense.amount : 0;
 
   const overallBudget = budgets.find(b => b.category === 'Overall');
   const budgetAmount = overallBudget ? overallBudget.amount : 1500;
-  const remainingBudget = 520;
+  const remainingBudget = Math.max(0, budgetAmount - monthTotal);
+  const budgetUsedPct = Math.min(100, Math.round((monthTotal / (budgetAmount || 1)) * 100));
 
-  // Category Breakdown Math
+  const todayProfitRecord = (dailyProfits || []).find(p => p.date === todayStr);
+  const todayProfit = todayProfitRecord ? todayProfitRecord.amount : 0;
+
+  // Category Breakdown Math (Current Month)
   const categoryTotals = {};
-  nonRentExpenses.forEach(e => {
+  currentMonthExpenses.forEach(e => {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
 
@@ -81,8 +95,6 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const chartData = [];
   let maxDailyAmount = 0;
   let weekTotal = 0;
-  
-  const pad = (n) => n.toString().padStart(2, '0');
   for (let i = 6; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
@@ -150,7 +162,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
             <div className="app-card">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">TODAY SPENDING</span>
               <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {todayTotal}
+                {settings.currency} {todayTotal.toLocaleString()}
               </h3>
               <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
                 <Info className="w-3.5 h-3.5 text-rose-500" />
@@ -174,12 +186,12 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
             <div className="app-card">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">REMAINING BUDGET</span>
               <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {remainingBudget}
+                {settings.currency} {remainingBudget.toLocaleString()}
               </h3>
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: '65%' }}></div>
+                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${budgetUsedPct}%` }}></div>
               </div>
-              <p className="text-[10px] text-slate-400 font-semibold mt-1">65% used (₹980)</p>
+              <p className="text-[10px] text-slate-400 font-semibold mt-1">{budgetUsedPct}% used (₹{monthTotal.toLocaleString()})</p>
             </div>
 
             {/* Today's Profit Card */}
@@ -191,12 +203,12 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                 </span>
               </div>
               <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} 0
+                {settings.currency} {todayProfit.toLocaleString()}
               </h3>
               <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
                 <div className="flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-                  <span>No entry today</span>
+                  <span>{todayProfit > 0 ? "Recorded today" : "No entry today"}</span>
                 </div>
                 <button
                   onClick={() => setActiveTab('profit')}
