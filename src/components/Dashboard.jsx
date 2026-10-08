@@ -84,8 +84,10 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
         strokeDasharray={`${dashLength} 251.2`}
         strokeDashoffset="0"
         transform={`rotate(${currentAngle} 50 50)`}
-        className="transition-all duration-1000 ease-out"
-      />
+        className="transition-all duration-1000 ease-out cursor-pointer hover:opacity-80"
+      >
+        <title>{c.name}: {settings.currency} {c.amount.toLocaleString()}</title>
+      </circle>
     );
     currentAngle += (c.pct / 100) * 360;
     return circle;
