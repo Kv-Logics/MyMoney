@@ -67,6 +67,12 @@ export function AppProvider({ children }) {
 
       const profSumRes = await fetchWithAuth(`${API_BASE}/profit/summary`);
       if (profSumRes.ok) setProfitSummary(await profSumRes.json());
+      
+      const tasksRes = await fetchWithAuth(`${API_BASE}/tasks`);
+      if (tasksRes.ok) setTasks(await tasksRes.json());
+      
+      const auditRes = await fetchWithAuth(`${API_BASE}/audit-logs`);
+      if (auditRes.ok) setAuditLogs(await auditRes.json());
     } catch (err) {
       // Suppress initial NetworkError during wake-up to keep console clean
       if (err.name !== 'TypeError' || err.message !== 'NetworkError when attempting to fetch resource.') {
