@@ -11,13 +11,7 @@ export function AppProvider({ children }) {
   const [activeOwner, setActiveOwner] = useState(null);
 
   // Collections
-  const [expenses, setExpenses] = useState([
-    { id: '1', title: 'Milk Bikies Biscuit', category: 'Food', payment_method: 'Cash', date: '2026-10-07', amount: 10 },
-    { id: '2', title: 'Rent', category: 'Rent', payment_method: 'Unknown', date: '2026-10-07', amount: 1888.89 },
-    { id: '3', title: 'Fruit juice', category: 'Food', payment_method: 'Not specified', date: '2026-10-07', amount: 35 },
-    { id: '4', title: 'Dinner - rice with chicken curry', category: 'Food', payment_method: 'Not specified', date: '2026-10-07', amount: 75 },
-    { id: '5', title: 'Petrol', category: 'Fuel', payment_method: 'UPI', date: '2026-10-06', amount: 100 }
-  ]);
+  const [expenses, setExpenses] = useState([]);
   const [categories, setCategories] = useState([
     { name: 'Food', color: '#ef4444' },
     { name: 'Travel', color: '#10b981' },
@@ -27,24 +21,13 @@ export function AppProvider({ children }) {
     { name: 'Other', color: '#64748b' }
   ]);
   const [paymentMethods, setPaymentMethods] = useState(['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer']);
-  const [budgets, setBudgets] = useState([
-    { id: 'b1', category: 'Food Budget', amount: 1500, spent: 980 }
-  ]);
+  const [budgets, setBudgets] = useState([]);
   const [savingsGoals, setSavingsGoals] = useState([]);
   const [dailyProfits, setDailyProfits] = useState([]);
   const [profitSummary, setProfitSummary] = useState({ total_profit: 0, profitable_days: 0, loss_days: 0, average_daily_profit: 0 });
-  const [tasks, setTasks] = useState([
-    { id: 't1', title: 'Week 1', category: 'Work', priority: 'MEDIUM', status: 'Overdue', due_date: '30/06/2026', progress: 33, items: [{ text: 'Git', done: true }, { text: 'antigravity cli', done: false }, { text: 'plugins', done: false }] },
-    { id: 't2', title: 'SEM 5', category: 'Study', priority: 'HIGH', status: 'Overdue', due_date: '29/06/2026 - 02/07/2026', progress: 0, items: [{ text: 'SDEPS', done: false }, { text: 'IoT Record', done: false }, { text: 'DC', done: false }] }
-  ]);
-  const [sharingList, setSharingList] = useState([
-    { id: 's1', shared_with_email: 'keerthivasan@gmail.com' },
-    { id: 's2', shared_with_email: 'nilaaguna23@gmail.com' }
-  ]);
-  const [auditLogs, setAuditLogs] = useState([
-    { id: 'a1', action: 'expense deleted', text: "Deleted expense 'Daily Profit' of amount 220.0.", date: '10/8/2026, 6:02:24 AM' },
-    { id: 'a2', action: 'expense created', text: "Added expense 'Paneer Gravy, Naan' of amount 160.0 in Food.", date: '10/7/2026, 4:51:06 PM' }
-  ]);
+  const [tasks, setTasks] = useState([]);
+  const [sharingList, setSharingList] = useState([]);
+  const [auditLogs, setAuditLogs] = useState([]);
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isServerAwake, setIsServerAwake] = useState(false);
