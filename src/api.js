@@ -1,6 +1,6 @@
 const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
   ? 'http://localhost:8000/api'
-  : (localStorage.getItem('api_base') || 'https://mymoney-jd8n.onrender.com/api');
+  : 'https://mymoney-jd8n.onrender.com/api';
 
 export { API_BASE };
 
