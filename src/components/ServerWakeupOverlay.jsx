@@ -8,8 +8,13 @@ export default function ServerWakeupOverlay() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const canvasRef = useRef(null);
 
+  // Set this flag to false to disable the animation and go directly to the app/login
+  const SHOW_WAKEUP_ANIMATION = false;
+
   // ── Effect 1: Particle Network Animation (mirrors startWakeupParticles in wakeup.js) ──
   useEffect(() => {
+    if (!SHOW_WAKEUP_ANIMATION) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
 
@@ -90,6 +95,13 @@ export default function ServerWakeupOverlay() {
 
   // ── Effect 2: Timer + Server Ping Loop (mirrors checkBackendWakeup in wakeup.js) ──
   useEffect(() => {
+    if (!SHOW_WAKEUP_ANIMATION) {
+      setIsServerAwake(true);
+      setIsAwake(true);
+      if (!token) setIsAuthModalOpen(true);
+      return;
+    }
+
     const startTime = Date.now();
 
     const timerInterval = setInterval(() => {
@@ -127,7 +139,7 @@ export default function ServerWakeupOverlay() {
     };
   }, [token, setIsAuthModalOpen, setIsServerAwake]);
 
-  if (isAwake) return null;
+  if (!SHOW_WAKEUP_ANIMATION || isAwake) return null;
 
   const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
   const secs = String(elapsedSeconds % 60).padStart(2, '0');
