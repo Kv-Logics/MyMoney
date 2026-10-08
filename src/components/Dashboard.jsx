@@ -36,7 +36,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const todayStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const currentMonthStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 
-  const nonRentExpenses = expenses.filter(e => e.category !== 'Rent');
+  const nonRentExpenses = expenses.filter(e => e.category && e.category.toLowerCase() !== 'rent');
   const currentMonthExpenses = nonRentExpenses.filter(e => e.date && e.date.startsWith(currentMonthStr));
   const monthTotal = currentMonthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
@@ -44,8 +44,8 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     .filter(e => e.date === todayStr)
     .reduce((sum, e) => sum + (e.amount || 0), 0);
 
-  const rentExpense = expenses.find(e => e.category === 'Rent' && e.date && e.date.startsWith(currentMonthStr));
-  const rentTotal = rentExpense ? rentExpense.amount : 0;
+  const rentExpensesList = expenses.filter(e => e.category && e.category.toLowerCase() === 'rent' && e.date && e.date.startsWith(currentMonthStr));
+  const rentTotal = rentExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const overallBudget = budgets.find(b => b.category === 'Overall');
   const budgetAmount = overallBudget ? overallBudget.amount : 1500;
@@ -406,7 +406,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {expenses.slice(0, 5).map(e => (
+                    {nonRentExpenses.slice(0, 5).map(e => (
                       <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
                         <td className="py-3">
                           <p className="font-bold text-slate-800 dark:text-white">{e.title}</p>
