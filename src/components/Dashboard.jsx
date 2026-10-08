@@ -194,21 +194,21 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
               <p className="text-[10px] text-slate-400 font-semibold mt-1">{budgetUsedPct}% used (₹{monthTotal.toLocaleString()})</p>
             </div>
 
-            {/* Today's Profit Card */}
+            {/* Monthly Profit Card */}
             <div className="app-card border border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-500/5 via-transparent to-emerald-500/5">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">TODAY'S PROFIT</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">MONTHLY PROFIT</span>
                 <span className="text-[9px] bg-amber-100 dark:bg-amber-950/40 border border-amber-300 text-amber-700 dark:text-amber-400 font-bold px-2 py-0.5 rounded-full uppercase">
                   ISOLATED
                 </span>
               </div>
               <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {todayProfit.toLocaleString()}
+                {settings.currency} {(profitSummary?.total_profit || 0).toLocaleString()}
               </h3>
               <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
                 <div className="flex items-center gap-1">
                   <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{todayProfit > 0 ? "Recorded today" : "No entry today"}</span>
+                  <span>{todayProfit > 0 ? `+${settings.currency}${todayProfit.toLocaleString()} today` : "Keep going!"}</span>
                 </div>
                 <button
                   onClick={() => setActiveTab('profit')}
