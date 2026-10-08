@@ -107,6 +107,19 @@ export function AppProvider({ children }) {
     setToken('');
     localStorage.removeItem('mymoney_token');
     localStorage.removeItem('mymoney_user');
+    
+    // Clear all sensitive data to prevent flash/leakage to next user
+    setExpenses([]);
+    setCategories([]);
+    setPaymentMethods([]);
+    setBudgets([]);
+    setSavingsGoals([]);
+    setDailyProfits([]);
+    setProfitSummary(null);
+    setTasks([]);
+    setSharingList([]);
+    setAuditLogs([]);
+
     setIsAuthModalOpen(true);
   };
 
