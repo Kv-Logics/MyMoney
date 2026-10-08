@@ -33,7 +33,7 @@ export default function Expenses({ isModalOpen, setIsModalOpen }) {
   const [endDate, setEndDate] = useState('2026-10-31');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
-  const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Modal Form state matching Screenshot
   const [editingId, setEditingId] = useState(null);

@@ -6,14 +6,22 @@ export default function ServerWakeupOverlay() {
   const { token, setIsAuthModalOpen, setIsServerAwake } = useApp();
   const [isAwake, setIsAwake] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const [showUI, setShowUI] = useState(false);
   const canvasRef = useRef(null);
 
   // Set this flag to false to disable the animation and go directly to the app/login
   const SHOW_WAKEUP_ANIMATION = true;
 
-  // ── Effect 1: Particle Network Animation (mirrors startWakeupParticles in wakeup.js) ──
+  // Delay showing the UI to prevent flash if backend is already awake
   useEffect(() => {
     if (!SHOW_WAKEUP_ANIMATION) return;
+    const timer = setTimeout(() => setShowUI(true), 500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // ── Effect 1: Particle Network Animation (mirrors startWakeupParticles in wakeup.js) ──
+  useEffect(() => {
+    if (!SHOW_WAKEUP_ANIMATION || !showUI) return;
 
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -139,7 +147,7 @@ export default function ServerWakeupOverlay() {
     };
   }, [token, setIsAuthModalOpen, setIsServerAwake]);
 
-  if (!SHOW_WAKEUP_ANIMATION || isAwake) return null;
+  if (!SHOW_WAKEUP_ANIMATION || isAwake || !showUI) return null;
 
   const mins = String(Math.floor(elapsedSeconds / 60)).padStart(2, '0');
   const secs = String(elapsedSeconds % 60).padStart(2, '0');

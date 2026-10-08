@@ -28,6 +28,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   } = useApp();
 
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
+  const [selectedDay, setSelectedDay] = useState(null);
 
   // Summary math
   const nonRentExpenses = expenses.filter(e => e.category !== 'Rent');
@@ -72,6 +73,27 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     currentAngle += (c.pct / 100) * 360;
     return circle;
   });
+
+  // Daily Spending Trend Math (Last 7 Days)
+  const chartData = [];
+  let maxDailyAmount = 0;
+  let weekTotal = 0;
+  
+  const pad = (n) => n.toString().padStart(2, '0');
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
+    
+    const dayExpenses = nonRentExpenses.filter(e => e.date === dateStr);
+    const sum = dayExpenses.reduce((acc, e) => acc + (e.amount || 0), 0);
+    
+    if (sum > maxDailyAmount) maxDailyAmount = sum;
+    weekTotal += sum;
+    
+    chartData.push({ dateStr, dayName, sum, expenses: dayExpenses });
+  }
 
   return (
     <div className="space-y-6">
@@ -262,7 +284,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                   <span>DAILY SPENDING TREND</span>
                 </h3>
                 <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-200">
-                  ₹1,270
+                  ₹{weekTotal.toLocaleString()}
                 </span>
               </div>
 
@@ -280,16 +302,47 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
               {/* Bar graph */}
               <div className="h-44 flex items-end justify-between px-2 gap-3 pt-4">
-                {['Fri', 'Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu'].map((day, idx) => {
-                  const heights = ['h-24', 'h-32', 'h-40', 'h-28', 'h-36', 'h-20', 'h-8'];
+                {chartData.map((item) => {
+                  const heightPct = maxDailyAmount === 0 ? 5 : Math.max(5, (item.sum / maxDailyAmount) * 100);
+                  const isSelected = selectedDay === item.dateStr;
                   return (
-                    <div key={day} className="flex-1 flex flex-col items-center gap-2">
-                      <div className={`w-full bg-indigo-100 dark:bg-indigo-950/60 hover:bg-emerald-500 rounded-lg transition-all ${heights[idx]}`}></div>
-                      <span className="text-[10px] text-slate-400 font-medium">{day}</span>
+                    <div key={item.dateStr} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : item.dateStr)}>
+                      <div 
+                        className={`relative w-full rounded-lg transition-all flex items-end justify-center ${isSelected ? 'bg-emerald-500' : 'bg-indigo-100 dark:bg-indigo-950/60 group-hover:bg-emerald-400'}`}
+                        style={{ height: `${heightPct}%` }}
+                      >
+                        <div className="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-lg">
+                          ₹{item.sum.toLocaleString()}
+                        </div>
+                      </div>
+                      <span className={`text-[10px] font-medium ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{item.dayName}</span>
                     </div>
                   );
                 })}
               </div>
+
+              {selectedDay && (
+                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-xs font-bold text-slate-800 dark:text-white mb-3">
+                    Expenses for {chartData.find(d => d.dateStr === selectedDay)?.dateStr}
+                  </h4>
+                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                    {chartData.find(d => d.dateStr === selectedDay)?.expenses.length > 0 ? (
+                      chartData.find(d => d.dateStr === selectedDay).expenses.map(e => (
+                        <div key={e.id || e._id} className="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                          <div className="flex flex-col">
+                            <span className="font-semibold text-slate-700 dark:text-slate-300">{e.title}</span>
+                            <span className="text-[9px] text-slate-400">{e.category}</span>
+                          </div>
+                          <span className="font-bold text-slate-800 dark:text-white">₹{e.amount.toLocaleString()}</span>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="text-[10px] text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800/40 rounded-lg">No expenses recorded for this day.</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {/* Comparison Badges */}
               <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
