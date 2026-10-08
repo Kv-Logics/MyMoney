@@ -83,7 +83,10 @@ export function AppProvider({ children }) {
       const profSumRes = await fetchWithAuth(`${API_BASE}/profit/summary`);
       if (profSumRes.ok) setProfitSummary(await profSumRes.json());
     } catch (err) {
-      console.warn('Backend loading warning:', err);
+      // Suppress initial NetworkError during wake-up to keep console clean
+      if (err.name !== 'TypeError' || err.message !== 'NetworkError when attempting to fetch resource.') {
+        console.warn('Backend loading warning:', err);
+      }
     }
   };
 
