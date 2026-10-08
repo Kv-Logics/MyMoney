@@ -92,13 +92,15 @@ def get_oauth_authorization_server():
         "resource_indicators_supported": True
     }
 
+DEFAULT_SCOPES = "profile:read expenses:read expenses:write budgets:read budgets:write savings:read profit:read profit:write"
+
 # --- 3. OAuth 2.1 Consent Form (GET) ---
 @router.get("/oauth/authorize", response_class=HTMLResponse)
 def oauth_authorize_page(
     response_type: str = "code",
     client_id: Optional[str] = "https://chatgpt.com/oauth/client.json",
     redirect_uri: str = "https://chatgpt.com/connector_platform_oauth_redirect",
-    scope: Optional[str] = "profile:read expenses:read expenses:write budgets:read budgets:write savings:read",
+    scope: Optional[str] = DEFAULT_SCOPES,
     state: Optional[str] = "",
     code_challenge: Optional[str] = "",
     code_challenge_method: Optional[str] = "S256",
@@ -224,7 +226,7 @@ def handle_oauth_authorize(
     client_id: str = Form("https://chatgpt.com/oauth/client.json"),
     redirect_uri: str = Form("https://chatgpt.com/connector_platform_oauth_redirect"),
     state: str = Form(""),
-    scope: str = Form("profile:read expenses:read expenses:write budgets:read budgets:write savings:read"),
+    scope: str = Form(DEFAULT_SCOPES),
     code_challenge: str = Form(""),
     code_challenge_method: str = Form("S256"),
     resource: str = Form(RESOURCE_URI)
@@ -275,7 +277,7 @@ async def oauth_token_endpoint(request: Request):
     grant_type = body.get("grant_type", "authorization_code")
 
     users_col = get_collection("users")
-    scope = "profile:read expenses:read expenses:write budgets:read budgets:write savings:read"
+    scope = DEFAULT_SCOPES
     user = None
 
     if grant_type == "refresh_token":
