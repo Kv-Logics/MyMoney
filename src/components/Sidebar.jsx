@@ -18,21 +18,23 @@ import {
 export default function Sidebar() {
   const { activeTab, setActiveTab, user, logout } = useApp();
 
+  const [showAdvanced, setShowAdvanced] = useState(false);
+
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'ai-agent', label: 'AI Mode', icon: Bot, badge: 'VOICE', badgeColor: 'bg-purple-100 text-purple-600 border-purple-200' },
     { id: 'expenses', label: 'Expenses', icon: DollarSign },
-    { id: 'budgets', label: 'Budgets & Savings', icon: PieChart },
     { id: 'profit', label: 'Profit Tracker', icon: TrendingUp, badge: 'ISOLATED', badgeColor: 'bg-amber-100 text-amber-700 border-amber-300' },
     { id: 'tasks', label: 'Task Manager', icon: CheckSquare },
     { id: 'reports', label: 'Reports', icon: FileText },
     { id: 'sharing', label: 'Family Sharing', icon: Users },
     { id: 'audit-log', label: 'Audit Log', icon: Activity },
-    { id: 'settings', label: 'Settings', icon: Settings }
+    { id: 'budgets', label: 'Budgets & Savings', icon: PieChart, advanced: true },
+    { id: 'settings', label: 'Settings', icon: Settings, advanced: true }
   ];
 
   return (
-    <aside className="w-60 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col justify-between p-4 shrink-0 transition-colors duration-200">
+    <aside className="w-60 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col justify-between p-4 shrink-0 transition-colors duration-200 overflow-y-auto">
       <div className="space-y-6">
         {/* Brand Header */}
         <div className="flex items-center gap-3 px-2 py-1">
@@ -51,7 +53,7 @@ export default function Sidebar() {
 
         {/* Navigation list */}
         <nav className="space-y-1">
-          {navItems.map((item) => {
+          {navItems.filter(item => showAdvanced || !item.advanced).map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id;
             return (
@@ -76,6 +78,13 @@ export default function Sidebar() {
               </button>
             );
           })}
+          
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-2 rounded-xl font-medium text-[10px] text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-all uppercase tracking-wider border border-dashed border-slate-200 dark:border-slate-800"
+          >
+            {showAdvanced ? "Hide Advanced" : "Show Advanced Options"}
+          </button>
         </nav>
       </div>
 
