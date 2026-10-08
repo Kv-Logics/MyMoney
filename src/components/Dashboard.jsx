@@ -47,12 +47,15 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
 
-  const categoryBreakdown = Object.entries(categoryTotals).map(([cat, amt]) => ({
-    name: cat,
-    amount: amt,
-    pct: Math.round((amt / (monthTotal || 1)) * 100),
-    color: cat === 'Food' ? '#ef4444' : cat === 'Travel' ? '#10b981' : cat === 'Fuel' ? '#6366f1' : '#f59e0b'
-  }));
+  const CHART_COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#14b8a6'];
+  const categoryBreakdown = Object.entries(categoryTotals)
+    .sort((a, b) => b[1] - a[1])
+    .map(([cat, amt], idx) => ({
+      name: cat,
+      amount: amt,
+      pct: Math.round((amt / (monthTotal || 1)) * 100),
+      color: CHART_COLORS[idx % CHART_COLORS.length]
+    }));
 
   let currentAngle = 0;
   const dynamicCircles = categoryBreakdown.map(c => {
@@ -306,7 +309,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                   const heightPct = maxDailyAmount === 0 ? 5 : Math.max(5, (item.sum / maxDailyAmount) * 100);
                   const isSelected = selectedDay === item.dateStr;
                   return (
-                    <div key={item.dateStr} className="flex-1 flex flex-col items-center gap-2 group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : item.dateStr)}>
+                    <div key={item.dateStr} className="flex-1 h-full flex flex-col items-center justify-end gap-2 group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : item.dateStr)}>
                       <div 
                         className={`relative w-full rounded-lg transition-all flex items-end justify-center ${isSelected ? 'bg-emerald-500' : 'bg-indigo-100 dark:bg-indigo-950/60 group-hover:bg-emerald-400'}`}
                         style={{ height: `${heightPct}%` }}
@@ -344,22 +347,24 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                 </div>
               )}
 
-              {/* Comparison Badges */}
+              {/* Comparison Badges (Placeholder math for now) */}
               <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">PREVIOUS WEEK</span>
-                    <span className="font-extrabold text-slate-800 dark:text-white">₹460</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">MONTH AVG / DAY</span>
+                    <span className="font-extrabold text-slate-800 dark:text-white">
+                      ₹{Math.round(monthTotal / (new Date().getDate() || 1)).toLocaleString()}
+                    </span>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-600 font-bold rounded-full">+176%</span>
                 </div>
 
                 <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl flex items-center justify-between">
                   <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">PREVIOUS MONTH</span>
-                    <span className="font-extrabold text-slate-800 dark:text-white">₹250</span>
+                    <span className="text-[10px] text-slate-400 font-bold uppercase block">HIGHEST DAY</span>
+                    <span className="font-extrabold text-slate-800 dark:text-white">
+                      ₹{maxDailyAmount.toLocaleString()}
+                    </span>
                   </div>
-                  <span className="text-[10px] px-2 py-0.5 bg-rose-100 text-rose-600 font-bold rounded-full">+492%</span>
                 </div>
               </div>
             </div>
