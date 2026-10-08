@@ -93,7 +93,15 @@ export default function ServerWakeupOverlay() {
 
     const checkWakeup = async () => {
       try {
-        const res = await fetch(rootUrl + '/');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+        const res = await fetch(rootUrl + '/', { 
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        
+        clearTimeout(timeoutId);
 
         if (res.ok) {
           if (isSubscribed) {
@@ -132,7 +140,7 @@ export default function ServerWakeupOverlay() {
 
       {/* Top Timer */}
       <div className="relative z-10 pt-16 flex flex-col items-center">
-        <span className="text-6xl font-extrabold text-slate-800 dark:text-white tracking-tight font-mono tabular-nums animate-pulse">
+        <span className="text-6xl font-extrabold text-slate-800 dark:text-white tracking-tight font-mono tabular-nums">
           {mins}:{secs}
         </span>
         <p className="text-xs text-slate-400 mt-2 uppercase tracking-widest font-semibold">
