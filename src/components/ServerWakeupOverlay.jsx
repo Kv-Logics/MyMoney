@@ -3,7 +3,7 @@ import { API_BASE } from '../api';
 import { useApp } from '../context/AppContext';
 
 export default function ServerWakeupOverlay() {
-  const { token, setIsAuthModalOpen, loadAllData } = useApp();
+  const { token, setIsAuthModalOpen, setIsServerAwake } = useApp();
   const [isAwake, setIsAwake] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const canvasRef = useRef(null);
@@ -106,11 +106,10 @@ export default function ServerWakeupOverlay() {
         if (res.ok) {
           if (isSubscribed) {
             setIsAwake(true);
+            setIsServerAwake(true);
             clearInterval(timerInterval);
             if (!token) {
               setIsAuthModalOpen(true);
-            } else {
-              loadAllData();
             }
           }
         } else {
@@ -127,7 +126,7 @@ export default function ServerWakeupOverlay() {
       isSubscribed = false;
       clearInterval(timerInterval);
     };
-  }, [token, setIsAuthModalOpen, loadAllData]);
+  }, [token, setIsAuthModalOpen, setIsServerAwake]);
 
   if (isAwake) return null;
 

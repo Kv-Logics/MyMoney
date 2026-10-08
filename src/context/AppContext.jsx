@@ -47,6 +47,7 @@ export function AppProvider({ children }) {
   ]);
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  const [isServerAwake, setIsServerAwake] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -62,9 +63,10 @@ export function AppProvider({ children }) {
     localStorage.setItem('mymoney_theme', theme);
   }, [theme]);
 
+  // Only load data when BOTH token exists AND server is confirmed awake
   useEffect(() => {
-    if (token) loadAllData();
-  }, [token]);
+    if (token && isServerAwake) loadAllData();
+  }, [token, isServerAwake]);
 
   const loadAllData = async () => {
     try {
@@ -136,6 +138,7 @@ export function AppProvider({ children }) {
       sharingList, setSharingList,
       auditLogs, setAuditLogs,
       isOffline,
+      isServerAwake, setIsServerAwake,
       isVoiceModalOpen, setIsVoiceModalOpen,
       isAuthModalOpen, setIsAuthModalOpen,
       settings, setSettings,
