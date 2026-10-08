@@ -1,7 +1,9 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { API_BASE } from '../api';
+import { useApp } from '../context/AppContext';
 
 export default function ServerWakeupOverlay() {
+  const { token, setIsAuthModalOpen, loadAllData } = useApp();
   const [isAwake, setIsAwake] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const canvasRef = useRef(null);
@@ -91,17 +93,27 @@ export default function ServerWakeupOverlay() {
 
     const checkWakeup = async () => {
       try {
-        const res = await fetch(rootUrl + '/');
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3500);
+
+        const res = await fetch(rootUrl + '/', { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (res.ok) {
           if (isSubscribed) {
             setIsAwake(true);
             clearInterval(timerInterval);
+            if (!token) {
+              setIsAuthModalOpen(true);
+            } else {
+              loadAllData();
+            }
           }
         } else {
-          if (isSubscribed) setTimeout(checkWakeup, 1500);
+          if (isSubscribed) setTimeout(checkWakeup, 2000);
         }
       } catch (err) {
-        if (isSubscribed) setTimeout(checkWakeup, 1500);
+        if (isSubscribed) setTimeout(checkWakeup, 2000);
       }
     };
 
@@ -111,7 +123,7 @@ export default function ServerWakeupOverlay() {
       isSubscribed = false;
       clearInterval(timerInterval);
     };
-  }, []);
+  }, [token, setIsAuthModalOpen, loadAllData]);
 
   if (isAwake) return null;
 

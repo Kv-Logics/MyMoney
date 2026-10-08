@@ -217,7 +217,7 @@ def test_profit_tracker_complete_lifecycle():
     )
     assert res_b_list.status_code == 200
     b_items = json.loads(res_b_list.json()["result"]["content"][0]["text"])
-    assert len(b_items) == 0
+    assert len(b_items["records"]) == 0
 
     # 11. Test delete_daily_profit
     res_del = client.post(
