@@ -147,7 +147,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
       {dashboardView === 'user' ? (
         <>
           {/* Top 5 Stat Cards Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-5">
+          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${overallBudget ? '5' : '4'} gap-5`}>
             {/* Month Spending */}
             <div className="app-card">
               <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">MONTH SPENDING</span>
@@ -184,17 +184,19 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
               </div>
             </div>
 
-            {/* Remaining Budget */}
-            <div className="app-card">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">REMAINING BUDGET</span>
-              <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {remainingBudget.toLocaleString()}
-              </h3>
-              <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-                <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${budgetUsedPct}%` }}></div>
+            {/* Remaining Budget (Only show if set) */}
+            {overallBudget && (
+              <div className="app-card">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">REMAINING BUDGET</span>
+                <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
+                  {settings.currency} {remainingBudget.toLocaleString()}
+                </h3>
+                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
+                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${budgetUsedPct}%` }}></div>
+                </div>
+                <p className="text-[10px] text-slate-400 font-semibold mt-1">{budgetUsedPct}% used ({settings.currency}{monthTotal.toLocaleString()})</p>
               </div>
-              <p className="text-[10px] text-slate-400 font-semibold mt-1">{budgetUsedPct}% used (₹{monthTotal.toLocaleString()})</p>
-            </div>
+            )}
 
             {/* Monthly Profit Card */}
             <div className="app-card border border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-500/5 via-transparent to-emerald-500/5">
