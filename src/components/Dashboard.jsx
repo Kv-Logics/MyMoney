@@ -13,7 +13,8 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowRight,
-  Zap
+  Zap,
+  PieChart
 } from 'lucide-react';
 
 export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
