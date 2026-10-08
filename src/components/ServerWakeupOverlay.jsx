@@ -8,36 +8,33 @@ export default function ServerWakeupOverlay() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const canvasRef = useRef(null);
 
+  // ── Effect 1: Particle Network Animation (mirrors startWakeupParticles in wakeup.js) ──
   useEffect(() => {
-    const startTime = Date.now();
-
-    const timerInterval = setInterval(() => {
-      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
-    }, 1000);
-
-    let animationFrameId;
     const canvas = canvasRef.current;
-    if (canvas) {
-      const ctx = canvas.getContext('2d');
-      const PARTICLE_COUNT = 60;
-      const CONNECT_DIST = 130;
+    if (!canvas) return;
 
-      const resize = () => {
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-      };
-      resize();
-      window.addEventListener('resize', resize);
+    const ctx = canvas.getContext('2d');
+    const PARTICLE_COUNT = 70;
+    const CONNECT_DIST = 140;
 
-      const colors = [
-        'rgba(99, 102, 241, ',
-        'rgba(16, 185, 129, ',
-        'rgba(139, 92, 246, ',
-        'rgba(14, 165, 233, ',
-        'rgba(244, 63, 94, '
-      ];
+    const resize = () => {
+      canvas.width = canvas.parentElement?.clientWidth || window.innerWidth;
+      canvas.height = canvas.parentElement?.clientHeight || window.innerHeight;
+    };
+    resize();
+    window.addEventListener('resize', resize);
 
-      const particles = Array.from({ length: PARTICLE_COUNT }, () => ({
+    const colors = [
+      'rgba(99, 102, 241, ',
+      'rgba(16, 185, 129, ',
+      'rgba(139, 92, 246, ',
+      'rgba(14, 165, 233, ',
+      'rgba(244, 63, 94, '
+    ];
+
+    const particles = [];
+    for (let i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push({
         x: Math.random() * canvas.width,
         y: Math.random() * canvas.height,
         vx: (Math.random() - 0.5) * 0.6,
@@ -45,69 +42,71 @@ export default function ServerWakeupOverlay() {
         r: Math.random() * 2 + 1,
         color: colors[Math.floor(Math.random() * colors.length)],
         alpha: Math.random() * 0.5 + 0.3
-      }));
+      });
+    }
 
-      const animate = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let animationFrameId;
 
-        particles.forEach((p) => {
-          p.x += p.vx;
-          p.y += p.vy;
-          if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
-          if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-          ctx.fillStyle = p.color + p.alpha + ')';
-          ctx.fill();
-        });
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        for (let i = 0; i < particles.length; i++) {
-          for (let j = i + 1; j < particles.length; j++) {
-            const dx = particles[i].x - particles[j].x;
-            const dy = particles[i].y - particles[j].y;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < CONNECT_DIST) {
-              ctx.beginPath();
-              ctx.moveTo(particles[i].x, particles[i].y);
-              ctx.lineTo(particles[j].x, particles[j].y);
-              ctx.strokeStyle = `rgba(148, 163, 184, ${(1 - dist / CONNECT_DIST) * 0.15})`;
-              ctx.lineWidth = 0.5;
-              ctx.stroke();
-            }
+      particles.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.x < 0 || p.x > canvas.width) p.vx *= -1;
+        if (p.y < 0 || p.y > canvas.height) p.vy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + p.alpha + ')';
+        ctx.fill();
+      });
+
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(148, 163, 184, ${(1 - dist / CONNECT_DIST) * 0.15})`;
+            ctx.lineWidth = 0.5;
+            ctx.stroke();
           }
         }
+      }
 
-        animationFrameId = requestAnimationFrame(animate);
-      };
+      animationFrameId = requestAnimationFrame(animate);
+    };
 
-      animate();
+    animate();
 
-      return () => {
-        cancelAnimationFrame(animationFrameId);
-        window.removeEventListener('resize', resize);
-      };
-    }
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('resize', resize);
+    };
+  }, []);
+
+  // ── Effect 2: Timer + Server Ping Loop (mirrors checkBackendWakeup in wakeup.js) ──
+  useEffect(() => {
+    const startTime = Date.now();
+
+    const timerInterval = setInterval(() => {
+      setElapsedSeconds(Math.floor((Date.now() - startTime) / 1000));
+    }, 1000);
 
     const rootUrl = API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : API_BASE;
     let isSubscribed = true;
 
     const checkWakeup = async () => {
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15s timeout
-
-        const res = await fetch(rootUrl + '/', { 
-          cache: 'no-store',
-          signal: controller.signal
-        });
-        
-        clearTimeout(timeoutId);
-
+        const res = await fetch(rootUrl + '/', { cache: 'no-store' });
         if (res.ok) {
           if (isSubscribed) {
-            setIsAwake(true);
-            setIsServerAwake(true);
             clearInterval(timerInterval);
+            setIsServerAwake(true);
+            setIsAwake(true);
             if (!token) {
               setIsAuthModalOpen(true);
             }
