@@ -3,7 +3,7 @@
   "mcpServers": {
     "mymoney": {
       "type": "streamable-http",
-      "url": "https://mymoney-jd8n.onrender.com/mcp"
+      "url": "https://mymoney-jd0n.onrender.com/mcp"
     }
   }
 }
