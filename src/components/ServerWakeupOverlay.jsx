@@ -130,6 +130,21 @@ export default function ServerWakeupOverlay() {
             if (!token) {
               setIsAuthModalOpen(true);
             }
+            
+            // Log telemetry
+            const totalElapsed = (Date.now() - startTime) / 1000;
+            try {
+              fetch(`${API_BASE}/telemetry/wakeup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  elapsed_seconds: parseFloat(totalElapsed.toFixed(2)),
+                  user_agent: navigator.userAgent
+                })
+              });
+            } catch (e) {
+              // Ignore telemetry error
+            }
           }
         } else {
           if (isSubscribed) setTimeout(checkWakeup, 2000);

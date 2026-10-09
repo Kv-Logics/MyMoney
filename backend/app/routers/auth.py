@@ -16,6 +16,7 @@ from app.models import (
     UserRegister,
     UserLogin,
     AdminSetPasswordRequest,
+    ChangePasswordRequest,
     UserResponse,
     SettingsUpdate,
     RefreshTokenRequest,
@@ -126,6 +127,23 @@ def update_settings(settings: SettingsUpdate, current_user: dict = Depends(get_c
     users_col.update_one({"_id": ObjectId(current_user["id"])}, {"$set": update_data})
     updated_user = users_col.find_one({"_id": ObjectId(current_user["id"])})
     return serialize_doc(updated_user)
+@router.post("/change-password")
+def change_password(payload: ChangePasswordRequest, current_user: dict = Depends(get_current_user)):
+    users_col = get_collection("users")
+    user = users_col.find_one({"_id": ObjectId(current_user["id"])})
+    if not user or not verify_password(payload.old_password, user["password"]):
+        raise HTTPException(status_code=400, detail="Incorrect old password")
+        
+    hashed = hash_password(payload.new_password)
+    users_col.update_one({"_id": ObjectId(current_user["id"])}, {"$set": {"password": hashed}})
+    
+    log_audit_action(
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        action="change_password",
+        details="User changed their own password."
+    )
+    return {"message": "Password changed successfully."}
 
 @router.post("/admin/set-password")
 def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = Depends(get_current_user)):
