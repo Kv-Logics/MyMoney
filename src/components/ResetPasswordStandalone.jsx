@@ -7,6 +7,7 @@ export default function ResetPasswordStandalone() {
   const [newPassword, setNewPassword] = useState('');
   const [statusMsg, setStatusMsg] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const token = localStorage.getItem('mymoney_token');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -42,53 +43,70 @@ export default function ResetPasswordStandalone() {
 
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white dark:bg-slate-900 py-8 px-4 shadow-2xl sm:rounded-2xl sm:px-10 border border-slate-200 dark:border-slate-800">
-          <form className="space-y-6" onSubmit={handleSubmit}>
-            <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                Current Password
-              </label>
-              <input
-                type="password"
-                required
-                value={oldPassword}
-                onChange={(e) => setOldPassword(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
-                New Password
-              </label>
-              <input
-                type="password"
-                required
-                minLength={6}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
-              />
-            </div>
-
-            {statusMsg && (
-              <div className={`p-3 rounded-lg text-xs font-bold text-center ${isSuccess ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
-                {statusMsg}
+          {!token ? (
+            <div className="text-center space-y-4">
+              <div className="p-4 bg-amber-50 dark:bg-amber-950/30 rounded-xl border border-amber-200 dark:border-amber-800">
+                <h3 className="text-sm font-bold text-amber-800 dark:text-amber-500 mb-2">Login Required</h3>
+                <p className="text-xs text-amber-700 dark:text-amber-400">
+                  You must be logged in to change your password here.
+                </p>
               </div>
-            )}
+              
+              <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white mb-2">Forgot your password?</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  If you cannot log in, please contact your System Administrator to override and reset your password for you.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  value={oldPassword}
+                  onChange={(e) => setOldPassword(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
 
-            <button
-              type="submit"
-              className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 transition duration-150"
-            >
-              <Key className="w-4 h-4" /> Reset Password
-            </button>
-            
+              <div>
+                <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  required
+                  minLength={6}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                />
+              </div>
+
+              {statusMsg && (
+                <div className={`p-3 rounded-lg text-xs font-bold text-center ${isSuccess ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400'}`}>
+                  {statusMsg}
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-md text-sm font-bold text-white bg-emerald-500 hover:bg-emerald-600 transition duration-150"
+              >
+                <Key className="w-4 h-4" /> Reset Password
+              </button>
+            </form>
+          )}            
             <div className="text-center mt-4">
               <a href="/" className="text-xs font-bold text-slate-400 hover:text-emerald-500 transition-colors">
                 &larr; Back to Dashboard
               </a>
             </div>
-          </form>
         </div>
       </div>
     </div>
