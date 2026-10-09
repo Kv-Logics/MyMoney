@@ -194,7 +194,7 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
         )
         return {"message": f"New user {target_email} registered and password set successfully."}
 
-ADMIN_EMAIL = "a.keerthivasan7676@gmail.com"
+ADMIN_EMAIL = "keerthivasan.220722@gmail.com"
 
 def _assert_admin(current_user):
     if current_user.get("email") != ADMIN_EMAIL:

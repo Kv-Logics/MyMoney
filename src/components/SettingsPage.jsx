@@ -86,7 +86,28 @@ export default function SettingsPage() {
             <p className="text-[10px] text-slate-400 mt-0.5">Set or override passwords for existing or new users.</p>
           </div>
 
-          <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
+          <form onSubmit={async (e) => {
+            e.preventDefault();
+            if (!userEmail || !newPassword) return;
+            try {
+              const { API_BASE, fetchWithAuth } = await import('../api');
+              const res = await fetchWithAuth(`${API_BASE}/auth/admin/set-password`, {
+                method: 'POST',
+                body: JSON.stringify({ email: userEmail, password: newPassword })
+              });
+              if (res.ok) {
+                alert(`Password overridden for ${userEmail}`);
+                setUserEmail('');
+                setNewPassword('');
+              } else {
+                const data = await res.json();
+                alert(`Error: ${data.detail || 'Failed to update'}`);
+              }
+            } catch (err) {
+              console.error(err);
+              alert('Network error');
+            }
+          }} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">USER EMAIL</label>
