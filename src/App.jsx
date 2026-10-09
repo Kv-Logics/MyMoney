@@ -15,6 +15,7 @@ import SettingsPage from './components/SettingsPage';
 import ServerWakeupOverlay from './components/ServerWakeupOverlay';
 import ConfirmModal from './components/ConfirmModal';
 import AuthModal from './components/AuthModal';
+import ResetPasswordStandalone from './components/ResetPasswordStandalone';
 
 function MainContent() {
   const { activeTab } = useApp();
@@ -74,6 +75,15 @@ function MainContent() {
 }
 
 export default function App() {
+  if (window.location.pathname === '/reset-pass') {
+    return (
+      <AppProvider>
+        <ResetPasswordStandalone />
+        <AuthModal />
+      </AppProvider>
+    );
+  }
+
   return (
     <AppProvider>
       <MainContent />
