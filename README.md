@@ -78,6 +78,67 @@ Streamable HTTP MCP (/mcp) ──► FastAPI Backend Server ◄── REST APIs 
 - **One-Click View Switch**: Switch between your personal tracker and shared family trackers with an instant exit badge.
 - **Activity Timeline**: Full audit logging for additions, edits, deletions, and sharing events.
 
+### 📱 Daily Reminders & AI Web Push
+- **Groq Llama 3 Summaries**: Instead of generic reminders, the app securely passes your day's expense summary to Groq's Llama 3 model, which replies with a concise, witty push notification.
+- **Service Worker Native Push**: Utilizes the standard Web Push API and VAPID keys to send silent notifications directly to your desktop or mobile OS—without requiring an active browser tab or an email service.
+- **How to Use Notification Feature**:
+  1. Add your `GROQ_API_KEY` and `VAPID_PRIVATE_KEY` to your backend's (e.g., Render) environment variables.
+  2. Log into the MyMoney web app, go to **Settings**, scroll to **DAILY REMINDERS (AI PUSH)**, and click **Enable Daily Reminders** to subscribe. Allow browser notifications.
+  3. Schedule a nightly cron job to hit the `POST /api/push/send-daily-reminders` endpoint using your admin JWT, and your device will instantly receive a custom AI push notification summarizing your day!
+
+---
+
+## 📡 API Endpoints Overview
+
+Here is a summary of all active features and endpoints available on the backend:
+
+### 👤 Authentication & User Management
+- `POST /api/auth/register`, `POST /api/auth/login`, `POST /api/auth/refresh`
+- `GET /api/auth/me`, `PUT /api/auth/settings`, `POST /api/auth/change-password`
+- `GET /api/auth/api-key` - Retrieve the permanent API key for MCP plugins.
+
+### 🤖 AI Agent & Tokens
+- `GET /api/ai/access/status`, `POST /api/ai/access/request`
+- `GET /api/ai/admin/dashboard` - Admin token analytics.
+- `POST /api/ai/admin/users/{user_id}/status` - Approve/revoke AI access.
+
+### 💰 Expenses & Receipts
+- `GET /api/expenses`, `POST /api/expenses`, `PUT /api/expenses/{id}`, `DELETE /api/expenses/{id}`
+- `POST /api/receipts/upload`, `POST /api/expenses/extract` (Gemini Vision)
+- `POST /api/expenses/voice-agent` (Voice input to expense logs)
+
+### 📈 Budgets, Savings & Daily Profits
+- `GET /api/budgets`, `POST /api/budgets`, `DELETE /api/budgets/{id}`, `GET /api/budgets/category/{category}`
+- `GET /api/savings`, `POST /api/savings`, `PUT /api/savings/{id}`, `DELETE /api/savings/{id}`
+- `GET /api/profit`, `POST /api/profit`, `PUT /api/profit/{key}`, `DELETE /api/profit/{key}`, `GET /api/profit/summary`
+
+### 📱 Daily Reminders & Web Push
+- `POST /push/subscribe` - Register a device for push notifications.
+- `POST /push/send-daily-reminders` - Admin endpoint to generate & send Llama 3 notifications.
+
+### 🏢 Admin Global Controls & Telemetry
+- `GET /api/auth/admin/users`, `GET /api/auth/admin/stats`
+- `POST /api/auth/admin/set-password` - Force reset passwords.
+- `GET /api/audit-logs` - View security logs.
+- `POST /api/telemetry/wakeup` - Server cold-start metrics.
+
+### 🗂️ Categories, Payment Methods & Multi-User Sharing
+- `GET /api/categories`, `POST /api/categories`, `DELETE /api/categories/{id}`
+- `GET /api/payment-methods`, `POST /api/payment-methods`
+- `GET /api/sharing/shared-with`, `GET /api/sharing/shared-by`
+- `POST /api/sharing/invite`, `DELETE /api/sharing/revoke/{id}`
+
+### 📊 Analytics & Reporting
+- `GET /api/analytics` - Dashboard charts data.
+- `GET /api/reports`, `GET /api/reports/export` (CSV export)
+
+### ✅ Task Manager
+- `GET /api/tasks`, `POST /api/tasks`, `PUT /api/tasks/{id}`, `DELETE /api/tasks/{id}`
+
+### 🔌 External Integrations
+- `GET /mcp` - MCP stream endpoint for ChatGPT/Claude.
+- `GET /oauth/authorize`, `POST /oauth/token` - OAuth 2.0 PKCE Authorization.
+
 ---
 
 ## 🗂️ Project Directory Structure
