@@ -15,8 +15,8 @@ from app.routers.auth import _assert_admin
 router = APIRouter(prefix="/push", tags=["Web Push"])
 logger = logging.getLogger(__name__)
 
-# The VAPID private key should be kept secure. For this stable approach, we load it from the pem file generated.
-VAPID_PRIVATE_KEY = "private_key.pem"
+# The VAPID private key should be kept secure. For this stable approach, we load it from the pem file generated or environment variable.
+VAPID_PRIVATE_KEY = os.environ.get("VAPID_PRIVATE_KEY", "private_key.pem")
 VAPID_CLAIMS = {"sub": "mailto:admin@mymoney.local"}
 
 class PushSubscription(BaseModel):
