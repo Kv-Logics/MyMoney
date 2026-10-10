@@ -17,6 +17,7 @@ from app.routers import (
     tasks,
     ai,
     oauth,
+    mcp,
     profit,
     push
 )
