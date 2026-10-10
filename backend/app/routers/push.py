@@ -43,9 +43,6 @@ def send_daily_reminders(current_user: dict = Depends(get_current_user)):
     expenses_col = get_collection("expenses")
     profit_col = get_collection("daily_profits")
     
-    client = get_ai_client()
-    model = client.models.get("gemini-2.0-flash")
-    
     import datetime
     today_str = datetime.date.today().strftime("%Y-%m-%d")
     
@@ -74,8 +71,18 @@ def send_daily_reminders(current_user: dict = Depends(get_current_user)):
         )
         
         try:
-            response = model.generate_content(context)
-            message = response.text.strip().strip('"')
+            from groq import Groq
+            client = Groq()
+            chat_completion = client.chat.completions.create(
+                messages=[
+                    {
+                        "role": "user",
+                        "content": context,
+                    }
+                ],
+                model="llama-3.3-70b-versatile",
+            )
+            message = chat_completion.choices[0].message.content.strip().strip('"')
             
             payload = json.dumps({
                 "title": "MyMoney Daily Summary",
