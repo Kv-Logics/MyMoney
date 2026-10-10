@@ -18,7 +18,7 @@ import AuthModal from './components/AuthModal';
 import ResetPasswordStandalone from './components/ResetPasswordStandalone';
 
 function MainContent() {
-  const { activeTab } = useApp();
+  const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isProfitModalOpen, setIsProfitModalOpen] = useState(false);
 
@@ -27,6 +27,14 @@ function MainContent() {
       {/* Server Wakeup Particle Loading Animation */}
       <ServerWakeupOverlay />
 
+      {/* Mobile Sidebar Backdrop */}
+      {isMobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
       <Sidebar />
 
@@ -34,7 +42,7 @@ function MainContent() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onOpenExpenseModal={() => setIsExpenseModalOpen(true)} />
 
-        <main className="flex-1 overflow-y-auto p-6 space-y-6">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
           {activeTab === 'dashboard' && (
             <Dashboard
               onOpenExpenseModal={() => setIsExpenseModalOpen(true)}

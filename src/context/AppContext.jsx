@@ -10,12 +10,17 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useState(localStorage.getItem('mymoney_theme') || 'light');
   const [activeOwner, setActiveOwner] = useState(null);
 
+  // Check local cache for instant load
+  const cachedDataStr = localStorage.getItem('mymoney_cache');
+  const cachedData = cachedDataStr ? JSON.parse(cachedDataStr) : {};
+  const isRecentlyAwake = sessionStorage.getItem('isBackendAwake') === 'true';
+
   // System Design Readiness Enum: 'INITIALIZING' | 'READY' | 'ERROR'
-  const [appState, setAppState] = useState('INITIALIZING');
+  const [appState, setAppState] = useState((isRecentlyAwake && cachedDataStr) ? 'READY' : 'INITIALIZING');
   const [appError, setAppError] = useState(null);
 
   // Collections
-  const [expenses, setExpenses] = useState([]);
+  const [expenses, setExpenses] = useState(cachedData.expenses || []);
   const [categories, setCategories] = useState([
     { name: 'Food', color: '#ef4444' },
     { name: 'Travel', color: '#10b981' },
@@ -25,18 +30,20 @@ export function AppProvider({ children }) {
     { name: 'Other', color: '#64748b' }
   ]);
   const [paymentMethods, setPaymentMethods] = useState(['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer']);
-  const [budgets, setBudgets] = useState([]);
+  const [budgets, setBudgets] = useState(cachedData.budgets || []);
   const [savingsGoals, setSavingsGoals] = useState([]);
-  const [dailyProfits, setDailyProfits] = useState([]);
-  const [profitSummary, setProfitSummary] = useState({ total_profit: 0, profitable_days: 0, loss_days: 0, average_daily_profit: 0 });
-  const [tasks, setTasks] = useState([]);
+  const [dailyProfits, setDailyProfits] = useState(cachedData.dailyProfits || []);
+  const [profitSummary, setProfitSummary] = useState(cachedData.profitSummary || { total_profit: 0, profitable_days: 0, loss_days: 0, average_daily_profit: 0 });
+  const [tasks, setTasks] = useState(cachedData.tasks || []);
   const [sharingList, setSharingList] = useState([]);
-  const [auditLogs, setAuditLogs] = useState([]);
+  const [auditLogs, setAuditLogs] = useState(cachedData.auditLogs || []);
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isServerAwake, setIsServerAwake] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(!localStorage.getItem('mymoney_token'));
+
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   // Confirm Modal state
   const [confirmState, setConfirmState] = useState({
@@ -51,39 +58,61 @@ export function AppProvider({ children }) {
   }, [theme]);
 
   const loadAllDataInternal = async (authToken = token) => {
-    try {
-      const expRes = await fetchWithAuth(`${API_BASE}/expenses`, {
-        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
-      });
-      if (expRes.ok) {
-        const expData = await expRes.json();
-        setExpenses(Array.isArray(expData) ? expData : []);
-      }
+    const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
+    
+    // Fetch all required data concurrently to eliminate the 2-3 second delay
+    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes] = await Promise.all([
+      fetchWithAuth(`${API_BASE}/expenses`, { headers }),
+      fetchWithAuth(`${API_BASE}/budgets`, { headers }),
+      fetchWithAuth(`${API_BASE}/profit`, { headers }),
+      fetchWithAuth(`${API_BASE}/profit/summary`, { headers }),
+      fetchWithAuth(`${API_BASE}/tasks`, { headers }),
+      fetchWithAuth(`${API_BASE}/audit-logs`, { headers })
+    ]);
 
-      const budRes = await fetchWithAuth(`${API_BASE}/budgets`);
-      if (budRes.ok) setBudgets(await budRes.json());
+    if (!expRes.ok) throw new Error(`Expenses API failed: ${expRes.status}`);
+    const expData = await expRes.json();
+    const _expenses = Array.isArray(expData) ? expData : [];
+    setExpenses(_expenses);
 
-      const profRes = await fetchWithAuth(`${API_BASE}/profit`);
-      if (profRes.ok) {
-        const data = await profRes.json();
-        setDailyProfits(data.records || []);
-      }
+    if (!budRes.ok) throw new Error(`Budgets API failed: ${budRes.status}`);
+    const _budgets = await budRes.json();
+    setBudgets(_budgets);
 
-      const profSumRes = await fetchWithAuth(`${API_BASE}/profit/summary`);
-      if (profSumRes.ok) setProfitSummary(await profSumRes.json());
-      
-      const tasksRes = await fetchWithAuth(`${API_BASE}/tasks`);
-      if (tasksRes.ok) setTasks(await tasksRes.json());
-      
-      const auditRes = await fetchWithAuth(`${API_BASE}/audit-logs`);
-      if (auditRes.ok) setAuditLogs(await auditRes.json());
-    } catch (err) {
-      console.warn('Data loading error:', err);
-    }
+    if (!profRes.ok) throw new Error(`Profit API failed: ${profRes.status}`);
+    const profData = await profRes.json();
+    const _dailyProfits = profData.records || [];
+    setDailyProfits(_dailyProfits);
+
+    if (!profSumRes.ok) throw new Error(`Profit Summary API failed: ${profSumRes.status}`);
+    const _profitSummary = await profSumRes.json();
+    setProfitSummary(_profitSummary);
+    
+    // Optional endpoints
+    const _tasks = tasksRes.ok ? await tasksRes.json() : [];
+    if (tasksRes.ok) setTasks(_tasks);
+
+    const _auditLogs = auditRes.ok ? await auditRes.json() : [];
+    if (auditRes.ok) setAuditLogs(_auditLogs);
+
+    localStorage.setItem('mymoney_cache', JSON.stringify({
+      expenses: _expenses,
+      budgets: _budgets,
+      dailyProfits: _dailyProfits,
+      profitSummary: _profitSummary,
+      tasks: _tasks,
+      auditLogs: _auditLogs
+    }));
   };
 
   const startBackendCheckAndInitialization = useCallback(async () => {
-    setAppState('INITIALIZING');
+    const isAwake = sessionStorage.getItem('isBackendAwake') === 'true';
+    const hasCache = !!localStorage.getItem('mymoney_cache');
+    
+    setAppState(prev => {
+      if (prev === 'READY' && isAwake && hasCache) return 'READY';
+      return 'INITIALIZING';
+    });
     setAppError(null);
 
     const rootUrl = API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : API_BASE;
@@ -91,20 +120,28 @@ export function AppProvider({ children }) {
 
     let isHealthy = false;
     let attempts = 0;
+    
+    // Check if we recently verified the backend is awake to skip the health poll loop on refresh
+    const isRecentlyAwake = sessionStorage.getItem('isBackendAwake') === 'true';
 
-    // Retry checking /health until backend responds 200 OK
-    while (!isHealthy && attempts < 40) {
-      attempts++;
-      try {
-        const res = await fetch(healthUrl, { cache: 'no-store' });
-        if (res.ok) {
-          isHealthy = true;
-          break;
+    if (isRecentlyAwake) {
+      isHealthy = true;
+    } else {
+      // Retry checking /health until backend responds 200 OK
+      while (!isHealthy && attempts < 40) {
+        attempts++;
+        try {
+          const res = await fetch(healthUrl, { cache: 'no-store' });
+          if (res.ok) {
+            isHealthy = true;
+            sessionStorage.setItem('isBackendAwake', 'true');
+            break;
+          }
+        } catch (e) {
+          // Backend cold start in progress
         }
-      } catch (e) {
-        // Backend cold start in progress
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
-      await new Promise((resolve) => setTimeout(resolve, 2000));
     }
 
     if (!isHealthy) {
@@ -126,7 +163,14 @@ export function AppProvider({ children }) {
       await loadAllDataInternal(storedToken);
       setAppState('READY');
     } catch (e) {
-      setAppState('READY');
+      if (e.message && e.message.includes('401')) {
+        console.warn('Session expired (401). Logging out.');
+        logout();
+        return;
+      }
+      console.error('Initial data loading failed:', e);
+      setAppError('Failed to load dashboard data. Please try again.');
+      setAppState('ERROR');
     }
   }, []);
 
@@ -138,7 +182,13 @@ export function AppProvider({ children }) {
     try {
       await loadAllDataInternal(token);
     } catch (e) {
-      console.warn(e);
+      if (e.message && e.message.includes('401')) {
+        logout();
+        return;
+      }
+      console.error('Data refresh failed:', e);
+      setAppError('Failed to refresh data. Please try again.');
+      setAppState('ERROR');
     }
   };
 
@@ -152,8 +202,18 @@ export function AppProvider({ children }) {
     setIsAuthModalOpen(false);
 
     setAppState('INITIALIZING');
-    await loadAllDataInternal(userToken);
-    setAppState('READY');
+    try {
+      await loadAllDataInternal(userToken);
+      setAppState('READY');
+    } catch (e) {
+      if (e.message && e.message.includes('401')) {
+        logout();
+        return;
+      }
+      console.error('Login data load failed:', e);
+      setAppError('Failed to load dashboard data after login. Please refresh.');
+      setAppState('ERROR');
+    }
   };
 
   const logout = () => {
@@ -172,6 +232,9 @@ export function AppProvider({ children }) {
     setTasks([]);
     setSharingList([]);
     setAuditLogs([]);
+
+    localStorage.removeItem('mymoney_cache');
+    sessionStorage.removeItem('isBackendAwake');
 
     setIsAuthModalOpen(true);
     setAppState('READY');
@@ -213,6 +276,7 @@ export function AppProvider({ children }) {
       isAuthModalOpen, setIsAuthModalOpen,
       settings, setSettings,
       showConfirm, confirmState, handleConfirmClose,
+      isMobileMenuOpen, setIsMobileMenuOpen,
       loadAllData
     }}>
       {children}

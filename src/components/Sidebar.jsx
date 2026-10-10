@@ -12,11 +12,12 @@ import {
   Activity,
   Settings,
   LogOut,
-  Wallet
+  Wallet,
+  X
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { activeTab, setActiveTab, user, logout } = useApp();
+  const { activeTab, setActiveTab, user, logout, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
 
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -34,16 +35,24 @@ export default function Sidebar() {
   ];
 
   return (
-    <aside className="w-60 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col justify-between p-4 shrink-0 transition-colors duration-200 overflow-y-auto">
+    <aside className={`fixed inset-y-0 left-0 z-50 w-full md:w-60 bg-white dark:bg-slate-900 border-r border-slate-100 dark:border-slate-800 flex flex-col justify-between p-4 shrink-0 transition-transform duration-300 ease-in-out md:relative md:translate-x-0 ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'} overflow-y-auto`}>
       <div className="space-y-6">
         {/* Brand Header */}
-        <div className="flex items-center gap-3 px-2 py-1">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
-            <Wallet className="w-5 h-5" />
+        <div className="flex items-center justify-between px-2 py-1">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center text-white shadow-md shadow-emerald-500/20">
+              <Wallet className="w-5 h-5" />
+            </div>
+            <div>
+              <h1 className="font-extrabold text-lg text-slate-800 dark:text-white tracking-tight">MyMoney</h1>
+            </div>
           </div>
-          <div>
-            <h1 className="font-extrabold text-lg text-slate-800 dark:text-white tracking-tight">MyMoney</h1>
-          </div>
+          <button 
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="md:hidden p-2 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition"
+          >
+            <X className="w-5 h-5" />
+          </button>
         </div>
 
         {/* User Handle */}
@@ -59,7 +68,10 @@ export default function Sidebar() {
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => {
+                  setActiveTab(item.id);
+                  setIsMobileMenuOpen(false);
+                }}
                 className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl font-medium text-xs transition-all ${
                   isActive
                     ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold border-l-4 border-emerald-500'
