@@ -37,6 +37,47 @@ export default function SettingsPage() {
       <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
         <div>
           <h4 className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+            <Shield className="w-4 h-4 text-emerald-500" /> DAILY REMINDERS (AI PUSH)
+          </h4>
+          <p className="text-[10px] text-slate-500 mt-1">
+            Receive a personalized daily summary at night directly on your device. No email or WhatsApp needed!
+          </p>
+        </div>
+        <button
+          onClick={async () => {
+            try {
+              const registration = await navigator.serviceWorker.register('/sw.js');
+              const permission = await Notification.requestPermission();
+              if (permission !== 'granted') {
+                alert('Notification permission denied.');
+                return;
+              }
+              const subscription = await registration.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: 'BIMi_b_1NBMksseVvdVyJF6w0eRn9w157A3CyTo9_WlbwOrwm5LXnHwlQJJzq8C5K03m1Npi5c_VUZ_VQBzZNe0'
+              });
+              
+              const { API_BASE, fetchWithAuth } = await import('../api');
+              const res = await fetchWithAuth(`${API_BASE}/push/subscribe`, {
+                method: 'POST',
+                body: JSON.stringify(subscription)
+              });
+              if (res.ok) alert('Successfully subscribed to daily AI reminders!');
+              else alert('Failed to save subscription to server.');
+            } catch (err) {
+              console.error(err);
+              alert('Error setting up push notifications: ' + err.message);
+            }
+          }}
+          className="w-full py-2.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition"
+        >
+          Enable Daily Reminders
+        </button>
+      </div>
+
+      <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+        <div>
+          <h4 className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
             <Key className="w-4 h-4 text-emerald-500" /> CHANGE ACCOUNT PASSWORD
           </h4>
         </div>
