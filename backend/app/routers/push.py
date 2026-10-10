@@ -11,7 +11,7 @@ from app.database import get_collection
 from app.auth import get_current_user
 from app.routers.auth import _assert_admin
 
-router = APIRouter(prefix="/push", tags=["Web Push"])
+router = APIRouter(prefix="/api/push", tags=["Web Push"])
 logger = logging.getLogger(__name__)
 
 # The VAPID private key should be kept secure. For this stable approach, we load it from the pem file generated or environment variable.

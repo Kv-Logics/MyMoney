@@ -116,7 +116,7 @@ export default function TasksPage() {
               <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
                 <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${t.progress}%` }}></div>
               </div>
-              <span className="text-[10px] text-slate-400 font-bold block text-right mt-1">{t.progress}%</span>
+              <span className="text-[10px] text-slate-400 font-bold block text-right mt-1">{Math.round(t.progress)}%</span>
             </div>
 
             {/* Checklist items */}
