@@ -14,7 +14,6 @@ export default function SettingsPage() {
   const [adminStatus, setAdminStatus] = useState(null);
 
   return (
-  return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       
       {/* Left Column */}
@@ -245,7 +244,6 @@ export default function SettingsPage() {
           </div>
         )}
       </div>
-    </div>
     </div>
   );
 }

@@ -60,10 +60,15 @@ async def http_exception_handler(request: Request, exc: HTTPException):
     response.headers["Access-Control-Allow-Headers"] = "*"
     return response
 
-# Root endpoint
+# Root & Health Endpoints
 @app.get("/")
 def read_root():
     return {"status": "ok", "message": "MyMoney - Expense Tracker API is running"}
+
+@app.get("/health")
+@app.get("/api/health")
+def health_check():
+    return {"status": "ok", "message": "MyMoney API is healthy and ready"}
 
 # Include Modular Routers
 app.include_router(auth.router)

@@ -29,6 +29,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
   const [selectedDay, setSelectedDay] = useState(null);
+  const [hoveredCategory, setHoveredCategory] = useState(null);
 
   // Summary math
   const d = new Date();
@@ -74,20 +75,29 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   let currentAngle = 0;
   const dynamicCircles = categoryBreakdown.map(c => {
     const dashLength = (c.pct / 100) * 251.2;
+    const isHovered = hoveredCategory && hoveredCategory.name === c.name;
+    const isAnyHovered = hoveredCategory !== null;
+
     const circle = (
       <circle
         key={c.name}
         cx="50" cy="50" r="40"
         fill="transparent"
         stroke={c.color}
-        strokeWidth="10"
+        strokeWidth={isHovered ? "13" : "10"}
         strokeDasharray={`${dashLength} 251.2`}
         strokeDashoffset="0"
         transform={`rotate(${currentAngle} 50 50)`}
-        className="transition-all duration-1000 ease-out cursor-pointer hover:opacity-80"
-      >
-        <title>{c.name}: {settings.currency} {c.amount.toLocaleString()}</title>
-      </circle>
+        onMouseEnter={() => setHoveredCategory(c)}
+        onMouseLeave={() => setHoveredCategory(null)}
+        className={`transition-all duration-300 ease-out cursor-pointer ${
+          isHovered
+            ? 'opacity-100 drop-shadow-md'
+            : isAnyHovered
+            ? 'opacity-40 hover:opacity-100'
+            : 'opacity-100 hover:opacity-90'
+        }`}
+      />
     );
     currentAngle += (c.pct / 100) * 360;
     return circle;
@@ -273,24 +283,72 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     <circle cx="50" cy="50" r="40" fill="transparent" stroke="#e2e8f0" strokeWidth="10" />
                     {dynamicCircles}
                   </svg>
-                  <div className="absolute text-center">
-                    <span className="text-[10px] uppercase font-semibold text-slate-400 block">TOTAL SPENT</span>
-                    <span className="text-lg font-bold text-slate-800 dark:text-white">
-                      ₹{monthTotal.toLocaleString()}
-                    </span>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2 transition-all duration-300">
+                    {hoveredCategory ? (
+                      <>
+                        <span
+                          className="text-[10px] uppercase font-extrabold tracking-wider block transition-colors duration-200 truncate max-w-[100px]"
+                          style={{ color: hoveredCategory.color }}
+                        >
+                          {hoveredCategory.name}
+                        </span>
+                        <span className="text-lg font-black text-slate-800 dark:text-white leading-tight">
+                          {settings.currency}{hoveredCategory.amount.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] font-bold text-slate-400 mt-0.5">
+                          {hoveredCategory.pct}% of total
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="text-[10px] uppercase font-semibold text-slate-400 tracking-wider block">
+                          TOTAL SPENT
+                        </span>
+                        <span className="text-lg font-extrabold text-slate-800 dark:text-white leading-tight">
+                          {settings.currency}{monthTotal.toLocaleString()}
+                        </span>
+                        <span className="text-[10px] font-medium text-slate-400 mt-0.5">
+                          {categoryBreakdown.length} {categoryBreakdown.length === 1 ? 'Category' : 'Categories'}
+                        </span>
+                      </>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-3 flex-1 max-w-[200px]">
-                  {categoryBreakdown.map(c => (
-                    <div key={c.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: c.color }}></div>
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">{c.name}</span>
+                <div className="space-y-2 flex-1 min-w-[180px] max-w-[260px]">
+                  {categoryBreakdown.map(c => {
+                    const isHovered = hoveredCategory && hoveredCategory.name === c.name;
+                    return (
+                      <div
+                        key={c.name}
+                        onMouseEnter={() => setHoveredCategory(c)}
+                        onMouseLeave={() => setHoveredCategory(null)}
+                        className={`flex items-center justify-between text-xs p-1.5 rounded-xl transition-all cursor-pointer ${
+                          isHovered
+                            ? 'bg-slate-100 dark:bg-slate-800 scale-[1.02] shadow-sm'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 min-w-0 pr-2">
+                          <div
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: c.color }}
+                          ></div>
+                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                            {c.name}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0 text-right">
+                          <span className="font-extrabold text-slate-800 dark:text-white">
+                            {settings.currency}{c.amount.toLocaleString()}
+                          </span>
+                          <span className="text-[10px] font-bold text-slate-400">
+                            ({c.pct}%)
+                          </span>
+                        </div>
                       </div>
-                      <span className="font-extrabold text-slate-800 dark:text-white">{c.pct}%</span>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>

@@ -1,14 +1,18 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { API_BASE, fetchWithAuth } from '../api';
 
 const AppContext = createContext();
 
 export function AppProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('mymoney_token') || '');
-  const [user, setUser] = useState(JSON.parse(localStorage.getItem('mymoney_user') || 'null') || { name: 'kv', email: 'kv@example.com' });
+  const [user, setUser] = useState(JSON.parse(localStorage.getItem('mymoney_user') || 'null'));
   const [activeTab, setActiveTab] = useState('dashboard');
   const [theme, setTheme] = useState(localStorage.getItem('mymoney_theme') || 'light');
   const [activeOwner, setActiveOwner] = useState(null);
+
+  // System Design Readiness Enum: 'INITIALIZING' | 'READY' | 'ERROR'
+  const [appState, setAppState] = useState('INITIALIZING');
+  const [appError, setAppError] = useState(null);
 
   // Collections
   const [expenses, setExpenses] = useState([]);
@@ -32,7 +36,7 @@ export function AppProvider({ children }) {
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isServerAwake, setIsServerAwake] = useState(false);
   const [isVoiceModalOpen, setIsVoiceModalOpen] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(!localStorage.getItem('mymoney_token'));
 
   // Confirm Modal state
   const [confirmState, setConfirmState] = useState({
@@ -46,15 +50,15 @@ export function AppProvider({ children }) {
     localStorage.setItem('mymoney_theme', theme);
   }, [theme]);
 
-  // Only load data when BOTH token exists AND server is confirmed awake
-  useEffect(() => {
-    if (token && isServerAwake) loadAllData();
-  }, [token, isServerAwake]);
-
-  const loadAllData = async () => {
+  const loadAllDataInternal = async (authToken = token) => {
     try {
-      const expRes = await fetchWithAuth(`${API_BASE}/expenses`);
-      if (expRes.ok) setExpenses(await expRes.json());
+      const expRes = await fetchWithAuth(`${API_BASE}/expenses`, {
+        headers: authToken ? { Authorization: `Bearer ${authToken}` } : {}
+      });
+      if (expRes.ok) {
+        const expData = await expRes.json();
+        setExpenses(Array.isArray(expData) ? expData : []);
+      }
 
       const budRes = await fetchWithAuth(`${API_BASE}/budgets`);
       if (budRes.ok) setBudgets(await budRes.json());
@@ -74,21 +78,82 @@ export function AppProvider({ children }) {
       const auditRes = await fetchWithAuth(`${API_BASE}/audit-logs`);
       if (auditRes.ok) setAuditLogs(await auditRes.json());
     } catch (err) {
-      // Suppress initial NetworkError during wake-up to keep console clean
-      if (err.name !== 'TypeError' || err.message !== 'NetworkError when attempting to fetch resource.') {
-        console.warn('Backend loading warning:', err);
+      console.warn('Data loading error:', err);
+    }
+  };
+
+  const startBackendCheckAndInitialization = useCallback(async () => {
+    setAppState('INITIALIZING');
+    setAppError(null);
+
+    const rootUrl = API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : API_BASE;
+    const healthUrl = `${rootUrl}/health`;
+
+    let isHealthy = false;
+    let attempts = 0;
+
+    // Retry checking /health until backend responds 200 OK
+    while (!isHealthy && attempts < 40) {
+      attempts++;
+      try {
+        const res = await fetch(healthUrl, { cache: 'no-store' });
+        if (res.ok) {
+          isHealthy = true;
+          break;
+        }
+      } catch (e) {
+        // Backend cold start in progress
       }
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+    }
+
+    if (!isHealthy) {
+      setAppError('Backend server failed to respond within timeout. Please click Retry.');
+      setAppState('ERROR');
+      return;
+    }
+
+    setIsServerAwake(true);
+
+    const storedToken = localStorage.getItem('mymoney_token');
+    if (!storedToken) {
+      setIsAuthModalOpen(true);
+      setAppState('READY');
+      return;
+    }
+
+    try {
+      await loadAllDataInternal(storedToken);
+      setAppState('READY');
+    } catch (e) {
+      setAppState('READY');
+    }
+  }, []);
+
+  useEffect(() => {
+    startBackendCheckAndInitialization();
+  }, [startBackendCheckAndInitialization]);
+
+  const loadAllData = async () => {
+    try {
+      await loadAllDataInternal(token);
+    } catch (e) {
+      console.warn(e);
     }
   };
 
   const toggleTheme = () => setTheme(prev => (prev === 'light' ? 'dark' : 'light'));
 
-  const login = (userData, userToken) => {
+  const login = async (userData, userToken) => {
     setUser(userData);
     setToken(userToken);
     localStorage.setItem('mymoney_token', userToken);
     localStorage.setItem('mymoney_user', JSON.stringify(userData));
     setIsAuthModalOpen(false);
+
+    setAppState('INITIALIZING');
+    await loadAllDataInternal(userToken);
+    setAppState('READY');
   };
 
   const logout = () => {
@@ -97,7 +162,6 @@ export function AppProvider({ children }) {
     localStorage.removeItem('mymoney_token');
     localStorage.removeItem('mymoney_user');
     
-    // Clear all sensitive data to prevent flash/leakage to next user
     setExpenses([]);
     setCategories([]);
     setPaymentMethods([]);
@@ -110,6 +174,7 @@ export function AppProvider({ children }) {
     setAuditLogs([]);
 
     setIsAuthModalOpen(true);
+    setAppState('READY');
   };
 
   const showConfirm = (message, title = 'Confirm Action', confirmText = 'Confirm', isDanger = true) => {
@@ -125,6 +190,9 @@ export function AppProvider({ children }) {
 
   return (
     <AppContext.Provider value={{
+      appState, setAppState,
+      appError, setAppError,
+      retryConnection: startBackendCheckAndInitialization,
       token, user, login, logout,
       activeTab, setActiveTab,
       theme, toggleTheme,
