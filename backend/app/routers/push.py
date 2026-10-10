@@ -9,7 +9,6 @@ from pywebpush import webpush, WebPushException
 
 from app.database import get_collection
 from app.auth import get_current_user
-from app.services.ai_access import get_ai_client
 from app.routers.auth import _assert_admin
 
 router = APIRouter(prefix="/push", tags=["Web Push"])
