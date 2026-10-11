@@ -37,6 +37,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
   const [selectedDay, setSelectedDay] = useState(null);
   const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   // Admin stats & users state
   const [adminStats, setAdminStats] = useState(null);
@@ -144,12 +145,16 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     return circle;
   });
 
-  // Daily Spending Trend Math (Last 7 Days)
+  // Daily Spending Trend Math (7 Days shifted by weekOffset)
   const chartData = [];
   let maxDailyAmount = 0;
   let weekTotal = 0;
+  
+  const anchorDate = new Date();
+  anchorDate.setDate(anchorDate.getDate() + (weekOffset * 7));
+
   for (let i = 6; i >= 0; i--) {
-    const d = new Date();
+    const d = new Date(anchorDate);
     d.setDate(d.getDate() - i);
     const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const dayName = d.toLocaleDateString('en-US', { weekday: 'short' });
@@ -162,6 +167,14 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     
     chartData.push({ dateStr, dayName, sum, expenses: dayExpenses });
   }
+
+  const firstChartDay = chartData[0] ? `${chartData[0].dateStr.slice(8, 10)}/${chartData[0].dateStr.slice(5, 7)}` : '';
+  const lastChartDay = chartData[6] ? `${chartData[6].dateStr.slice(8, 10)}/${chartData[6].dateStr.slice(5, 7)}` : '';
+  const weekLabel = weekOffset === 0
+    ? `This Week – ${firstChartDay} - ${lastChartDay}`
+    : weekOffset === -1
+    ? `Last Week – ${firstChartDay} - ${lastChartDay}`
+    : `${firstChartDay} - ${lastChartDay}`;
 
   return (
     <div className="space-y-6">
@@ -409,13 +422,38 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
               </div>
 
               <div className="flex items-center justify-between mb-4 bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl">
-                <button className="p-1 text-slate-400 hover:text-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedDay(null);
+                    setWeekOffset((prev) => prev - 1);
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
+                  title="Previous week"
+                  aria-label="Previous week"
+                >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  This Week - 02/10 - 08/10
+                  {weekLabel}
                 </span>
-                <button className="p-1 text-slate-400 hover:text-slate-800">
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (weekOffset < 0) {
+                      setSelectedDay(null);
+                      setWeekOffset((prev) => Math.min(0, prev + 1));
+                    }
+                  }}
+                  disabled={weekOffset >= 0}
+                  className={`p-1 transition rounded-lg ${
+                    weekOffset >= 0
+                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                      : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
+                  }`}
+                  title={weekOffset >= 0 ? 'Current week' : 'Next week'}
+                  aria-label="Next week"
+                >
                   <ChevronRight className="w-4 h-4" />
                 </button>
               </div>

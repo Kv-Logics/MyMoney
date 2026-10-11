@@ -23,7 +23,7 @@ from app.models import (
     APIKeyGenerateRequest,
     APIKeyResponse
 )
-from app.utils import serialize_doc, DEFAULT_PAYMENT_METHODS, log_audit_action
+from app.utils import serialize_doc, serialize_docs, DEFAULT_PAYMENT_METHODS, log_audit_action
 
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
