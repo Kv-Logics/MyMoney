@@ -17,9 +17,25 @@ import {
 } from 'lucide-react';
 
 export default function Sidebar() {
-  const { activeTab, setActiveTab, user, logout, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
+  const { activeTab, setActiveTab, user, logout, isMobileMenuOpen, setIsMobileMenuOpen, sharedByList, activeOwner, setActiveOwner } = useApp();
 
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(() => {
+    return activeTab === 'settings' || activeTab === 'budgets' || localStorage.getItem('mymoney_showAdvanced') === 'true';
+  });
+
+  useEffect(() => {
+    if (activeTab === 'settings' || activeTab === 'budgets') {
+      setShowAdvanced(true);
+    }
+  }, [activeTab]);
+
+  const toggleAdvanced = () => {
+    setShowAdvanced(prev => {
+      const next = !prev;
+      localStorage.setItem('mymoney_showAdvanced', String(next));
+      return next;
+    });
+  };
 
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -92,7 +108,7 @@ export default function Sidebar() {
           })}
           
           <button
-            onClick={() => setShowAdvanced(!showAdvanced)}
+            onClick={toggleAdvanced}
             className="w-full flex items-center justify-center gap-2 px-3 py-2 mt-2 rounded-xl font-medium text-[10px] text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-slate-600 dark:hover:text-slate-300 transition-all uppercase tracking-wider border border-dashed border-slate-200 dark:border-slate-800"
           >
             {showAdvanced ? "Hide Advanced" : "Show Advanced Options"}
@@ -106,6 +122,37 @@ export default function Sidebar() {
           <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider block mb-2">
             SHARED WITH ME
           </span>
+          {sharedByList && sharedByList.length > 0 ? (
+            <div className="space-y-1 mb-2">
+              {sharedByList.map(item => (
+                <button
+                  key={item._id || item.id}
+                  onClick={() => {
+                    setActiveOwner(item.owner_email);
+                    setActiveTab('expenses');
+                  }}
+                  className={`w-full text-left px-2 py-1.5 rounded-lg text-xs font-semibold flex items-center justify-between transition ${
+                    activeOwner === item.owner_email
+                      ? 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="truncate">{item.owner_name || item.owner_email}</span>
+                  <span className="text-[9px] bg-slate-100 dark:bg-slate-800 px-1 rounded">View</span>
+                </button>
+              ))}
+              {activeOwner && (
+                <button
+                  onClick={() => setActiveOwner(null)}
+                  className="w-full text-center text-[10px] text-emerald-600 font-bold hover:underline py-1"
+                >
+                  Back to My Personal Tracker
+                </button>
+              )}
+            </div>
+          ) : (
+            <span className="text-[10px] text-slate-400 italic block mb-2">No shared trackers</span>
+          )}
           <button
             onClick={logout}
             className="w-full flex items-center gap-2 px-2 py-1.5 text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg font-semibold transition"

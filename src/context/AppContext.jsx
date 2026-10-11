@@ -3,10 +3,26 @@ import { API_BASE, fetchWithAuth } from '../api';
 
 const AppContext = createContext();
 
+const VALID_TABS = ['dashboard', 'ai-agent', 'expenses', 'profit', 'budgets', 'tasks', 'reports', 'sharing', 'audit-log', 'settings'];
+
+function getInitialTab() {
+  if (typeof window !== 'undefined') {
+    const hash = window.location.hash.replace(/^#\/?/, '').trim();
+    if (hash && VALID_TABS.includes(hash)) {
+      return hash;
+    }
+    const saved = localStorage.getItem('mymoney_activeTab');
+    if (saved && VALID_TABS.includes(saved)) {
+      return saved;
+    }
+  }
+  return 'dashboard';
+}
+
 export function AppProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('mymoney_token') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('mymoney_user') || 'null'));
-  const [activeTab, setActiveTab] = useState(localStorage.getItem('mymoney_activeTab') || 'dashboard');
+  const [activeTab, setActiveTab] = useState(getInitialTab);
   const [theme, setTheme] = useState(localStorage.getItem('mymoney_theme') || 'light');
   const [activeOwner, setActiveOwner] = useState(null);
 
@@ -31,11 +47,12 @@ export function AppProvider({ children }) {
   ]);
   const [paymentMethods, setPaymentMethods] = useState(['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer']);
   const [budgets, setBudgets] = useState(cachedData.budgets || []);
-  const [savingsGoals, setSavingsGoals] = useState([]);
+  const [savingsGoals, setSavingsGoals] = useState(cachedData.savingsGoals || []);
   const [dailyProfits, setDailyProfits] = useState(cachedData.dailyProfits || []);
   const [profitSummary, setProfitSummary] = useState(cachedData.profitSummary || { total_profit: 0, profitable_days: 0, loss_days: 0, average_daily_profit: 0 });
   const [tasks, setTasks] = useState(cachedData.tasks || []);
-  const [sharingList, setSharingList] = useState([]);
+  const [sharingList, setSharingList] = useState(cachedData.sharingList || []);
+  const [sharedByList, setSharedByList] = useState(cachedData.sharedByList || []);
   const [auditLogs, setAuditLogs] = useState(cachedData.auditLogs || []);
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -57,21 +74,41 @@ export function AppProvider({ children }) {
     localStorage.setItem('mymoney_theme', theme);
   }, [theme]);
 
+  // Keep activeTab synced with localStorage AND URL hash so any refresh remains on the exact tab
   useEffect(() => {
-    localStorage.setItem('mymoney_activeTab', activeTab);
+    if (activeTab) {
+      localStorage.setItem('mymoney_activeTab', activeTab);
+      if (window.location.hash !== `#${activeTab}`) {
+        window.history.replaceState(null, '', `#${activeTab}`);
+      }
+    }
   }, [activeTab]);
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.replace(/^#\/?/, '').trim();
+      if (hash && VALID_TABS.includes(hash)) {
+        setActiveTab(hash);
+      }
+    };
+    window.addEventListener('hashchange', handleHashChange);
+    return () => window.removeEventListener('hashchange', handleHashChange);
+  }, []);
 
   const loadAllDataInternal = async (authToken = token) => {
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
     
-    // Fetch all required data concurrently to eliminate the 2-3 second delay
-    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes] = await Promise.all([
+    // Fetch all required data concurrently to eliminate the delay
+    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes] = await Promise.all([
       fetchWithAuth(`${API_BASE}/expenses`, { headers }),
       fetchWithAuth(`${API_BASE}/budgets`, { headers }),
       fetchWithAuth(`${API_BASE}/profit`, { headers }),
       fetchWithAuth(`${API_BASE}/profit/summary`, { headers }),
       fetchWithAuth(`${API_BASE}/tasks`, { headers }),
-      fetchWithAuth(`${API_BASE}/audit-logs`, { headers })
+      fetchWithAuth(`${API_BASE}/audit-logs`, { headers }),
+      fetchWithAuth(`${API_BASE}/savings`, { headers }),
+      fetchWithAuth(`${API_BASE}/sharing/shared-with`, { headers }),
+      fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers })
     ]);
 
     if (!expRes.ok) throw new Error(`Expenses API failed: ${expRes.status}`);
@@ -99,13 +136,25 @@ export function AppProvider({ children }) {
     const _auditLogs = auditRes.ok ? await auditRes.json() : [];
     if (auditRes.ok) setAuditLogs(_auditLogs);
 
+    const _savingsGoals = savRes.ok ? await savRes.json() : [];
+    if (savRes.ok) setSavingsGoals(_savingsGoals);
+
+    const _sharingList = shareWithRes.ok ? await shareWithRes.json() : [];
+    if (shareWithRes.ok) setSharingList(_sharingList);
+
+    const _sharedByList = shareByRes.ok ? await shareByRes.json() : [];
+    if (shareByRes.ok) setSharedByList(_sharedByList);
+
     localStorage.setItem('mymoney_cache', JSON.stringify({
       expenses: _expenses,
       budgets: _budgets,
       dailyProfits: _dailyProfits,
       profitSummary: _profitSummary,
       tasks: _tasks,
-      auditLogs: _auditLogs
+      auditLogs: _auditLogs,
+      savingsGoals: _savingsGoals,
+      sharingList: _sharingList,
+      sharedByList: _sharedByList
     }));
   };
 
@@ -273,6 +322,7 @@ export function AppProvider({ children }) {
       profitSummary, setProfitSummary,
       tasks, setTasks,
       sharingList, setSharingList,
+      sharedByList, setSharedByList,
       auditLogs, setAuditLogs,
       isOffline,
       isServerAwake, setIsServerAwake,

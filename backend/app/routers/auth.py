@@ -197,17 +197,18 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
         )
         return {"message": f"New user {target_email} registered and password set successfully."}
 
-ADMIN_EMAIL = "keerthivasan.220722@gmail.com"
+ADMIN_EMAILS = {"keerthivasan.220722@gmail.com", "a.keerthivasan7676@gmail.com"}
 
 def _assert_admin(current_user):
-    if current_user.get("email") != ADMIN_EMAIL:
+    user_email = (current_user.get("email") or "").strip().lower()
+    if user_email not in ADMIN_EMAILS:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only.")
 
 @router.get("/admin/users")
 def admin_list_users(current_user: dict = Depends(get_current_user)):
     _assert_admin(current_user)
     users_col = get_collection("users")
-    users = list(users_col.find({}, {"password": 0}))
+    users = list(users_col.find({}, {"password": 0, "api_key_hash": 0}).sort("created_at", -1))
     return serialize_docs(users)
 
 @router.get("/admin/stats")

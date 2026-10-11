@@ -10,35 +10,37 @@ router = APIRouter(prefix="/api/sharing", tags=["Sharing"])
 
 @router.post("/invite")
 def invite_user(inv: InvitationCreate, current_user: dict = Depends(get_current_user)):
-    if inv.email == current_user["email"]:
+    target_email = inv.email.strip().lower()
+    owner_email = current_user["email"].strip().lower()
+    if target_email == owner_email:
         raise HTTPException(status_code=400, detail="Cannot invite yourself")
     
     invitations_col = get_collection("invitations")
     sharing_col = get_collection("sharing")
     
-    if sharing_col.find_one({"owner_email": current_user["email"], "shared_with_email": inv.email}):
+    if sharing_col.find_one({"owner_email": owner_email, "shared_with_email": target_email}):
         raise HTTPException(status_code=400, detail="Access already shared with this user")
     
     invite = {
-        "owner_email": current_user["email"],
+        "owner_email": owner_email,
         "owner_name": current_user["name"],
-        "shared_with_email": inv.email,
+        "shared_with_email": target_email,
         "permission": inv.permission,
         "status": "accepted",
         "created_at": datetime.utcnow()
     }
     invitations_col.update_one(
-        {"owner_email": current_user["email"], "shared_with_email": inv.email},
+        {"owner_email": owner_email, "shared_with_email": target_email},
         {"$set": invite},
         upsert=True
     )
     
     sharing_col.update_one(
-        {"owner_email": current_user["email"], "shared_with_email": inv.email},
+        {"owner_email": owner_email, "shared_with_email": target_email},
         {"$set": {
-            "owner_email": current_user["email"],
+            "owner_email": owner_email,
             "owner_name": current_user["name"],
-            "shared_with_email": inv.email,
+            "shared_with_email": target_email,
             "permission": inv.permission,
             "shared_at": datetime.utcnow()
         }},
@@ -47,7 +49,7 @@ def invite_user(inv: InvitationCreate, current_user: dict = Depends(get_current_
     
     notify_col = get_collection("notifications")
     notify_col.insert_one({
-        "user_email": inv.email,
+        "user_email": target_email,
         "title": "New Shared Access",
         "message": f"{current_user['name']} has shared their expense tracker with you.",
         "type": "sharing",
@@ -59,31 +61,42 @@ def invite_user(inv: InvitationCreate, current_user: dict = Depends(get_current_
         user_id=current_user["id"],
         user_name=current_user["name"],
         action="invite_sent",
-        details=f"Invited {inv.email} with {inv.permission} permission."
+        details=f"Invited {target_email} with {inv.permission} permission."
     )
     
-    return {"message": f"Successfully shared access with {inv.email}"}
+    return {"message": f"Successfully shared access with {target_email}"}
 
 @router.get("/shared-with")
 def get_shared_with(current_user: dict = Depends(get_current_user)):
     sharing_col = get_collection("sharing")
-    shared_list = list(sharing_col.find({"owner_email": current_user["email"]}))
+    user_email = (current_user.get("email") or "").strip().lower()
+    shared_list = list(sharing_col.find({"$or": [{"owner_email": user_email}, {"owner_email": current_user["email"]}]}))
     return serialize_docs(shared_list)
 
 @router.get("/shared-by")
 def get_shared_by(current_user: dict = Depends(get_current_user)):
     sharing_col = get_collection("sharing")
-    shared_list = list(sharing_col.find({"shared_with_email": current_user["email"]}))
+    user_email = (current_user.get("email") or "").strip().lower()
+    shared_list = list(sharing_col.find({"$or": [{"shared_with_email": user_email}, {"shared_with_email": current_user["email"]}]}))
     return serialize_docs(shared_list)
 
 @router.delete("/revoke/{id}")
 def revoke_sharing(id: str, current_user: dict = Depends(get_current_user)):
     sharing_col = get_collection("sharing")
-    access = sharing_col.find_one({"_id": ObjectId(id), "owner_email": current_user["email"]})
+    user_email = (current_user.get("email") or "").strip().lower()
+    try:
+        obj_id = ObjectId(id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid ID format")
+
+    access = sharing_col.find_one({
+        "_id": obj_id,
+        "$or": [{"owner_email": user_email}, {"owner_email": current_user["email"]}]
+    })
     if not access:
         raise HTTPException(status_code=404, detail="Shared access not found")
         
-    sharing_col.delete_one({"_id": ObjectId(id)})
+    sharing_col.delete_one({"_id": obj_id})
     
     log_audit_action(
         user_id=current_user["id"],

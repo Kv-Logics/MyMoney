@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
+import { API_BASE, fetchWithAuth } from '../api';
 import {
   Calendar,
   Info,
@@ -14,7 +15,11 @@ import {
   ChevronRight,
   ArrowRight,
   Zap,
-  PieChart
+  PieChart,
+  Shield,
+  Users,
+  Search,
+  RefreshCw
 } from 'lucide-react';
 
 export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
@@ -32,6 +37,40 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
   const [selectedDay, setSelectedDay] = useState(null);
   const [hoveredCategory, setHoveredCategory] = useState(null);
+
+  // Admin stats & users state
+  const [adminStats, setAdminStats] = useState(null);
+  const [adminUsers, setAdminUsers] = useState([]);
+  const [adminLoading, setAdminLoading] = useState(false);
+  const [adminUserSearch, setAdminUserSearch] = useState('');
+
+  const loadAdminData = async () => {
+    if (!isAdmin) return;
+    setAdminLoading(true);
+    try {
+      const [statsRes, usersRes] = await Promise.all([
+        fetchWithAuth(`${API_BASE}/auth/admin/stats`),
+        fetchWithAuth(`${API_BASE}/auth/admin/users`)
+      ]);
+      if (statsRes.ok) {
+        setAdminStats(await statsRes.json());
+      }
+      if (usersRes.ok) {
+        const uData = await usersRes.json();
+        setAdminUsers(Array.isArray(uData) ? uData : []);
+      }
+    } catch (e) {
+      console.error('Error fetching admin data:', e);
+    } finally {
+      setAdminLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isAdmin && dashboardView === 'admin') {
+      loadAdminData();
+    }
+  }, [isAdmin, dashboardView]);
 
   // Summary math
   const d = new Date();
@@ -51,9 +90,9 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const rentTotal = rentExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
 
   const overallBudget = budgets.find(b => b.category === 'Overall');
-  const budgetAmount = overallBudget ? overallBudget.amount : 1500;
+  const budgetAmount = overallBudget ? overallBudget.amount : 0;
   const remainingBudget = Math.max(0, budgetAmount - monthTotal);
-  const budgetUsedPct = Math.min(100, Math.round((monthTotal / (budgetAmount || 1)) * 100));
+  const budgetUsedPct = overallBudget ? Math.min(100, Math.round((monthTotal / (budgetAmount || 1)) * 100)) : 0;
 
   const todayProfitRecord = (dailyProfits || []).find(p => p.date === todayStr);
   const todayProfit = todayProfitRecord ? todayProfitRecord.amount : 0;
@@ -543,20 +582,134 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
         </>
       ) : (
         /* System Admin View */
-        <div className="app-card space-y-4">
-          <h3 className="text-base font-bold text-slate-800 dark:text-white">System Admin Metrics</h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
-              <span className="text-xs text-slate-400 font-bold uppercase">TOTAL USERS</span>
-              <p className="text-2xl font-extrabold text-slate-800 dark:text-white mt-1">12 Accounts</p>
+        <div className="space-y-6">
+          <div className="app-card space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                  <Shield className="w-5 h-5 text-emerald-500" />
+                  <span>Platform Administration Overview</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Real-time database metrics and registered platform accounts
+                </p>
+              </div>
+              <button
+                onClick={loadAdminData}
+                disabled={adminLoading}
+                className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${adminLoading ? 'animate-spin' : ''}`} />
+                <span>Refresh</span>
+              </button>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
-              <span className="text-xs text-slate-400 font-bold uppercase">PLATFORM TRANSACTIONS</span>
-              <p className="text-2xl font-extrabold text-slate-800 dark:text-white mt-1">348 Expenses</p>
+
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <span className="text-xs text-slate-400 font-bold uppercase">TOTAL USERS</span>
+                <p className="text-2xl font-extrabold text-slate-800 dark:text-white mt-1">
+                  {adminStats?.total_users ?? adminUsers.length} Accounts
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <span className="text-xs text-slate-400 font-bold uppercase">PLATFORM TRANSACTIONS</span>
+                <p className="text-2xl font-extrabold text-slate-800 dark:text-white mt-1">
+                  {adminStats?.total_expenses ?? '...'} Expenses
+                </p>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                <span className="text-xs text-slate-400 font-bold uppercase">TOTAL SPEND TRACKED</span>
+                <p className="text-2xl font-extrabold text-emerald-600 mt-1">
+                  {settings.currency}{(adminStats?.total_amount ?? 0).toLocaleString()}
+                </p>
+              </div>
             </div>
-            <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200">
-              <span className="text-xs text-slate-400 font-bold uppercase">DATABASE STATUS</span>
-              <p className="text-2xl font-extrabold text-emerald-600 mt-1">Connected (MongoDB)</p>
+          </div>
+
+          {/* Registered Users Table Card */}
+          <div className="app-card space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Users className="w-4 h-4 text-emerald-500" />
+                  <span>REGISTERED USERS ({adminUsers.length})</span>
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  User accounts and names registered on the platform
+                </p>
+              </div>
+
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search user name or email..."
+                  value={adminUserSearch}
+                  onChange={(e) => setAdminUserSearch(e.target.value)}
+                  className="pl-8 pr-3 py-1.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs text-slate-800 dark:text-white focus:outline-none w-full sm:w-64"
+                />
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
+                    <th className="pb-3">User Name</th>
+                    <th className="pb-3">Email Address</th>
+                    <th className="pb-3">Role</th>
+                    <th className="pb-3">Account ID</th>
+                    <th className="pb-3 text-right">Joined</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  {adminUsers
+                    .filter((u) => {
+                      if (!adminUserSearch) return true;
+                      const q = adminUserSearch.toLowerCase();
+                      return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+                    })
+                    .map((u) => {
+                      const isMe = (u.email || '').toLowerCase() === (user?.email || '').toLowerCase();
+                      const isUserAdmin = (u.email || '').toLowerCase() === 'keerthivasan.220722@gmail.com' || (u.email || '').toLowerCase() === 'a.keerthivasan7676@gmail.com';
+                      return (
+                        <tr key={u.id || u._id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                          <td className="py-3 font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                            <span>{u.name || 'Anonymous User'}</span>
+                            {isMe && (
+                              <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded font-extrabold uppercase">
+                                You
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 text-slate-600 dark:text-slate-300 font-mono text-[11px]">{u.email}</td>
+                          <td className="py-3">
+                            {isUserAdmin ? (
+                              <span className="text-[10px] bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300 font-bold px-2 py-0.5 rounded-full">
+                                Super Admin
+                              </span>
+                            ) : (
+                              <span className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 font-medium px-2 py-0.5 rounded-full">
+                                User
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 font-mono text-[10px] text-slate-400">{u.id || u._id}</td>
+                          <td className="py-3 text-right text-slate-400">
+                            {u.created_at ? new Date(u.created_at).toLocaleDateString() : 'Active'}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  {adminUsers.length === 0 && (
+                    <tr>
+                      <td colSpan="5" className="py-8 text-center text-slate-400 italic">
+                        {adminLoading ? 'Loading users from database...' : 'No users found'}
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>
