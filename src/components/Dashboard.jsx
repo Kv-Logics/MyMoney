@@ -90,10 +90,14 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const rentExpensesList = expenses.filter(e => e.category && e.category.toLowerCase() === 'rent' && e.date && e.date.startsWith(currentMonthStr));
   const rentTotal = rentExpensesList.reduce((sum, e) => sum + (e.amount || 0), 0);
 
+  const allCurrentMonthExpenses = expenses.filter(e => e.date && e.date.startsWith(currentMonthStr));
+  const totalAllMonthSpent = allCurrentMonthExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
   const overallBudget = budgets.find(b => b.category === 'Overall');
   const budgetAmount = overallBudget ? overallBudget.amount : 0;
-  const remainingBudget = Math.max(0, budgetAmount - monthTotal);
-  const budgetUsedPct = overallBudget ? Math.min(100, Math.round((monthTotal / (budgetAmount || 1)) * 100)) : 0;
+  const remainingBudget = budgetAmount - totalAllMonthSpent;
+  const isOverBudget = overallBudget && remainingBudget < 0;
+  const budgetUsedPct = overallBudget ? Math.round((totalAllMonthSpent / (budgetAmount || 1)) * 100) : 0;
 
   const todayProfitRecord = (dailyProfits || []).find(p => p.date === todayStr);
   const todayProfit = todayProfitRecord ? todayProfitRecord.amount : 0;
@@ -178,37 +182,62 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   return (
     <div className="space-y-6">
-      {/* Dashboard View Toggle Tabs (Only shown to System Admin) */}
-      {isAdmin && (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-            <button
-              onClick={() => setDashboardView('user')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-                dashboardView === 'user'
-                  ? 'bg-emerald-500 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              My Personal Expenses
-            </button>
-            <button
-              onClick={() => setDashboardView('admin')}
-              className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-                dashboardView === 'admin'
-                  ? 'bg-emerald-500 text-white shadow-md'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-              }`}
-            >
-              System Admin Stats
-            </button>
-          </div>
-
-          <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-            Administrator Account
-          </span>
+      {/* Frontpage Header & Quick Actions Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+        <div>
+          <h2 className="text-lg font-extrabold text-slate-800 dark:text-white">
+            Overview & Quick Actions
+          </h2>
+          <p className="text-xs text-slate-400">
+            Track spending, monitor budgets, and log transactions
+          </p>
         </div>
-      )}
+
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {isAdmin && (
+            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mr-1">
+              <button
+                onClick={() => setDashboardView('user')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                  dashboardView === 'user'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Personal
+              </button>
+              <button
+                onClick={() => setDashboardView('admin')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
+                  dashboardView === 'admin'
+                    ? 'bg-emerald-500 text-white shadow-sm'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                }`}
+              >
+                Admin Stats
+              </button>
+            </div>
+          )}
+
+          <button
+            onClick={onOpenExpenseModal}
+            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition active:scale-95"
+            title="Add a new expense"
+          >
+            <Plus className="w-4 h-4" />
+            <span>Add Expense</span>
+          </button>
+
+          <button
+            onClick={onOpenProfitModal}
+            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95"
+            title="Record today's profit"
+          >
+            <TrendingUp className="w-4 h-4" />
+            <span>Record Profit</span>
+          </button>
+        </div>
+      </div>
 
       {(!isAdmin || dashboardView === 'user') ? (
         <>
@@ -253,14 +282,32 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
             {/* Remaining Budget (Only show if set) */}
             {overallBudget && (
               <div className="app-card">
-                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">REMAINING BUDGET</span>
-                <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                  {settings.currency} {remainingBudget.toLocaleString()}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">REMAINING BUDGET</span>
+                  {isOverBudget ? (
+                    <span className="text-[9px] bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold px-1.5 py-0.5 rounded-full uppercase">
+                      OVER LIMIT
+                    </span>
+                  ) : (
+                    <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded-full uppercase">
+                      ON TRACK
+                    </span>
+                  )}
+                </div>
+                <h3 className={`text-3xl font-extrabold mt-2 ${isOverBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>
+                  {isOverBudget 
+                    ? `- ${settings.currency} ${Math.abs(remainingBudget).toLocaleString()}` 
+                    : `${settings.currency} ${remainingBudget.toLocaleString()}`}
                 </h3>
                 <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-                  <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${budgetUsedPct}%` }}></div>
+                  <div 
+                    className={`h-full rounded-full transition-all duration-300 ${isOverBudget ? 'bg-rose-500' : budgetUsedPct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} 
+                    style={{ width: `${Math.min(100, budgetUsedPct)}%` }}
+                  ></div>
                 </div>
-                <p className="text-[10px] text-slate-400 font-semibold mt-1">{budgetUsedPct}% used ({settings.currency}{monthTotal.toLocaleString()})</p>
+                <p className={`text-[10px] font-semibold mt-1 ${isOverBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
+                  {budgetUsedPct}% used ({settings.currency}{totalAllMonthSpent.toLocaleString()} of {settings.currency}{budgetAmount.toLocaleString()})
+                </p>
               </div>
             )}
 
