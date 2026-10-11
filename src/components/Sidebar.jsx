@@ -115,8 +115,11 @@ export default function Sidebar() {
           </button>
         </div>
 
-        <div className="px-2 text-[10px] text-slate-400">
-          Developed by Kv Logics
+        <div className="px-2 flex items-center justify-between text-[11px] text-slate-400">
+          <span className="font-semibold tracking-wide">MyMoney</span>
+          <span className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded text-[10px] font-bold text-slate-500 dark:text-slate-400">
+            v2.4.0
+          </span>
         </div>
       </div>
     </aside>

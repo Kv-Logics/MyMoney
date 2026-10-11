@@ -4,12 +4,12 @@ from datetime import datetime
 
 # User schemas
 class UserRegister(BaseModel):
-    name: str = Field(..., min_length=2)
-    email: EmailStr
-    password: str = Field(..., min_length=6)
+    name: str = Field(..., min_length=1)
+    email: str
+    password: str = Field(..., min_length=4)
 
 class UserLogin(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class AdminSetPasswordRequest(BaseModel):

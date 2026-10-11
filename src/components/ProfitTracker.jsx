@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useApp } from '../context/AppContext';
 import { API_BASE, fetchWithAuth } from '../api';
 import {
@@ -6,11 +6,10 @@ import {
   Plus,
   Calendar,
   Edit,
-  Trash2,
-  X
+  Trash2
 } from 'lucide-react';
 
-export default function ProfitTracker({ isModalOpen, setIsModalOpen }) {
+export default function ProfitTracker({ onOpenProfitModal }) {
   const {
     dailyProfits,
     setDailyProfits,
@@ -19,56 +18,6 @@ export default function ProfitTracker({ isModalOpen, setIsModalOpen }) {
     settings,
     showConfirm
   } = useApp();
-
-  const [formDate, setFormDate] = useState(new Date().toISOString().split('T')[0]);
-  const [formAmount, setFormAmount] = useState('');
-  const [formNote, setFormNote] = useState('');
-  const [editingId, setEditingId] = useState(null);
-
-  const openNewProfitModal = () => {
-    setEditingId(null);
-    setFormDate(new Date().toISOString().split('T')[0]);
-    setFormAmount('');
-    setFormNote('');
-    setIsModalOpen(true);
-  };
-
-  const openEditProfitModal = (item) => {
-    setEditingId(item.id || item._id);
-    setFormDate(item.date);
-    setFormAmount(item.amount);
-    setFormNote(item.note || '');
-    setIsModalOpen(true);
-  };
-
-  const handleSaveProfit = async (e) => {
-    e.preventDefault();
-    if (!formAmount || isNaN(formAmount)) return;
-
-    try {
-      const payload = {
-        date: formDate,
-        amount: parseFloat(formAmount),
-        note: formNote
-      };
-
-      const res = await fetchWithAuth(`${API_BASE}/profit`, {
-        method: 'POST',
-        body: JSON.stringify(payload)
-      });
-
-      if (res.ok) {
-        setIsModalOpen(false);
-        const profRes = await fetchWithAuth(`${API_BASE}/profit`);
-        if (profRes.ok) setDailyProfits((await profRes.json()).records || []);
-
-        const profSumRes = await fetchWithAuth(`${API_BASE}/profit/summary`);
-        if (profSumRes.ok) setProfitSummary(await profSumRes.json());
-      }
-    } catch (err) {
-      console.error('Error saving daily profit:', err);
-    }
-  };
 
   const handleDeleteProfit = async (id, date) => {
     const confirmed = await showConfirm(
@@ -110,7 +59,7 @@ export default function ProfitTracker({ isModalOpen, setIsModalOpen }) {
           </p>
         </div>
         <button
-          onClick={openNewProfitModal}
+          onClick={() => onOpenProfitModal && onOpenProfitModal()}
           className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 shrink-0 transition"
         >
           <Plus className="w-4 h-4" /> Record Today's Profit
@@ -180,7 +129,7 @@ export default function ProfitTracker({ isModalOpen, setIsModalOpen }) {
                   </td>
                   <td className="py-3 text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <button onClick={() => openEditProfitModal(item)} className="p-1 text-slate-400 hover:text-slate-700">
+                      <button onClick={() => onOpenProfitModal && onOpenProfitModal(item)} className="p-1 text-slate-400 hover:text-slate-700">
                         <Edit className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => handleDeleteProfit(item.id || item._id, item.date)} className="p-1 text-rose-400 hover:text-rose-600">
@@ -201,63 +150,6 @@ export default function ProfitTracker({ isModalOpen, setIsModalOpen }) {
           </table>
         </div>
       </div>
-
-      {/* Record Modal */}
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass-modal max-w-md w-full rounded-2xl p-6 border border-slate-200 shadow-2xl space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-800">
-                {editingId ? 'Edit Daily Profit Entry' : 'Record Daily Profit'}
-              </h3>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400"><X className="w-5 h-5" /></button>
-            </div>
-
-            <form onSubmit={handleSaveProfit} className="space-y-4">
-              <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1">Date</label>
-                <input
-                  type="date"
-                  required
-                  value={formDate}
-                  onChange={(e) => setFormDate(e.target.value)}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1">Profit Amount (₹)</label>
-                <input
-                  type="number"
-                  step="any"
-                  required
-                  placeholder="e.g. 220"
-                  value={formAmount}
-                  onChange={(e) => setFormAmount(e.target.value)}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-400 mb-1">Notes / Description</label>
-                <input
-                  type="text"
-                  placeholder="e.g. Daily revenue from shop"
-                  value={formNote}
-                  onChange={(e) => setFormNote(e.target.value)}
-                  className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3 py-2 text-xs"
-                />
-              </div>
-
-              <div className="pt-2">
-                <button type="submit" className="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs rounded-xl shadow-md">
-                  Save Profit
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

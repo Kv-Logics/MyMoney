@@ -19,6 +19,7 @@ import {
 
 export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const {
+    user,
     expenses,
     budgets,
     dailyProfits,
@@ -27,6 +28,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     setActiveTab
   } = useApp();
 
+  const isAdmin = user && (user.email === 'keerthivasan.220722@gmail.com' || user.email === 'a.keerthivasan7676@gmail.com');
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
   const [selectedDay, setSelectedDay] = useState(null);
   const [hoveredCategory, setHoveredCategory] = useState(null);
@@ -124,37 +126,39 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   return (
     <div className="space-y-6">
-      {/* Dashboard View Toggle Tabs */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-          <button
-            onClick={() => setDashboardView('user')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-              dashboardView === 'user'
-                ? 'bg-emerald-500 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            My Personal Expenses
-          </button>
-          <button
-            onClick={() => setDashboardView('admin')}
-            className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
-              dashboardView === 'admin'
-                ? 'bg-emerald-500 text-white shadow-md'
-                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-            }`}
-          >
-            System Admin Stats
-          </button>
+      {/* Dashboard View Toggle Tabs (Only shown to System Admin) */}
+      {isAdmin && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+            <button
+              onClick={() => setDashboardView('user')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
+                dashboardView === 'user'
+                  ? 'bg-emerald-500 text-white shadow-md'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              My Personal Expenses
+            </button>
+            <button
+              onClick={() => setDashboardView('admin')}
+              className={`px-4 py-2 text-xs font-bold rounded-xl transition ${
+                dashboardView === 'admin'
+                  ? 'bg-emerald-500 text-white shadow-md'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+              }`}
+            >
+              System Admin Stats
+            </button>
+          </div>
+
+          <span className="text-xs text-slate-400 font-medium hidden sm:inline">
+            Administrator Account
+          </span>
         </div>
+      )}
 
-        <span className="text-xs text-slate-400 font-medium hidden sm:inline">
-          Administrator Account
-        </span>
-      </div>
-
-      {dashboardView === 'user' ? (
+      {(!isAdmin || dashboardView === 'user') ? (
         <>
           {/* Top 5 Stat Cards Grid */}
           <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${overallBudget ? '5' : '4'} gap-5`}>

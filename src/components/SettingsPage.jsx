@@ -3,12 +3,12 @@ import { useApp } from '../context/AppContext';
 import { Key, Shield } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, settings, setSettings } = useApp();
+  const { user, setUser, settings, setSettings } = useApp();
   const [userEmail, setUserEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
   const [pushStatus, setPushStatus] = useState(null);
-  const [reminderTime, setReminderTime] = useState('21:00');
+  const [reminderTime, setReminderTime] = useState(user?.push_subscription?.reminder_time || '21:00');
   
   const [pwdStatus, setPwdStatus] = useState(null);
   const [adminStatus, setAdminStatus] = useState(null);
@@ -51,7 +51,7 @@ export default function SettingsPage() {
               <Shield className="w-4 h-4 text-emerald-500" /> DAILY REMINDERS (AI PUSH)
             </h4>
             <p className="text-[10px] text-slate-500 mt-1">
-              Receive a personalized daily summary at night directly on your device. No email or WhatsApp needed!
+              Receive a personalized daily summary at night directly on your device.
             </p>
           </div>
           
@@ -103,7 +103,10 @@ export default function SettingsPage() {
                     body: JSON.stringify(payload)
                   });
                   if (res.ok) {
-                    setPushStatus({ type: 'success', message: 'Successfully subscribed to daily AI reminders!' });
+                    setPushStatus({ type: 'success', message: 'Successfully saved daily AI reminders!' });
+                    const updatedUser = { ...user, push_subscription: payload };
+                    setUser(updatedUser);
+                    localStorage.setItem('mymoney_user', JSON.stringify(updatedUser));
                   } else {
                     setPushStatus({ type: 'error', message: 'Failed to save subscription to server.' });
                   }
@@ -114,7 +117,7 @@ export default function SettingsPage() {
               }}
               className="flex-2 mt-5 py-2.5 px-4 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition"
             >
-              Enable Reminders
+              {user?.push_subscription ? 'Update Reminders' : 'Enable Reminders'}
             </button>
           </div>
         </div>

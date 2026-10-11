@@ -5,7 +5,7 @@ import { Bot, Mic, Send, RefreshCw, Key, Sparkles } from 'lucide-react';
 
 export default function VoiceAgentPage() {
   const { loadAllData } = useApp();
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKey] = useState(localStorage.getItem('mymoney_gemini_key') || '');
   const [isRecording, setIsRecording] = useState(false);
   const [promptInput, setPromptInput] = useState('');
   const [chatMessages, setChatMessages] = useState([
@@ -30,7 +30,11 @@ export default function VoiceAgentPage() {
     try {
       const res = await fetchWithAuth(`${API_BASE}/ai/parse-voice-chat`, {
         method: 'POST',
-        body: JSON.stringify({ prompt: text })
+        body: JSON.stringify({ 
+          narration: text, 
+          conversation_history: chatMessages,
+          gemini_api_key: apiKey 
+        })
       });
 
       if (res.ok) {
@@ -79,18 +83,39 @@ export default function VoiceAgentPage() {
         </div>
 
         {/* Key Save Header */}
-        <div className="flex items-center gap-2 bg-slate-900 text-white px-3 py-1.5 rounded-xl">
-          <Key className="w-3.5 h-3.5 text-amber-400" />
-          <input
-            type="password"
-            placeholder="••••••••••••••••••••••••"
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            className="bg-transparent text-xs text-white focus:outline-none w-36"
-          />
-          <button className="px-2.5 py-1 bg-purple-600 hover:bg-purple-700 text-white font-bold text-[10px] rounded-lg">
-            Save Key
-          </button>
+        <div className="flex flex-col gap-2 bg-slate-900 text-white px-4 py-3 rounded-xl mt-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Key className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-bold uppercase tracking-wider">Gemini API Key</span>
+            </div>
+            <a 
+              href="https://github.com/Kv-Logics/MyMoney/blob/main/docs/05-GEMINI-API-KEY-SETUP-GUIDE.md" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-[10px] text-purple-400 hover:text-purple-300 underline font-semibold flex items-center gap-1"
+            >
+              How to get a key?
+            </a>
+          </div>
+          <div className="flex items-center gap-2 mt-1">
+            <input
+              type="password"
+              placeholder="Enter your AI Studio API Key (AIzaSy...)"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              className="bg-slate-800 border border-slate-700 text-xs text-white focus:outline-none focus:border-purple-500 rounded-lg px-3 py-2 flex-1"
+            />
+            <button 
+              onClick={() => {
+                localStorage.setItem('mymoney_gemini_key', apiKey);
+                alert('Gemini API Key saved locally!');
+              }}
+              className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs rounded-lg transition shrink-0"
+            >
+              Save Key
+            </button>
+          </div>
         </div>
       </div>
 

@@ -15,12 +15,21 @@ import SettingsPage from './components/SettingsPage';
 import ServerWakeupOverlay from './components/ServerWakeupOverlay';
 import ConfirmModal from './components/ConfirmModal';
 import AuthModal from './components/AuthModal';
+import ProfitModal from './components/ProfitModal';
+import McpGuideModal from './components/McpGuideModal';
 import ResetPasswordStandalone from './components/ResetPasswordStandalone';
 
 function MainContent() {
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [isProfitModalOpen, setIsProfitModalOpen] = useState(false);
+  const [profitModalData, setProfitModalData] = useState(null);
+  const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
+
+  const handleOpenProfitModal = (data = null) => {
+    setProfitModalData(data);
+    setIsProfitModalOpen(true);
+  };
 
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
@@ -40,13 +49,16 @@ function MainContent() {
 
       {/* Main View Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header onOpenExpenseModal={() => setIsExpenseModalOpen(true)} />
+        <Header 
+          onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
+          onOpenMcpGuide={() => setIsMcpModalOpen(true)}
+        />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
           {activeTab === 'dashboard' && (
             <Dashboard
               onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
-              onOpenProfitModal={() => setIsProfitModalOpen(true)}
+              onOpenProfitModal={() => handleOpenProfitModal(null)}
             />
           )}
 
@@ -61,8 +73,7 @@ function MainContent() {
 
           {activeTab === 'profit' && (
             <ProfitTracker
-              isModalOpen={isProfitModalOpen}
-              setIsModalOpen={setIsProfitModalOpen}
+              onOpenProfitModal={handleOpenProfitModal}
             />
           )}
 
@@ -75,9 +86,21 @@ function MainContent() {
         </main>
       </div>
 
-      {/* Custom Confirmation Dialog Modal */}
+      {/* Custom Confirmation & Reusable Dialog Modals */}
       <ConfirmModal />
       <AuthModal />
+      <ProfitModal 
+        isOpen={isProfitModalOpen} 
+        onClose={() => {
+          setIsProfitModalOpen(false);
+          setProfitModalData(null);
+        }}
+        initialData={profitModalData}
+      />
+      <McpGuideModal 
+        isOpen={isMcpModalOpen} 
+        onClose={() => setIsMcpModalOpen(false)} 
+      />
     </div>
   );
 }

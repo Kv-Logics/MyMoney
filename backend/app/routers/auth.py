@@ -30,13 +30,15 @@ router = APIRouter(prefix="/api/auth", tags=["Auth"])
 @router.post("/register")
 def register(user_data: UserRegister):
     users_col = get_collection("users")
-    if users_col.find_one({"email": user_data.email}):
+    clean_email = str(user_data.email).strip().lower()
+    clean_name = str(user_data.name).strip()
+    if users_col.find_one({"email": clean_email}):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed = hash_password(user_data.password)
     new_user = {
-        "name": user_data.name,
-        "email": user_data.email,
+        "name": clean_name or clean_email.split("@")[0],
+        "email": clean_email,
         "password": hashed,
         "currency": "INR",
         "theme": "light",
@@ -54,8 +56,8 @@ def register(user_data: UserRegister):
         "payment_methods": DEFAULT_PAYMENT_METHODS
     })
     
-    access_token = create_access_token({"email": user_data.email})
-    refresh_token = create_refresh_token({"email": user_data.email})
+    access_token = create_access_token({"email": clean_email})
+    refresh_token = create_refresh_token({"email": clean_email})
     return {
         "access_token": access_token,
         "refresh_token": refresh_token,
@@ -65,7 +67,8 @@ def register(user_data: UserRegister):
 @router.post("/login")
 def login(credentials: UserLogin):
     users_col = get_collection("users")
-    user = users_col.find_one({"email": credentials.email})
+    clean_email = str(credentials.email).strip().lower()
+    user = users_col.find_one({"email": clean_email})
     if not user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     

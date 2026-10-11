@@ -21,6 +21,7 @@ VAPID_CLAIMS = {"sub": "mailto:admin@mymoney.local"}
 class PushSubscription(BaseModel):
     endpoint: str
     keys: Dict[str, str]
+    reminder_time: Optional[str] = "21:00"
 
 @router.post("/subscribe")
 def subscribe_to_push(subscription: PushSubscription, current_user: dict = Depends(get_current_user)):

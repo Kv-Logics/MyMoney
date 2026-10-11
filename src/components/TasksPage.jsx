@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
+import { API_BASE, fetchWithAuth } from '../api';
 import { CheckSquare, Plus, Folder, Calendar, Edit3, Trash2, X } from 'lucide-react';
 
 export default function TasksPage() {
@@ -12,7 +13,7 @@ export default function TasksPage() {
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Work');
   const [priority, setPriority] = useState('MEDIUM');
-  const [dueDate, setDueDate] = useState('30/06/2026');
+  const [dueDate, setDueDate] = useState(new Date().toISOString().split('T')[0]);
   
   const [newItemText, setNewItemText] = useState('');
   const [newItemDate, setNewItemDate] = useState('');
@@ -26,6 +27,16 @@ export default function TasksPage() {
       true
     );
     if (!confirmed) return;
+
+    try {
+      if (id && !String(id).startsWith('local_')) {
+        await fetchWithAuth(`${API_BASE}/tasks/${id}`, {
+          method: 'DELETE'
+        });
+      }
+    } catch (err) {
+      console.error('Error deleting task on backend:', err);
+    }
 
     setTasks(prev => prev.filter(t => (t.id || t._id) !== id));
   };
@@ -163,8 +174,7 @@ export default function TasksPage() {
             
             <form onSubmit={async (e) => {
               e.preventDefault();
-              const newTask = {
-                id: Date.now().toString(),
+              const payload = {
                 title,
                 category,
                 priority,
@@ -173,7 +183,20 @@ export default function TasksPage() {
                 progress: 0,
                 items: draftChecklist
               };
-              setTasks(prev => [...prev, newTask]);
+              try {
+                const res = await fetchWithAuth(`${API_BASE}/tasks`, {
+                  method: 'POST',
+                  body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                  const saved = await res.json();
+                  setTasks(prev => [...prev, saved]);
+                } else {
+                  setTasks(prev => [...prev, { ...payload, id: `local_${Date.now()}` }]);
+                }
+              } catch (err) {
+                setTasks(prev => [...prev, { ...payload, id: `local_${Date.now()}` }]);
+              }
               setIsModalOpen(false);
               setTitle('');
               setCategory('Work');

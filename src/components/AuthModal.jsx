@@ -1,13 +1,14 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { API_BASE } from '../api';
-import { Wallet } from 'lucide-react';
+import { Wallet, Eye, EyeOff } from 'lucide-react';
 
 export default function AuthModal() {
   const { isAuthModalOpen, login } = useApp();
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
 
@@ -19,7 +20,10 @@ export default function AuthModal() {
 
     try {
       const endpoint = isRegister ? `${API_BASE}/auth/register` : `${API_BASE}/auth/login`;
-      const payload = isRegister ? { name, email, password } : { email, password };
+      const normalizedEmail = email.trim().toLowerCase();
+      const payload = isRegister 
+        ? { name: name.trim(), email: normalizedEmail, password } 
+        : { email: normalizedEmail, password };
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -31,11 +35,19 @@ export default function AuthModal() {
       if (res.ok) {
         login(data.user, data.access_token);
       } else {
-        setError(data.detail || 'Authentication failed');
+        let errMessage = 'Authentication failed';
+        if (typeof data.detail === 'string') {
+          errMessage = data.detail;
+        } else if (Array.isArray(data.detail)) {
+          errMessage = data.detail.map(d => d.msg || d.message).join('. ');
+        } else if (data.detail && typeof data.detail === 'object') {
+          errMessage = data.detail.msg || data.detail.message || JSON.stringify(data.detail);
+        }
+        setError(errMessage);
       }
     } catch (err) {
       console.error('Auth error:', err);
-      setError('Server connection failed.');
+      setError('Server connection failed. Please ensure the backend is active.');
     }
   };
 
@@ -45,7 +57,7 @@ export default function AuthModal() {
 
   return (
     <div className="fixed inset-0 bg-slate-950/70 backdrop-blur-md flex items-center justify-center z-50 p-4">
-      <div className="glass-modal max-w-md w-full rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6">
+      <div className="glass-modal max-w-md w-full rounded-2xl p-8 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-6 bg-white dark:bg-slate-900">
         <div className="text-center space-y-2">
           <div className="w-12 h-12 rounded-2xl bg-emerald-500 mx-auto flex items-center justify-center text-white shadow-lg shadow-emerald-500/20">
             <Wallet className="w-7 h-7" />
@@ -55,7 +67,7 @@ export default function AuthModal() {
         </div>
 
         {error && (
-          <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-600 text-center font-semibold">
+          <div className="p-3 bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/40 rounded-xl text-xs text-rose-600 dark:text-rose-400 text-center font-semibold">
             {error}
           </div>
         )}
@@ -70,7 +82,7 @@ export default function AuthModal() {
                 placeholder="kv"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none"
+                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
               />
             </div>
           )}
@@ -83,20 +95,34 @@ export default function AuthModal() {
               placeholder="user@example.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none"
+              className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-100 focus:outline-none"
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-400 mb-1">Password</label>
-            <input
-              type="password"
-              required
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full bg-slate-100 border border-slate-200 rounded-xl px-3.5 py-2.5 text-xs focus:outline-none"
-            />
+            <div className="flex items-center justify-between mb-1">
+              <label className="block text-xs font-bold text-slate-400">Password</label>
+              <span className="text-[10px] text-slate-400">Min 4 chars</span>
+            </div>
+            <div className="relative">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                required
+                minLength={4}
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-xs text-slate-800 dark:text-slate-100 focus:outline-none pr-10"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                tabIndex={-1}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
           </div>
 
           <button

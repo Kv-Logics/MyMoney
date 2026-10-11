@@ -1,8 +1,8 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { CheckCircle2, Moon, Sun, Bell, Bot, Plus, Menu } from 'lucide-react';
+import { Sparkles, Moon, Sun, Bell, Bot, Plus, Menu } from 'lucide-react';
 
-export default function Header({ onOpenExpenseModal }) {
+export default function Header({ onOpenExpenseModal, onOpenMcpGuide }) {
   const { activeTab, setActiveTab, theme, toggleTheme, setIsVoiceModalOpen, setIsMobileMenuOpen } = useApp();
 
   const titleMap = {
@@ -33,11 +33,17 @@ export default function Header({ onOpenExpenseModal }) {
       </div>
 
       <div className="flex items-center gap-2 md:gap-3">
-        {/* Synced Badge */}
-        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded-full text-xs font-semibold">
-          <CheckCircle2 className="w-3.5 h-3.5" />
-          <span>Synced</span>
-        </div>
+        {/* New Update: ChatGPT MCP Guide */}
+        <button
+          onClick={onOpenMcpGuide}
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 hover:from-amber-500/20 hover:to-purple-500/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded-full text-xs font-bold transition shadow-sm"
+        >
+          <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
+          <span>New Update</span>
+          <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 px-1.5 py-0.2 rounded-full font-bold uppercase hidden md:inline">
+            MCP
+          </span>
+        </button>
 
         {/* Theme Toggle Button */}
         <button

@@ -6,7 +6,7 @@ const AppContext = createContext();
 export function AppProvider({ children }) {
   const [token, setToken] = useState(localStorage.getItem('mymoney_token') || '');
   const [user, setUser] = useState(JSON.parse(localStorage.getItem('mymoney_user') || 'null'));
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState(localStorage.getItem('mymoney_activeTab') || 'dashboard');
   const [theme, setTheme] = useState(localStorage.getItem('mymoney_theme') || 'light');
   const [activeOwner, setActiveOwner] = useState(null);
 
@@ -56,6 +56,10 @@ export function AppProvider({ children }) {
     document.documentElement.classList.toggle('dark', theme === 'dark');
     localStorage.setItem('mymoney_theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('mymoney_activeTab', activeTab);
+  }, [activeTab]);
 
   const loadAllDataInternal = async (authToken = token) => {
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
@@ -256,7 +260,7 @@ export function AppProvider({ children }) {
       appState, setAppState,
       appError, setAppError,
       retryConnection: startBackendCheckAndInitialization,
-      token, user, login, logout,
+      token, user, setUser, login, logout,
       activeTab, setActiveTab,
       theme, toggleTheme,
       activeOwner, setActiveOwner,

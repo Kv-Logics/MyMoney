@@ -108,8 +108,31 @@ MCP_TOOLS = [
         "_meta": { "openai/profile": True }
     },
     {
+        "name": "expense_tracker",
+        "description": "Comprehensive Expense Tracker for MyMoney. Use this tool whenever the user asks to manage the expense tracker, log or add an expense, view recent spending, or check spending breakdown. Actions: 'add' (record expense), 'list' (view/filter expenses), 'summary' (spending overview).",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["add", "list", "summary"],
+                    "description": "Action to perform: 'add' to record a new expense, 'list' to view expenses, 'summary' for category and monthly totals"
+                },
+                "title": { "type": "string", "description": "Title or item name (e.g. Groceries, Dinner, Taxi)" },
+                "amount": { "type": "number", "description": "Amount spent in user currency" },
+                "category": { "type": "string", "description": "Category like Food, Travel, Rent, Fuel, Utilities, Other" },
+                "date": { "type": "string", "description": "Date YYYY-MM-DD (defaults to today)" },
+                "payment_method": { "type": "string", "description": "Cash, UPI, Credit Card, Debit Card, Bank Transfer" },
+                "notes": { "type": "string", "description": "Optional notes or details" },
+                "search": { "type": "string", "description": "Search keyword for filtering" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["expenses:read", "expenses:write"] }],
+        "annotations": { "destructiveHint": False }
+    },
+    {
         "name": "list_expenses",
-        "description": "List and filter user expenses.",
+        "description": "List and filter user expenses from the Expense Tracker. Use this whenever the user wants to see their expenses, search transactions, or check history.",
         "inputSchema": {
             "type": "object",
             "properties": {
@@ -127,7 +150,7 @@ MCP_TOOLS = [
     },
     {
         "name": "create_expense",
-        "description": "Create a new expense item for the user.",
+        "description": "Create and record a new expense item in the Expense Tracker. ALWAYS use this tool or expense_tracker when the user mentions spending money, buying something, or adding an expense.",
         "inputSchema": {
             "type": "object",
             "required": ["title", "amount", "category", "payment_method", "date"],
@@ -412,6 +435,18 @@ def handle_mcp_get():
 
 def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
     user_id = user["id"]
+
+    # 0. expense_tracker (Unified Expense Tracker action)
+    if name == "expense_tracker":
+        action = args.get("action", "summary")
+        if action == "add":
+            if not args.get("date"):
+                args["date"] = datetime.utcnow().strftime("%Y-%m-%d")
+            return execute_mcp_tool("create_expense", args, user)
+        elif action == "list":
+            return execute_mcp_tool("list_expenses", args, user)
+        else:
+            return execute_mcp_tool("get_expense_summary", args, user)
 
     # 1. get_user_profile
     if name == "get_user_profile":
