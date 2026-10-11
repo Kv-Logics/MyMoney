@@ -14,7 +14,7 @@ import {
   DollarSign
 } from 'lucide-react';
 
-export default function Expenses({ isModalOpen, setIsModalOpen }) {
+export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOpen }) {
   const {
     expenses,
     setExpenses,
@@ -58,29 +58,37 @@ export default function Expenses({ isModalOpen, setIsModalOpen }) {
   };
 
   const openNewExpenseModal = () => {
-    setEditingId(null);
-    setAmount('');
-    setTitle('');
-    setCategory(categories[0]?.name || 'Food');
-    setPaymentMethod(paymentMethods[0] || 'Cash');
-    setDate(new Date().toISOString().split('T')[0]);
-    setTime('09:00 AM');
-    setLocation('');
-    setNotes('');
-    setIsModalOpen(true);
+    if (onOpenExpenseModal) {
+      onOpenExpenseModal(null);
+    } else {
+      setEditingId(null);
+      setAmount('');
+      setTitle('');
+      setCategory(categories[0]?.name || 'Food');
+      setPaymentMethod(paymentMethods[0] || 'Cash');
+      setDate(new Date().toISOString().split('T')[0]);
+      setTime('09:00 AM');
+      setLocation('');
+      setNotes('');
+      if (setIsModalOpen) setIsModalOpen(true);
+    }
   };
 
   const openEditExpenseModal = (item) => {
-    setEditingId(item.id || item._id);
-    setAmount(item.amount);
-    setTitle(item.title);
-    setCategory(item.category || 'Food');
-    setPaymentMethod(item.payment_method || 'Cash');
-    setDate(item.date || '2026-10-07');
-    setTime(item.time || '09:00 AM');
-    setLocation(item.location || '');
-    setNotes(item.description || item.notes || '');
-    setIsModalOpen(true);
+    if (onOpenExpenseModal) {
+      onOpenExpenseModal(item);
+    } else {
+      setEditingId(item.id || item._id);
+      setAmount(item.amount);
+      setTitle(item.title);
+      setCategory(item.category || 'Food');
+      setPaymentMethod(item.payment_method || 'Cash');
+      setDate(item.date || '2026-10-07');
+      setTime(item.time || '09:00 AM');
+      setLocation(item.location || '');
+      setNotes(item.description || item.notes || '');
+      if (setIsModalOpen) setIsModalOpen(true);
+    }
   };
 
   const handleSaveExpense = async (e) => {
@@ -327,8 +335,8 @@ export default function Expenses({ isModalOpen, setIsModalOpen }) {
         </div>
       </div>
 
-      {/* Modify Expense Details Modal (Screenshot 5 Exact Replica) */}
-      {isModalOpen && (
+      {/* Modify Expense Details Modal (Fallback if not provided globally) */}
+      {!onOpenExpenseModal && isModalOpen && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="glass-modal max-w-lg w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">

@@ -30,11 +30,18 @@ def get_budgets(owner_email: Optional[str] = None, current_user: dict = Depends(
 def create_or_update_budget(budget: BudgetCreate, current_user: dict = Depends(get_current_user)):
     budgets_col = get_collection("budgets")
     
+    period = budget.period or ("weekly" if "allowance" in budget.category.lower() or "pocket" in budget.category.lower() else "monthly")
     existing = budgets_col.find_one({"user_id": current_user["id"], "category": budget.category})
     if existing:
+        update_doc = {
+            "amount": budget.amount,
+            "period": period,
+            "reset_day": budget.reset_day or existing.get("reset_day", "Monday"),
+            "updated_at": datetime.utcnow()
+        }
         budgets_col.update_one(
             {"_id": existing["_id"]},
-            {"$set": {"amount": budget.amount, "updated_at": datetime.utcnow()}}
+            {"$set": update_doc}
         )
         updated = budgets_col.find_one({"_id": existing["_id"]})
         return serialize_doc(updated)
@@ -43,6 +50,8 @@ def create_or_update_budget(budget: BudgetCreate, current_user: dict = Depends(g
             "user_id": current_user["id"],
             "category": budget.category,
             "amount": budget.amount,
+            "period": period,
+            "reset_day": budget.reset_day or "Monday",
             "created_at": datetime.utcnow()
         }
         res = budgets_col.insert_one(new_budget)

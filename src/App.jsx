@@ -17,14 +17,21 @@ import ConfirmModal from './components/ConfirmModal';
 import AuthModal from './components/AuthModal';
 import ProfitModal from './components/ProfitModal';
 import McpGuideModal from './components/McpGuideModal';
+import ExpenseModal from './components/ExpenseModal';
 import ResetPasswordStandalone from './components/ResetPasswordStandalone';
 
 function MainContent() {
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [expenseModalData, setExpenseModalData] = useState(null);
   const [isProfitModalOpen, setIsProfitModalOpen] = useState(false);
   const [profitModalData, setProfitModalData] = useState(null);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
+
+  const handleOpenExpenseModal = (data = null) => {
+    setExpenseModalData(data);
+    setIsExpenseModalOpen(true);
+  };
 
   const handleOpenProfitModal = (data = null) => {
     setProfitModalData(data);
@@ -50,14 +57,14 @@ function MainContent() {
       {/* Main View Area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header 
-          onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
+          onOpenExpenseModal={() => handleOpenExpenseModal(null)}
           onOpenMcpGuide={() => setIsMcpModalOpen(true)}
         />
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 md:space-y-6">
           {activeTab === 'dashboard' && (
             <Dashboard
-              onOpenExpenseModal={() => setIsExpenseModalOpen(true)}
+              onOpenExpenseModal={() => handleOpenExpenseModal(null)}
               onOpenProfitModal={() => handleOpenProfitModal(null)}
             />
           )}
@@ -66,8 +73,7 @@ function MainContent() {
 
           {activeTab === 'expenses' && (
             <Expenses
-              isModalOpen={isExpenseModalOpen}
-              setIsModalOpen={setIsExpenseModalOpen}
+              onOpenExpenseModal={handleOpenExpenseModal}
             />
           )}
 
@@ -89,6 +95,14 @@ function MainContent() {
       {/* Custom Confirmation & Reusable Dialog Modals */}
       <ConfirmModal />
       <AuthModal />
+      <ExpenseModal
+        isOpen={isExpenseModalOpen}
+        onClose={() => {
+          setIsExpenseModalOpen(false);
+          setExpenseModalData(null);
+        }}
+        initialData={expenseModalData}
+      />
       <ProfitModal 
         isOpen={isProfitModalOpen} 
         onClose={() => {

@@ -80,8 +80,10 @@ class CategoryUpdate(BaseModel):
 
 # Budget schemas
 class BudgetCreate(BaseModel):
-    category: str # "Overall" or specific category name
+    category: str # "Overall", "Weekly Allowance", or specific category name
     amount: float = Field(..., gt=0)
+    period: Optional[str] = "monthly" # "monthly" or "weekly"
+    reset_day: Optional[str] = "Monday"
 
 # Invitation schemas
 class InvitationCreate(BaseModel):

@@ -1,6 +1,6 @@
 import json
 import hashlib
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Request, Response, HTTPException, status
 from fastapi.responses import JSONResponse
@@ -109,17 +109,17 @@ MCP_TOOLS = [
     },
     {
         "name": "expense_tracker",
-        "description": "Comprehensive Expense Tracker for MyMoney. Use this tool whenever the user asks to manage the expense tracker, log or add an expense, view recent spending, or check spending breakdown. Actions: 'add' (record expense), 'list' (view/filter expenses), 'summary' (spending overview).",
+        "description": "Comprehensive Expense Tracker for MyMoney. Use this tool whenever the user asks to manage the expense tracker, log or add an expense, view recent spending, check spending breakdown, or track weekly allowance / pocket money from parents. Actions: 'add' (record expense), 'list' (view/filter expenses), 'summary' (spending overview), 'allowance' (get or set weekly pocket money from parent).",
         "inputSchema": {
             "type": "object",
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["add", "list", "summary"],
-                    "description": "Action to perform: 'add' to record a new expense, 'list' to view expenses, 'summary' for category and monthly totals"
+                    "enum": ["add", "list", "summary", "allowance"],
+                    "description": "Action to perform: 'add' to record a new expense, 'list' to view expenses, 'summary' for category and monthly totals, 'allowance' for parent weekly pocket money"
                 },
                 "title": { "type": "string", "description": "Title or item name (e.g. Groceries, Dinner, Taxi)" },
-                "amount": { "type": "number", "description": "Amount spent in user currency" },
+                "amount": { "type": "number", "description": "Amount spent or allowance received in user currency" },
                 "category": { "type": "string", "description": "Category like Food, Travel, Rent, Fuel, Utilities, Other" },
                 "date": { "type": "string", "description": "Date YYYY-MM-DD (defaults to today)" },
                 "payment_method": { "type": "string", "description": "Cash, UPI, Credit Card, Debit Card, Bank Transfer" },
@@ -228,6 +228,25 @@ MCP_TOOLS = [
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["budgets:write"] }],
+        "annotations": { "destructiveHint": False }
+    },
+    {
+        "name": "manage_allowance",
+        "description": "Manage weekly pocket money / allowance from parents (e.g. father/mother). Use this tool whenever the user mentions getting weekly pocket money, allowance from dad/parents, checking how much pocket money or weekly allowance is left, or setting their weekly budget. Actions: 'set' (records weekly allowance amount given by parent, e.g. 1500), 'get' (returns weekly allowance, amount spent this week, remaining balance, and safe daily spend rate).",
+        "inputSchema": {
+            "type": "object",
+            "required": ["action"],
+            "properties": {
+                "action": {
+                    "type": "string",
+                    "enum": ["set", "get"],
+                    "description": "'set' to save weekly allowance, 'get' to check remaining pocket money balance and safe daily spend"
+                },
+                "amount": { "type": "number", "description": "Weekly allowance amount in user's currency (required when action='set')" },
+                "notes": { "type": "string", "description": "Optional note (e.g., 'Given by dad for college travel and snacks')" }
+            }
+        },
+        "securitySchemes": [{ "type": "oauth2", "scopes": ["budgets:write", "budgets:read"] }],
         "annotations": { "destructiveHint": False }
     },
     {
@@ -445,6 +464,14 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
             return execute_mcp_tool("create_expense", args, user)
         elif action == "list":
             return execute_mcp_tool("list_expenses", args, user)
+        elif action == "allowance":
+            sub_action = "set" if "amount" in args and args["amount"] is not None and float(args["amount"]) > 0 else "get"
+            allowance_payload = {
+                "action": args.get("sub_action", sub_action),
+                "amount": args.get("amount"),
+                "notes": args.get("notes") or args.get("title")
+            }
+            return execute_mcp_tool("manage_allowance", allowance_payload, user)
         else:
             return execute_mcp_tool("get_expense_summary", args, user)
 
@@ -563,10 +590,29 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
         ]
         categories_data = [{"category": i["_id"], "amount": i["total"], "count": i["count"]} for i in expenses_col.aggregate(pipeline_cat)]
 
+        budgets_col = get_collection("budgets")
+        allowance_doc = budgets_col.find_one({"user_id": user_id, "category": "Weekly Allowance"})
+        allowance_info = None
+        if allowance_doc:
+            monday = now - timedelta(days=now.weekday())
+            res_w = list(expenses_col.aggregate([
+                {"$match": {"user_id": user_id, "date": {"$gte": monday.strftime("%Y-%m-%d"), "$lte": today_str}, "category": {"$ne": "Rent"}}},
+                {"$group": {"_id": None, "total": {"$sum": "$amount"}}}
+            ]))
+            w_spent = res_w[0]["total"] if res_w else 0.0
+            a_amt = allowance_doc.get("amount", 0.0)
+            allowance_info = {
+                "weekly_allowance": a_amt,
+                "spent_this_week": w_spent,
+                "remaining_balance": a_amt - w_spent,
+                "safe_daily_spend": round((a_amt - w_spent) / max(1, 7 - now.weekday()), 2) if (a_amt - w_spent) > 0 else 0.0
+            }
+
         return {
             "current_month_spending": month_total,
             "today_spending": today_total,
-            "category_distribution": categories_data
+            "category_distribution": categories_data,
+            "weekly_pocket_money": allowance_info
         }
 
     # 7. list_budgets
@@ -590,6 +636,80 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
             res = budgets_col.insert_one(new_b)
             new_b["_id"] = res.inserted_id
             return serialize_doc(new_b)
+
+    # 8b. manage_allowance
+    if name == "manage_allowance":
+        budgets_col = get_collection("budgets")
+        expenses_col = get_collection("expenses")
+        action = args.get("action", "get")
+
+        if action == "set":
+            if "amount" not in args or args["amount"] is None:
+                raise Exception("'amount' is required when setting weekly allowance")
+            amt = float(args["amount"])
+            existing = budgets_col.find_one({"user_id": user_id, "category": "Weekly Allowance"})
+            notes = args.get("notes", "Pocket money from parent")
+            if existing:
+                budgets_col.update_one(
+                    {"_id": existing["_id"]},
+                    {"$set": {"amount": amt, "period": "weekly", "reset_day": "Monday", "notes": notes, "updated_at": datetime.utcnow()}}
+                )
+            else:
+                budgets_col.insert_one({
+                    "user_id": user_id,
+                    "category": "Weekly Allowance",
+                    "amount": amt,
+                    "period": "weekly",
+                    "reset_day": "Monday",
+                    "notes": notes,
+                    "created_at": datetime.utcnow()
+                })
+
+        # Calculate current week's spending
+        now = datetime.now()
+        monday = now - timedelta(days=now.weekday())
+        monday_str = monday.strftime("%Y-%m-%d")
+        today_str = now.strftime("%Y-%m-%d")
+
+        pipeline_week = [
+            {"$match": {
+                "user_id": user_id,
+                "date": {"$gte": monday_str, "$lte": today_str},
+                "category": {"$ne": "Rent"}
+            }},
+            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
+        ]
+        res_w = list(expenses_col.aggregate(pipeline_week))
+        week_spent = res_w[0]["total"] if res_w else 0.0
+        expense_count = res_w[0]["count"] if res_w else 0
+
+        allowance_doc = budgets_col.find_one({"user_id": user_id, "category": "Weekly Allowance"})
+        allowance_amt = allowance_doc["amount"] if allowance_doc else 0.0
+
+        remaining = allowance_amt - week_spent
+        days_left = max(1, 7 - now.weekday())
+        daily_safe = round(remaining / days_left, 2) if remaining > 0 else 0.0
+
+        return {
+            "status": "success",
+            "weekly_allowance": allowance_amt,
+            "spent_this_week": week_spent,
+            "remaining_balance": remaining,
+            "is_over_budget": remaining < 0,
+            "over_by": abs(remaining) if remaining < 0 else 0.0,
+            "days_remaining_in_week": days_left,
+            "safe_daily_spend": daily_safe,
+            "week_period": f"{monday_str} to {(monday + timedelta(days=6)).strftime('%Y-%m-%d')}",
+            "expenses_logged_count": expense_count,
+            "message": (
+                f"Weekly Pocket Money: ₹{allowance_amt:,.2f}. "
+                f"Spent this week: ₹{week_spent:,.2f}. "
+                f"Remaining: ₹{remaining:,.2f} "
+                f"(Safe spend: ₹{daily_safe:,.2f}/day for {days_left} days left)."
+                if allowance_amt > 0 else
+                "No weekly allowance configured yet. Set it using action='set' and amount=X."
+            )
+        }
 
     # 9. list_savings_goals
     if name == "list_savings_goals":

@@ -9,6 +9,7 @@ import {
   TrendingUp,
   Plus,
   Target,
+  X,
   CheckSquare,
   BarChart2,
   ChevronLeft,
@@ -27,6 +28,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     user,
     expenses,
     budgets,
+    setBudgets,
     dailyProfits,
     profitSummary,
     settings,
@@ -38,6 +40,11 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [selectedDay, setSelectedDay] = useState(null);
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [weekOffset, setWeekOffset] = useState(0);
+
+  // Weekly Pocket Money / Parent Allowance state
+  const [isAllowanceModalOpen, setIsAllowanceModalOpen] = useState(false);
+  const [allowanceInput, setAllowanceInput] = useState('');
+  const [isSavingAllowance, setIsSavingAllowance] = useState(false);
 
   // Admin stats & users state
   const [adminStats, setAdminStats] = useState(null);
@@ -101,6 +108,51 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   const todayProfitRecord = (dailyProfits || []).find(p => p.date === todayStr);
   const todayProfit = todayProfitRecord ? todayProfitRecord.amount : 0;
+
+  // Weekly Pocket Money / Allowance from Parents Math
+  const weeklyAllowanceBudget = budgets.find(b => b.category === 'Weekly Allowance' || b.category === 'Pocket Money');
+  const weeklyAllowanceAmount = weeklyAllowanceBudget ? weeklyAllowanceBudget.amount : 0;
+  
+  const dayOfWeek = (d.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
+  const mondayDate = new Date(d);
+  mondayDate.setDate(d.getDate() - dayOfWeek);
+  const mondayStr = `${mondayDate.getFullYear()}-${pad(mondayDate.getMonth() + 1)}-${pad(mondayDate.getDate())}`;
+
+  const currentWeekExpenses = nonRentExpenses.filter(e => e.date && e.date >= mondayStr && e.date <= todayStr);
+  const currentWeekSpent = currentWeekExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const remainingAllowance = weeklyAllowanceAmount - currentWeekSpent;
+  const isAllowanceOver = weeklyAllowanceBudget && remainingAllowance < 0;
+  const daysRemainingInWeek = Math.max(1, 7 - dayOfWeek);
+  const safeDailyAllowanceSpend = remainingAllowance > 0 ? Math.round(remainingAllowance / daysRemainingInWeek) : 0;
+  const allowanceUsedPct = weeklyAllowanceBudget ? Math.round((currentWeekSpent / (weeklyAllowanceAmount || 1)) * 100) : 0;
+
+  const handleSaveAllowance = async (e) => {
+    e.preventDefault();
+    if (!allowanceInput || isNaN(parseFloat(allowanceInput))) return;
+    setIsSavingAllowance(true);
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/budgets`, {
+        method: 'POST',
+        body: JSON.stringify({
+          category: 'Weekly Allowance',
+          amount: parseFloat(allowanceInput),
+          period: 'weekly',
+          reset_day: 'Monday'
+        })
+      });
+      if (res.ok) {
+        setIsAllowanceModalOpen(false);
+        const bRes = await fetchWithAuth(`${API_BASE}/budgets`);
+        if (bRes.ok && setBudgets) {
+          setBudgets(await bRes.json());
+        }
+      }
+    } catch (err) {
+      console.error('Error saving weekly allowance:', err);
+    } finally {
+      setIsSavingAllowance(false);
+    }
+  };
 
   // Category Breakdown Math (Current Month)
   const categoryTotals = {};
@@ -367,6 +419,74 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                 className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition"
               >
                 View History
+              </button>
+            </div>
+          </div>
+
+          {/* Weekly Pocket Money / Allowance from Parents Banner */}
+          <div className="app-card border border-indigo-200 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 flex flex-col md:flex-row md:items-center justify-between gap-5">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center shrink-0 shadow-sm">
+                <Target className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              </div>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h4 className="text-base font-bold text-slate-800 dark:text-white">
+                    Weekly Pocket Money Tracker
+                  </h4>
+                  <span className="text-[9px] bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-full">
+                    Parent Allowance
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Tracks pocket money given by parents. Deducts weekly expenses automatically so you always know your remaining balance.
+                </p>
+
+                {weeklyAllowanceBudget ? (
+                  <div className="flex flex-wrap items-center gap-4 mt-3 text-xs">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Allowance</span>
+                      <span className="font-extrabold text-slate-800 dark:text-white">
+                        {settings.currency} {weeklyAllowanceAmount.toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Spent this week</span>
+                      <span className="font-extrabold text-slate-700 dark:text-slate-300">
+                        {settings.currency} {currentWeekSpent.toLocaleString()}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Remaining Balance</span>
+                      <span className={`font-extrabold ${isAllowanceOver ? 'text-rose-600' : 'text-emerald-600'}`}>
+                        {isAllowanceOver ? `- ${settings.currency}${Math.abs(remainingAllowance).toLocaleString()}` : `${settings.currency}${remainingAllowance.toLocaleString()}`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Safe Daily Spend</span>
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
+                        {settings.currency} {safeDailyAllowanceSpend.toLocaleString()} / day ({daysRemainingInWeek} days left)
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-2">
+                    Did your father or parent give you weekly allowance? Click below to track your pocket money balance!
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 shrink-0">
+              <button
+                onClick={() => {
+                  setAllowanceInput(weeklyAllowanceBudget ? String(weeklyAllowanceBudget.amount) : '');
+                  setIsAllowanceModalOpen(true);
+                }}
+                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{weeklyAllowanceBudget ? 'Update Pocket Money' : 'Set Weekly Allowance'}</span>
               </button>
             </div>
           </div>
@@ -796,6 +916,52 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                 </tbody>
               </table>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Set Weekly Allowance Modal */}
+      {isAllowanceModalOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-modal max-w-sm w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                Weekly Pocket Money / Allowance
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsAllowanceModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition p-1"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400">
+              Enter the amount given by your parent (e.g. father/mother) for this week's expenses.
+            </p>
+            <form onSubmit={handleSaveAllowance} className="space-y-4">
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  WEEKLY AMOUNT ({settings.currency})
+                </label>
+                <input
+                  type="number"
+                  step="any"
+                  required
+                  placeholder="e.g. 1500"
+                  value={allowanceInput}
+                  onChange={(e) => setAllowanceInput(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+              <button
+                type="submit"
+                disabled={isSavingAllowance}
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-xs rounded-xl shadow-md transition"
+              >
+                {isSavingAllowance ? 'Saving...' : 'Save Pocket Money'}
+              </button>
+            </form>
           </div>
         </div>
       )}
