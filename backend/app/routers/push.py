@@ -112,3 +112,37 @@ def send_daily_reminders(current_user: dict = Depends(get_current_user)):
         "success": success_count,
         "failures": failure_count
     }
+
+@router.post("/test")
+def test_push_notification(current_user: dict = Depends(get_current_user)):
+    _assert_admin(current_user)
+    users_col = get_collection("users")
+    user = users_col.find_one({"_id": ObjectId(current_user["id"])})
+    sub = user.get("push_subscription") if user else None
+
+    if not sub:
+        raise HTTPException(
+            status_code=400,
+            detail="No push subscription found on this account. Please click 'Enable Reminders' first to register this browser."
+        )
+
+    import datetime
+    now_str = datetime.datetime.now().strftime("%H:%M:%S")
+    payload = json.dumps({
+        "title": "MyMoney Admin Test 🔔",
+        "body": f"Push notification delivered successfully from server at {now_str}!",
+        "icon": "/assets/favicon.svg"
+    })
+
+    try:
+        webpush(
+            subscription_info=sub,
+            data=payload,
+            vapid_private_key=VAPID_PRIVATE_KEY,
+            vapid_claims=VAPID_CLAIMS
+        )
+        return {"status": "success", "message": "Test push notification dispatched successfully!"}
+    except Exception as e:
+        logger.error(f"Test push notification failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Push dispatch error: {str(e)}")
+
