@@ -120,7 +120,7 @@ MCP_TOOLS = [
                 },
                 "title": { "type": "string", "description": "Title or item name (e.g. Groceries, Dinner, Taxi)" },
                 "amount": { "type": "number", "description": "Amount spent or allowance received in user currency" },
-                "category": { "type": "string", "description": "Category like Food, Travel, Rent, Fuel, Utilities, Other" },
+                "category": { "type": "string", "description": "Category like Food, Travel, Rent, Fuel, Grocery, Shopping, Medical, Utilities, Miscellaneous, Other" },
                 "date": { "type": "string", "description": "Date YYYY-MM-DD (defaults to today)" },
                 "payment_method": { "type": "string", "description": "Cash, UPI, Credit Card, Debit Card, Bank Transfer" },
                 "notes": { "type": "string", "description": "Optional notes or details" },
@@ -136,7 +136,7 @@ MCP_TOOLS = [
         "inputSchema": {
             "type": "object",
             "properties": {
-                "category": { "type": "string" },
+                "category": { "type": "string", "description": "Category filter" },
                 "payment_method": { "type": "string" },
                 "start_date": { "type": "string", "description": "YYYY-MM-DD" },
                 "end_date": { "type": "string", "description": "YYYY-MM-DD" },
@@ -157,7 +157,7 @@ MCP_TOOLS = [
             "properties": {
                 "title": { "type": "string" },
                 "amount": { "type": "number" },
-                "category": { "type": "string" },
+                "category": { "type": "string", "description": "Category like Food, Travel, Rent, Fuel, Grocery, Shopping, Medical, Utilities, Miscellaneous, Other" },
                 "payment_method": { "type": "string" },
                 "date": { "type": "string", "description": "YYYY-MM-DD" },
                 "description": { "type": "string" },
@@ -452,6 +452,42 @@ def handle_mcp_get():
         "protected_resource": PROTECTED_RESOURCE_URL
     }
 
+def normalize_mcp_category(cat: Any) -> str:
+    if not cat or not isinstance(cat, str):
+        return "Other"
+    clean = cat.strip()
+    low = clean.lower()
+    mapping = {
+        "food": "Food",
+        "dining": "Food",
+        "lunch": "Food",
+        "dinner": "Food",
+        "breakfast": "Food",
+        "snacks": "Food",
+        "grocery": "Grocery",
+        "groceries": "Grocery",
+        "travel": "Travel",
+        "transport": "Travel",
+        "fuel": "Fuel",
+        "gas": "Fuel",
+        "petrol": "Fuel",
+        "rent": "Rent",
+        "utilities": "Utilities",
+        "electricity": "Electricity",
+        "water": "Water",
+        "shopping": "Shopping",
+        "entertainment": "Entertainment",
+        "medical": "Medical",
+        "education": "Education",
+        "subscription": "Subscription",
+        "subscriptions": "Subscription",
+        "miscellaneous": "Miscellaneous",
+        "misc": "Miscellaneous",
+        "other": "Other",
+        "others": "Other"
+    }
+    return mapping.get(low, clean.title() if clean else "Other")
+
 def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
     user_id = user["id"]
 
@@ -524,7 +560,7 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
             "user_email": user["email"],
             "title": args.get("title"),
             "amount": float(args.get("amount", 0)),
-            "category": args.get("category", "Other"),
+            "category": normalize_mcp_category(args.get("category", "Other")),
             "payment_method": args.get("payment_method", "Cash"),
             "date": args.get("date", datetime.utcnow().strftime("%Y-%m-%d")),
             "description": args.get("description", ""),
@@ -548,7 +584,12 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
         update_fields = {}
         for field in ["title", "amount", "category", "payment_method", "date", "description", "time", "location", "notes"]:
             if field in args and args[field] is not None:
-                update_fields[field] = float(args[field]) if field == "amount" else args[field]
+                if field == "amount":
+                    update_fields[field] = float(args[field])
+                elif field == "category":
+                    update_fields[field] = normalize_mcp_category(args[field])
+                else:
+                    update_fields[field] = args[field]
         update_fields["updated_at"] = datetime.utcnow()
         expenses_col.update_one({"_id": ObjectId(exp_id)}, {"$set": update_fields})
         updated = expenses_col.find_one({"_id": ObjectId(exp_id)})

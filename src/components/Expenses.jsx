@@ -388,7 +388,13 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
                       onChange={(e) => setCategory(e.target.value)}
                       className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none"
                     >
-                      {categories.map(c => <option key={c.name} value={c.name}>{c.name}</option>)}
+                      {category && !categories.some(c => ((typeof c === 'string' ? c : c.name) || '').toLowerCase() === category.toLowerCase()) && (
+                        <option key={category} value={category}>{category}</option>
+                      )}
+                      {categories.map(c => {
+                        const catName = typeof c === 'string' ? c : c.name;
+                        return <option key={catName} value={catName}>{catName}</option>;
+                      })}
                     </select>
                     <button type="button" className="px-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 font-bold">+</button>
                   </div>
@@ -402,6 +408,9 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none"
                     >
+                      {paymentMethod && !paymentMethods.some(p => (p || '').toLowerCase() === paymentMethod.toLowerCase()) && (
+                        <option key={paymentMethod} value={paymentMethod}>{paymentMethod}</option>
+                      )}
                       {paymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                     <button type="button" className="px-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 font-bold">+</button>

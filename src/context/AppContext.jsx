@@ -37,12 +37,16 @@ export function AppProvider({ children }) {
 
   // Collections
   const [expenses, setExpenses] = useState(cachedData.expenses || []);
-  const [categories, setCategories] = useState([
+  const [categories, setCategories] = useState(cachedData.categories || [
     { name: 'Food', color: '#ef4444' },
     { name: 'Travel', color: '#10b981' },
     { name: 'Fuel', color: '#6366f1' },
     { name: 'Rent', color: '#8b5cf6' },
+    { name: 'Grocery', color: '#10b981' },
+    { name: 'Shopping', color: '#ec4899' },
+    { name: 'Medical', color: '#14b8a6' },
     { name: 'Utilities', color: '#eab308' },
+    { name: 'Miscellaneous', color: '#6b7280' },
     { name: 'Other', color: '#64748b' }
   ]);
   const [paymentMethods, setPaymentMethods] = useState(['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer']);
@@ -116,7 +120,7 @@ export function AppProvider({ children }) {
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
     
     // Fetch all required data concurrently to eliminate the delay
-    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes] = await Promise.all([
+    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes, catRes] = await Promise.all([
       fetchWithAuth(`${API_BASE}/expenses`, { headers }),
       fetchWithAuth(`${API_BASE}/budgets`, { headers }),
       fetchWithAuth(`${API_BASE}/profit`, { headers }),
@@ -125,7 +129,8 @@ export function AppProvider({ children }) {
       fetchWithAuth(`${API_BASE}/audit-logs`, { headers }),
       fetchWithAuth(`${API_BASE}/savings`, { headers }),
       fetchWithAuth(`${API_BASE}/sharing/shared-with`, { headers }),
-      fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers })
+      fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers }),
+      fetchWithAuth(`${API_BASE}/categories`, { headers })
     ]);
 
     if (!expRes.ok) throw new Error(`Expenses API failed: ${expRes.status}`);
@@ -162,6 +167,15 @@ export function AppProvider({ children }) {
     const _sharedByList = shareByRes.ok ? await shareByRes.json() : [];
     if (shareByRes.ok) setSharedByList(_sharedByList);
 
+    let _categories = categories;
+    if (catRes && catRes.ok) {
+      const catData = await catRes.json();
+      if (Array.isArray(catData) && catData.length > 0) {
+        _categories = catData;
+        setCategories(catData);
+      }
+    }
+
     localStorage.setItem('mymoney_cache', JSON.stringify({
       expenses: _expenses,
       budgets: _budgets,
@@ -171,7 +185,8 @@ export function AppProvider({ children }) {
       auditLogs: _auditLogs,
       savingsGoals: _savingsGoals,
       sharingList: _sharingList,
-      sharedByList: _sharedByList
+      sharedByList: _sharedByList,
+      categories: _categories
     }));
   };
 
