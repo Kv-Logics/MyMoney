@@ -67,6 +67,9 @@ def read_root():
 
 @app.get("/health")
 @app.get("/api/health")
+@app.get("/ping")
+@app.get("/api/ping")
+@app.get("/api/status")
 def health_check():
     return {"status": "ok", "message": "MyMoney API is healthy and ready"}
 
@@ -87,9 +90,10 @@ app.include_router(profit.router)
 app.include_router(push.router)
 
 # Mount receipt uploads folder statically
-upload_dir = "/home/kv/Projects/MyMoney/backend/uploads"
+base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+upload_dir = os.path.join(base_dir, "uploads")
 if not os.path.exists(upload_dir):
-    os.makedirs(upload_dir)
+    os.makedirs(upload_dir, exist_ok=True)
 app.mount("/uploads", StaticFiles(directory=upload_dir), name="uploads")
 
 if __name__ == "__main__":

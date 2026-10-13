@@ -16,7 +16,7 @@ const STATUS_MESSAGES = [
 ];
 
 export default function ServerWakeupOverlay() {
-  const { appState, appError, retryConnection } = useApp();
+  const { appState, setAppState, appError, retryConnection, setIsAuthModalOpen } = useApp();
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [msgIndex, setMsgIndex] = useState(0);
   const canvasRef = useRef(null);
@@ -199,6 +199,26 @@ export default function ServerWakeupOverlay() {
         <p className="text-[11px] text-slate-500 max-w-xs text-center leading-relaxed">
           Our free Render server may take a moment to wake up. Hang tight!
         </p>
+
+        {elapsedSeconds >= 4 && (
+          <div className="mt-4 flex flex-col items-center gap-1.5 animate-fade-in">
+            <button
+              onClick={() => {
+                sessionStorage.setItem('isBackendAwake', 'true');
+                setAppState('READY');
+                if (!localStorage.getItem('mymoney_token')) {
+                  setIsAuthModalOpen(true);
+                }
+              }}
+              className="px-4 py-2 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-lg backdrop-blur-md active:scale-95"
+            >
+              <span>Continue to Login / Dashboard →</span>
+            </button>
+            <p className="text-[10px] text-slate-400">
+              Adblocker active or waiting? Click above to proceed.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Bottom info */}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { API_BASE } from '../api';
-import { Wallet, Eye, EyeOff } from 'lucide-react';
+import { Wallet, Eye, EyeOff, RefreshCw } from 'lucide-react';
 
 export default function AuthModal() {
   const { isAuthModalOpen, login } = useApp();
@@ -11,12 +11,20 @@ export default function AuthModal() {
   const [showPassword, setShowPassword] = useState(false);
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [slowWarning, setSlowWarning] = useState(false);
 
   if (!isAuthModalOpen) return null;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
+    setSlowWarning(false);
+
+    const slowTimer = setTimeout(() => {
+      setSlowWarning(true);
+    }, 4000);
 
     try {
       const endpoint = isRegister ? `${API_BASE}/auth/register` : `${API_BASE}/auth/login`;
@@ -31,6 +39,7 @@ export default function AuthModal() {
         body: JSON.stringify(payload)
       });
 
+      clearTimeout(slowTimer);
       const data = await res.json();
       if (res.ok) {
         login(data.user, data.access_token);
@@ -46,8 +55,11 @@ export default function AuthModal() {
         setError(errMessage);
       }
     } catch (err) {
+      clearTimeout(slowTimer);
       console.error('Auth error:', err);
-      setError('Server connection failed. Please ensure the backend is active.');
+      setError('Server connection failed. If you use an adblocker, please allow mymoney-jd0n.onrender.com.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -127,10 +139,22 @@ export default function AuthModal() {
 
           <button
             type="submit"
-            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md transition"
+            disabled={isSubmitting}
+            className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-60 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2"
           >
-            {isRegister ? 'Create Account' : 'Sign In'}
+            {isSubmitting && <RefreshCw className="w-4 h-4 animate-spin" />}
+            <span>
+              {isSubmitting
+                ? (isRegister ? 'Creating Account...' : 'Signing In...')
+                : (isRegister ? 'Create Account' : 'Sign In')}
+            </span>
           </button>
+
+          {slowWarning && isSubmitting && (
+            <p className="text-[11px] text-amber-500 text-center animate-pulse font-medium">
+              Free backend is waking up (takes ~45s on cold start). Please wait...
+            </p>
+          )}
         </form>
 
         <button

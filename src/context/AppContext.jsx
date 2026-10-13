@@ -96,6 +96,23 @@ export function AppProvider({ children }) {
   }, []);
 
   const loadAllDataInternal = async (authToken = token) => {
+    if (authToken === 'guest_token_demo') {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const mockExpenses = [
+        { _id: 'g1', title: 'Groceries & Provisions', amount: 850, category: 'Food', payment_method: 'UPI', date: todayStr },
+        { _id: 'g2', title: 'Travel & Metro Card', amount: 200, category: 'Travel', payment_method: 'Cash', date: todayStr }
+      ];
+      const mockBudgets = [
+        { _id: 'gb1', category: 'Overall', amount: 5000, period: 'monthly' },
+        { _id: 'gb2', category: 'Weekly Allowance', amount: 1500, period: 'weekly', reset_day: 'Monday' }
+      ];
+      setExpenses(mockExpenses);
+      setBudgets(mockBudgets);
+      setDailyProfits([{ date: todayStr, amount: 350, note: 'Freelance earnings' }]);
+      setProfitSummary({ total_profit: 350, profitable_days: 1, loss_days: 0, average_daily_profit: 350 });
+      return;
+    }
+
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
     
     // Fetch all required data concurrently to eliminate the delay
@@ -161,7 +178,17 @@ export function AppProvider({ children }) {
   const startBackendCheckAndInitialization = useCallback(async () => {
     const isAwake = sessionStorage.getItem('isBackendAwake') === 'true';
     const hasCache = !!localStorage.getItem('mymoney_cache');
+    const storedToken = localStorage.getItem('mymoney_token');
     
+    // If not logged in yet, allow the login modal to display immediately
+    if (!storedToken) {
+      setIsAuthModalOpen(true);
+      setAppState('READY');
+      // Fire a non-blocking background ping to warm up the backend while user types credentials
+      fetch(`${API_BASE}/ping`, { cache: 'no-store' }).catch(() => {});
+      return;
+    }
+
     setAppState(prev => {
       if (prev === 'READY' && isAwake && hasCache) return 'READY';
       return 'INITIALIZING';
@@ -169,10 +196,16 @@ export function AppProvider({ children }) {
     setAppError(null);
 
     const rootUrl = API_BASE.endsWith('/api') ? API_BASE.slice(0, -4) : API_BASE;
-    const healthUrl = `${rootUrl}/health`;
+    // Use /api/ping and /api/status - adblockers block /health!
+    const pingEndpoints = [
+      `${API_BASE}/ping`,
+      `${API_BASE}/status`,
+      `${rootUrl}/`
+    ];
 
     let isHealthy = false;
     let attempts = 0;
+    let adblockDetected = false;
     
     // Check if we recently verified the backend is awake to skip the health poll loop on refresh
     const isRecentlyAwake = sessionStorage.getItem('isBackendAwake') === 'true';
@@ -180,37 +213,47 @@ export function AppProvider({ children }) {
     if (isRecentlyAwake) {
       isHealthy = true;
     } else {
-      // Retry checking /health until backend responds 200 OK
-      while (!isHealthy && attempts < 40) {
+      // Retry checking until backend responds 200 OK or adblocker detected
+      while (!isHealthy && attempts < 25) {
         attempts++;
+        const targetUrl = pingEndpoints[(attempts - 1) % pingEndpoints.length];
+        
         try {
-          const res = await fetch(healthUrl, { cache: 'no-store' });
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000);
+          const res = await fetch(targetUrl, { 
+            cache: 'no-store',
+            signal: controller.signal 
+          });
+          clearTimeout(timeoutId);
+
           if (res.ok) {
             isHealthy = true;
             sessionStorage.setItem('isBackendAwake', 'true');
             break;
           }
         } catch (e) {
-          // Backend cold start in progress
+          // If the request was immediately blocked (Adblocker error)
+          if (e.name !== 'AbortError' && attempts <= 3) {
+            // Check if user is offline or adblocker is intercepting
+            if (!navigator.onLine) {
+              setAppError('You appear to be offline. Please check your internet connection.');
+              setAppState('ERROR');
+              return;
+            }
+          }
         }
-        await new Promise((resolve) => setTimeout(resolve, 2000));
+        await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
 
+    // If pings failed but user has token, don't trap them forever; attempt data load directly
     if (!isHealthy) {
-      setAppError('Backend server failed to respond within timeout. Please click Retry.');
-      setAppState('ERROR');
-      return;
+      console.warn('Backend pings timed out or were blocked by adblocker. Attempting direct data load.');
     }
 
     setIsServerAwake(true);
-
-    const storedToken = localStorage.getItem('mymoney_token');
-    if (!storedToken) {
-      setIsAuthModalOpen(true);
-      setAppState('READY');
-      return;
-    }
+    sessionStorage.setItem('isBackendAwake', 'true');
 
     try {
       await loadAllDataInternal(storedToken);
@@ -222,8 +265,12 @@ export function AppProvider({ children }) {
         return;
       }
       console.error('Initial data loading failed:', e);
-      setAppError('Failed to load dashboard data. Please try again.');
-      setAppState('ERROR');
+      // If we have cached data, display it instead of hard error screen
+      if (hasCache) {
+        setAppState('READY');
+      } else {
+        setAppError('Backend server connection timed out or is blocked by an adblocker. Please allow mymoney-jd0n.onrender.com or click Retry.');
+      }
     }
   }, []);
 
@@ -252,20 +299,18 @@ export function AppProvider({ children }) {
     setToken(userToken);
     localStorage.setItem('mymoney_token', userToken);
     localStorage.setItem('mymoney_user', JSON.stringify(userData));
+    sessionStorage.setItem('isBackendAwake', 'true');
     setIsAuthModalOpen(false);
+    setAppState('READY');
 
-    setAppState('INITIALIZING');
     try {
       await loadAllDataInternal(userToken);
-      setAppState('READY');
     } catch (e) {
       if (e.message && e.message.includes('401')) {
         logout();
         return;
       }
-      console.error('Login data load failed:', e);
-      setAppError('Failed to load dashboard data after login. Please refresh.');
-      setAppState('ERROR');
+      console.warn('Login background data load had issues:', e);
     }
   };
 
