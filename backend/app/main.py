@@ -19,7 +19,8 @@ from app.routers import (
     oauth,
     mcp,
     profit,
-    push
+    push,
+    pocket_money
 )
 
 logging.basicConfig(level=logging.INFO)
@@ -88,6 +89,7 @@ app.include_router(oauth.router)
 app.include_router(mcp.router)
 app.include_router(profit.router)
 app.include_router(push.router)
+app.include_router(pocket_money.router)
 
 # Mount receipt uploads folder statically
 base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

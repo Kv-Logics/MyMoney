@@ -85,6 +85,17 @@ class BudgetCreate(BaseModel):
     period: Optional[str] = "monthly" # "monthly" or "weekly"
     reset_day: Optional[str] = "Monday"
 
+# Pocket Money / Allowance Box schemas
+class PocketMoneyCreate(BaseModel):
+    amount: float = Field(..., gt=0)
+    start_date: Optional[str] = None # YYYY-MM-DD
+    note: Optional[str] = "From Parent"
+
+class PocketMoneyUpdate(BaseModel):
+    amount: Optional[float] = Field(None, gt=0)
+    start_date: Optional[str] = None
+    note: Optional[str] = None
+
 # Invitation schemas
 class InvitationCreate(BaseModel):
     email: EmailStr

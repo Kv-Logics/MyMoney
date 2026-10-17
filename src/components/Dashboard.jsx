@@ -20,7 +20,11 @@ import {
   Shield,
   Users,
   Search,
-  RefreshCw
+  RefreshCw,
+  Gift,
+  Clock,
+  Inbox,
+  Trash2
 } from 'lucide-react';
 
 export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
@@ -29,6 +33,8 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     expenses,
     budgets,
     setBudgets,
+    pocketMoneyData,
+    refreshPocketMoney,
     dailyProfits,
     profitSummary,
     settings,
@@ -41,9 +47,12 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [weekOffset, setWeekOffset] = useState(0);
 
-  // Weekly Pocket Money / Parent Allowance state
+  // Pocket Money Box states
   const [isAllowanceModalOpen, setIsAllowanceModalOpen] = useState(false);
+  const [isBoxHistoryOpen, setIsBoxHistoryOpen] = useState(false);
   const [allowanceInput, setAllowanceInput] = useState('');
+  const [allowanceStartDate, setAllowanceStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [allowanceNote, setAllowanceNote] = useState('From Dad');
   const [isSavingAllowance, setIsSavingAllowance] = useState(false);
 
   // Admin stats & users state
@@ -109,10 +118,20 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const todayProfitRecord = (dailyProfits || []).find(p => p.date === todayStr);
   const todayProfit = todayProfitRecord ? todayProfitRecord.amount : 0;
 
-  // Weekly Pocket Money / Allowance from Parents Math
+  // Pocket Money Box Data
+  const pmSummary = pocketMoneyData?.summary || {
+    available_balance: 0,
+    total_active_deposited: 0,
+    total_waiting_deposited: 0,
+    total_spent: 0,
+    active_count: 0,
+    waiting_count: 0
+  };
+  const pmDeposits = pocketMoneyData?.deposits || [];
+  const hasBoxData = pmDeposits.length > 0;
+
+  // Weekly Pocket Money / Allowance from Parents Math (Fallback for legacy budget)
   const weeklyAllowanceBudget = budgets.find(b => b.category === 'Weekly Allowance' || b.category === 'Pocket Money');
-  const weeklyAllowanceAmount = weeklyAllowanceBudget ? weeklyAllowanceBudget.amount : 0;
-  
   const dayOfWeek = (d.getDay() + 6) % 7; // 0 = Mon, 6 = Sun
   const mondayDate = new Date(d);
   mondayDate.setDate(d.getDate() - dayOfWeek);
@@ -120,37 +139,55 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   const currentWeekExpenses = nonRentExpenses.filter(e => e.date && e.date >= mondayStr && e.date <= todayStr);
   const currentWeekSpent = currentWeekExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-  const remainingAllowance = weeklyAllowanceAmount - currentWeekSpent;
-  const isAllowanceOver = weeklyAllowanceBudget && remainingAllowance < 0;
+
+  const activeAllowanceAmount = hasBoxData ? pmSummary.total_active_deposited : (weeklyAllowanceBudget ? weeklyAllowanceBudget.amount : 0);
+  const activeSpentAmount = hasBoxData ? pmSummary.total_spent : currentWeekSpent;
+  const remainingAllowance = hasBoxData ? pmSummary.available_balance : (activeAllowanceAmount - activeSpentAmount);
+  const isAllowanceOver = remainingAllowance < 0;
+  const waitingAllowanceAmount = pmSummary.total_waiting_deposited || 0;
   const daysRemainingInWeek = Math.max(1, 7 - dayOfWeek);
   const safeDailyAllowanceSpend = remainingAllowance > 0 ? Math.round(remainingAllowance / daysRemainingInWeek) : 0;
-  const allowanceUsedPct = weeklyAllowanceBudget ? Math.round((currentWeekSpent / (weeklyAllowanceAmount || 1)) * 100) : 0;
+  const allowanceUsedPct = activeAllowanceAmount > 0 ? Math.round((activeSpentAmount / activeAllowanceAmount) * 100) : 0;
 
   const handleSaveAllowance = async (e) => {
     e.preventDefault();
     if (!allowanceInput || isNaN(parseFloat(allowanceInput))) return;
     setIsSavingAllowance(true);
     try {
-      const res = await fetchWithAuth(`${API_BASE}/budgets`, {
+      const res = await fetchWithAuth(`${API_BASE}/pocket-money`, {
         method: 'POST',
         body: JSON.stringify({
-          category: 'Weekly Allowance',
           amount: parseFloat(allowanceInput),
-          period: 'weekly',
-          reset_day: 'Monday'
+          start_date: allowanceStartDate || new Date().toISOString().split('T')[0],
+          note: allowanceNote || 'From Parent'
         })
       });
       if (res.ok) {
         setIsAllowanceModalOpen(false);
+        setAllowanceInput('');
+        if (refreshPocketMoney) await refreshPocketMoney();
         const bRes = await fetchWithAuth(`${API_BASE}/budgets`);
         if (bRes.ok && setBudgets) {
           setBudgets(await bRes.json());
         }
       }
     } catch (err) {
-      console.error('Error saving weekly allowance:', err);
+      console.error('Error saving pocket money:', err);
     } finally {
       setIsSavingAllowance(false);
+    }
+  };
+
+  const handleDeletePocketMoney = async (depositId) => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/pocket-money/${depositId}`, {
+        method: 'DELETE'
+      });
+      if (res.ok) {
+        if (refreshPocketMoney) await refreshPocketMoney();
+      }
+    } catch (err) {
+      console.error('Error deleting pocket money:', err);
     }
   };
 
@@ -423,70 +460,89 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
             </div>
           </div>
 
-          {/* Weekly Pocket Money / Allowance from Parents Banner */}
-          <div className="app-card border border-indigo-200 dark:border-indigo-800/40 bg-gradient-to-br from-indigo-500/5 via-transparent to-purple-500/5 flex flex-col md:flex-row md:items-center justify-between gap-5">
+          {/* Pocket Money Box Card */}
+          <div className="app-card border border-indigo-200/70 dark:border-indigo-800/50 bg-gradient-to-r from-indigo-50/60 via-purple-50/30 to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/80 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-sm relative overflow-hidden">
             <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-indigo-100 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-800 flex items-center justify-center shrink-0 shadow-sm">
-                <Target className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
+              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                <Gift className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
               </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-base font-bold text-slate-800 dark:text-white">
-                    Weekly Pocket Money Tracker
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h4 className="text-base font-extrabold text-slate-800 dark:text-white tracking-tight flex items-center gap-1.5">
+                    <span>Pocket Money Box</span>
                   </h4>
-                  <span className="text-[9px] bg-indigo-100 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-full">
+                  <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
                     Parent Allowance
                   </span>
+                  {waitingAllowanceAmount > 0 && (
+                    <span className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      +{settings.currency}{waitingAllowanceAmount.toLocaleString()} Waiting
+                    </span>
+                  )}
                 </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tracks pocket money given by parents. Deducts weekly expenses automatically so you always know your remaining balance.
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  Multiple family deposits. Deducts expenses automatically from your chosen utilization date.
                 </p>
 
-                {weeklyAllowanceBudget ? (
-                  <div className="flex flex-wrap items-center gap-4 mt-3 text-xs">
+                {(hasBoxData || weeklyAllowanceBudget) ? (
+                  <div className="flex flex-wrap items-center gap-4 mt-3 text-xs pt-1">
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Allowance</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Active Deposits</span>
                       <span className="font-extrabold text-slate-800 dark:text-white">
-                        {settings.currency} {weeklyAllowanceAmount.toLocaleString()}
+                        {settings.currency} {activeAllowanceAmount.toLocaleString()}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Spent this week</span>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Spent</span>
                       <span className="font-extrabold text-slate-700 dark:text-slate-300">
-                        {settings.currency} {currentWeekSpent.toLocaleString()}
+                        {settings.currency} {activeSpentAmount.toLocaleString()}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Remaining Balance</span>
-                      <span className={`font-extrabold ${isAllowanceOver ? 'text-rose-600' : 'text-emerald-600'}`}>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Available in Box</span>
+                      <span className={`font-black text-sm ${isAllowanceOver ? 'text-rose-600' : 'text-emerald-600'}`}>
                         {isAllowanceOver ? `- ${settings.currency}${Math.abs(remainingAllowance).toLocaleString()}` : `${settings.currency}${remainingAllowance.toLocaleString()}`}
                       </span>
                     </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Safe Daily Spend</span>
-                      <span className="font-bold text-indigo-600 dark:text-indigo-400">
-                        {settings.currency} {safeDailyAllowanceSpend.toLocaleString()} / day ({daysRemainingInWeek} days left)
-                      </span>
-                    </div>
+                    {waitingAllowanceAmount > 0 && (
+                      <div>
+                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase block">Waiting / Scheduled</span>
+                        <span className="font-bold text-amber-600 dark:text-amber-400">
+                          +{settings.currency}{waitingAllowanceAmount.toLocaleString()} ({pmSummary.waiting_count} upcoming)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-2">
-                    Did your father or parent give you weekly allowance? Click below to track your pocket money balance!
+                    Did your family give you pocket money? Click below to deposit into your Pocket Money Box!
                   </p>
                 )}
               </div>
             </div>
 
-            <div className="flex items-center gap-3 shrink-0">
+            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+              {pmDeposits.length > 0 && (
+                <button
+                  onClick={() => setIsBoxHistoryOpen(true)}
+                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm"
+                >
+                  <Inbox className="w-4 h-4 text-indigo-500" />
+                  <span>Box History ({pmDeposits.length})</span>
+                </button>
+              )}
               <button
                 onClick={() => {
-                  setAllowanceInput(weeklyAllowanceBudget ? String(weeklyAllowanceBudget.amount) : '');
+                  setAllowanceInput('');
+                  setAllowanceStartDate(new Date().toISOString().split('T')[0]);
+                  setAllowanceNote('From Dad');
                   setIsAllowanceModalOpen(true);
                 }}
-                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5"
+                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5 cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>{weeklyAllowanceBudget ? 'Update Pocket Money' : 'Set Weekly Allowance'}</span>
+                <span>Add Pocket Money</span>
               </button>
             </div>
           </div>
@@ -920,48 +976,190 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
         </div>
       )}
 
-      {/* Set Weekly Allowance Modal */}
+      {/* Add Pocket Money Modal */}
       {isAllowanceModalOpen && (
         <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="glass-modal max-w-sm w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-bold text-slate-800 dark:text-white">
-                Weekly Pocket Money / Allowance
+              <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                <Gift className="w-5 h-5 text-indigo-500" />
+                <span>Add Pocket Money</span>
               </h3>
               <button
                 type="button"
                 onClick={() => setIsAllowanceModalOpen(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition p-1"
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition p-1 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Enter the amount given by your parent (e.g. father/mother) for this week's expenses.
+              Deposit pocket money into your box. Choose the date from which this money should be utilized.
             </p>
-            <form onSubmit={handleSaveAllowance} className="space-y-4">
+            <form onSubmit={handleSaveAllowance} className="space-y-3.5">
               <div>
                 <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
-                  WEEKLY AMOUNT ({settings.currency})
+                  AMOUNT ({settings.currency})
                 </label>
                 <input
                   type="number"
                   step="any"
                   required
-                  placeholder="e.g. 1500"
+                  placeholder="e.g. 1000"
                   value={allowanceInput}
                   onChange={(e) => setAllowanceInput(e.target.value)}
                   className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
                 />
               </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  UTILIZE FROM DATE (START DATE)
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={allowanceStartDate}
+                  onChange={(e) => setAllowanceStartDate(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  {allowanceStartDate === todayStr ? (
+                    <span className="text-emerald-500 font-semibold">Active today: Starts deducting from today's expenses.</span>
+                  ) : allowanceStartDate < todayStr ? (
+                    <span className="text-indigo-500 font-semibold">Past date: Immediately deducts expenses incurred since {allowanceStartDate}.</span>
+                  ) : (
+                    <span className="text-amber-500 font-semibold">Future date: Sits in the box as Waiting/Scheduled until {allowanceStartDate}.</span>
+                  )}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                  NOTE / SOURCE
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. From Dad, From Mom, Festival allowance"
+                  value={allowanceNote}
+                  onChange={(e) => setAllowanceNote(e.target.value)}
+                  className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
               <button
                 type="submit"
                 disabled={isSavingAllowance}
-                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-xs rounded-xl shadow-md transition"
+                className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer"
               >
-                {isSavingAllowance ? 'Saving...' : 'Save Pocket Money'}
+                {isSavingAllowance ? 'Depositing...' : 'Deposit to Pocket Money Box'}
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Pocket Money Box History Modal */}
+      {isBoxHistoryOpen && (
+        <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="glass-modal max-w-md w-full rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Inbox className="w-5 h-5 text-indigo-500" />
+                <h3 className="text-base font-bold text-slate-800 dark:text-white">
+                  Pocket Money Box History
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsBoxHistoryOpen(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white transition p-1 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick summary header inside modal */}
+            <div className="grid grid-cols-3 gap-2 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-200/50 dark:border-slate-700/50 text-center">
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-400 block">Active</span>
+                <span className="text-xs font-black text-slate-800 dark:text-white">
+                  {settings.currency}{activeAllowanceAmount.toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-400 block">Spent</span>
+                <span className="text-xs font-black text-slate-700 dark:text-slate-300">
+                  {settings.currency}{activeSpentAmount.toLocaleString()}
+                </span>
+              </div>
+              <div>
+                <span className="text-[9px] uppercase font-bold text-slate-400 block">Available</span>
+                <span className={`text-xs font-black ${isAllowanceOver ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {isAllowanceOver ? `-${settings.currency}${Math.abs(remainingAllowance).toLocaleString()}` : `${settings.currency}${remainingAllowance.toLocaleString()}`}
+                </span>
+              </div>
+            </div>
+
+            <div className="overflow-y-auto space-y-2.5 flex-1 pr-1">
+              {pmDeposits.length === 0 ? (
+                <div className="text-center py-6 text-xs text-slate-400">
+                  No pocket money deposits recorded yet.
+                </div>
+              ) : (
+                pmDeposits.map((dep) => {
+                  const isWaiting = dep.start_date > todayStr;
+                  return (
+                    <div
+                      key={dep._id || dep.id}
+                      className="p-3 bg-white dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 rounded-xl flex items-center justify-between gap-3 shadow-sm hover:border-indigo-400/50 transition"
+                    >
+                      <div className="space-y-0.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-black text-slate-800 dark:text-white">
+                            {settings.currency}{Number(dep.amount).toLocaleString()}
+                          </span>
+                          <span className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full border ${
+                            isWaiting
+                              ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                              : 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
+                          }`}>
+                            {isWaiting ? '⏳ Waiting' : '🟢 Active'}
+                          </span>
+                        </div>
+                        <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                          {dep.note || 'From Parent'}
+                        </p>
+                        <p className="text-[10px] text-slate-400">
+                          Utilize from: <strong className="text-slate-600 dark:text-slate-300">{dep.start_date}</strong>
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeletePocketMoney(dep._id || dep.id)}
+                        title="Delete Deposit"
+                        className="p-1.5 text-slate-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setIsBoxHistoryOpen(false);
+                setAllowanceInput('');
+                setAllowanceStartDate(new Date().toISOString().split('T')[0]);
+                setAllowanceNote('From Dad');
+                setIsAllowanceModalOpen(true);
+              }}
+              className="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer"
+            >
+              <Plus className="w-4 h-4" /> Add Another Pocket Money Deposit
+            </button>
           </div>
         </div>
       )}

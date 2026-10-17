@@ -58,6 +58,10 @@ export function AppProvider({ children }) {
   const [sharingList, setSharingList] = useState(cachedData.sharingList || []);
   const [sharedByList, setSharedByList] = useState(cachedData.sharedByList || []);
   const [auditLogs, setAuditLogs] = useState(cachedData.auditLogs || []);
+  const [pocketMoneyData, setPocketMoneyData] = useState(cachedData.pocketMoneyData || {
+    summary: { available_balance: 0, total_active_deposited: 0, total_waiting_deposited: 0, total_spent: 0, waiting_count: 0, active_count: 0 },
+    deposits: []
+  });
 
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
   const [isServerAwake, setIsServerAwake] = useState(false);
@@ -120,7 +124,7 @@ export function AppProvider({ children }) {
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
     
     // Fetch all required data concurrently to eliminate the delay
-    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes, catRes] = await Promise.all([
+    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes, catRes, pmRes] = await Promise.all([
       fetchWithAuth(`${API_BASE}/expenses`, { headers }),
       fetchWithAuth(`${API_BASE}/budgets`, { headers }),
       fetchWithAuth(`${API_BASE}/profit`, { headers }),
@@ -130,7 +134,8 @@ export function AppProvider({ children }) {
       fetchWithAuth(`${API_BASE}/savings`, { headers }),
       fetchWithAuth(`${API_BASE}/sharing/shared-with`, { headers }),
       fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers }),
-      fetchWithAuth(`${API_BASE}/categories`, { headers })
+      fetchWithAuth(`${API_BASE}/categories`, { headers }),
+      fetchWithAuth(`${API_BASE}/pocket-money`, { headers }).catch(() => ({ ok: false }))
     ]);
 
     if (!expRes.ok) throw new Error(`Expenses API failed: ${expRes.status}`);
@@ -176,6 +181,19 @@ export function AppProvider({ children }) {
       }
     }
 
+    let _pocketMoneyData = pocketMoneyData;
+    if (pmRes && pmRes.ok) {
+      try {
+        const pmJson = await pmRes.json();
+        if (pmJson && pmJson.summary) {
+          _pocketMoneyData = pmJson;
+          setPocketMoneyData(pmJson);
+        }
+      } catch (e) {
+        console.warn('Pocket money parsing error:', e);
+      }
+    }
+
     localStorage.setItem('mymoney_cache', JSON.stringify({
       expenses: _expenses,
       budgets: _budgets,
@@ -186,7 +204,8 @@ export function AppProvider({ children }) {
       savingsGoals: _savingsGoals,
       sharingList: _sharingList,
       sharedByList: _sharedByList,
-      categories: _categories
+      categories: _categories,
+      pocketMoneyData: _pocketMoneyData
     }));
   };
 
@@ -364,6 +383,18 @@ export function AppProvider({ children }) {
     setConfirmState(prev => ({ ...prev, isOpen: false, resolve: null }));
   };
 
+  const refreshPocketMoney = async () => {
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/pocket-money`);
+      if (res.ok) {
+        const data = await res.json();
+        setPocketMoneyData(data);
+      }
+    } catch (e) {
+      console.warn('Failed to refresh pocket money:', e);
+    }
+  };
+
   return (
     <AppContext.Provider value={{
       appState, setAppState,
@@ -377,6 +408,7 @@ export function AppProvider({ children }) {
       categories, setCategories,
       paymentMethods, setPaymentMethods,
       budgets, setBudgets,
+      pocketMoneyData, setPocketMoneyData, refreshPocketMoney,
       savingsGoals, setSavingsGoals,
       dailyProfits, setDailyProfits,
       profitSummary, setProfitSummary,

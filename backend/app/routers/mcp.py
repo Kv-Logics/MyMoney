@@ -11,6 +11,7 @@ from app.database import get_collection
 from app.auth import JWT_SECRET, JWT_ALGORITHM, hash_api_key, API_KEY_PREFIX
 from app.utils import serialize_doc, serialize_docs
 from app.profit_tracker.service import profit_service
+from app.routers.pocket_money import compute_pocket_money_summary
 
 router = APIRouter(tags=["MCP Server"])
 
@@ -232,18 +233,20 @@ MCP_TOOLS = [
     },
     {
         "name": "manage_allowance",
-        "description": "Manage weekly pocket money / allowance from parents (e.g. father/mother). Use this tool whenever the user mentions getting weekly pocket money, allowance from dad/parents, checking how much pocket money or weekly allowance is left, or setting their weekly budget. Actions: 'set' (records weekly allowance amount given by parent, e.g. 1500), 'get' (returns weekly allowance, amount spent this week, remaining balance, and safe daily spend rate).",
+        "description": "Manage the Pocket Money Box / Parent Allowance. Use this tool whenever the user mentions getting pocket money or allowance from parents (e.g. father/mother), checking available pocket money balance, scheduling future pocket money, or recording past pocket money. Actions: 'add' or 'set' (deposits money into the box with amount, start_date, and note), 'get' (returns available balance, active total, waiting future deposits, and spending), 'list' (lists all box deposits), 'delete' (deletes a deposit by deposit_id).",
         "inputSchema": {
             "type": "object",
             "required": ["action"],
             "properties": {
                 "action": {
                     "type": "string",
-                    "enum": ["set", "get"],
-                    "description": "'set' to save weekly allowance, 'get' to check remaining pocket money balance and safe daily spend"
+                    "enum": ["add", "set", "get", "list", "delete"],
+                    "description": "'add' or 'set' to deposit pocket money, 'get' to check available balance and waiting money, 'list' to see all box deposits, 'delete' to remove a deposit"
                 },
-                "amount": { "type": "number", "description": "Weekly allowance amount in user's currency (required when action='set')" },
-                "notes": { "type": "string", "description": "Optional note (e.g., 'Given by dad for college travel and snacks')" }
+                "amount": { "type": "number", "description": "Pocket money amount in user's currency (required when action='add' or 'set')" },
+                "start_date": { "type": "string", "description": "Date from which this money is utilized (YYYY-MM-DD). Can be past (deducts past expenses), today, or future (waiting/scheduled)." },
+                "notes": { "type": "string", "description": "Optional note (e.g., 'From Dad', 'For college travel and snacks')" },
+                "deposit_id": { "type": "string", "description": "Deposit ID to delete (when action='delete')" }
             }
         },
         "securitySchemes": [{ "type": "oauth2", "scopes": ["budgets:write", "budgets:read"] }],
@@ -501,11 +504,14 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
         elif action == "list":
             return execute_mcp_tool("list_expenses", args, user)
         elif action == "allowance":
-            sub_action = "set" if "amount" in args and args["amount"] is not None and float(args["amount"]) > 0 else "get"
+            sub_action = args.get("sub_action")
+            if not sub_action:
+                sub_action = "add" if "amount" in args and args["amount"] is not None and float(args["amount"]) > 0 else "get"
             allowance_payload = {
-                "action": args.get("sub_action", sub_action),
+                "action": sub_action,
                 "amount": args.get("amount"),
-                "notes": args.get("notes") or args.get("title")
+                "start_date": args.get("start_date") or args.get("date"),
+                "notes": args.get("notes") or args.get("note") or args.get("title") or "From Parent"
             }
             return execute_mcp_tool("manage_allowance", allowance_payload, user)
         else:
@@ -680,20 +686,35 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
 
     # 8b. manage_allowance
     if name == "manage_allowance":
+        pm_col = get_collection("pocket_money")
         budgets_col = get_collection("budgets")
-        expenses_col = get_collection("expenses")
         action = args.get("action", "get")
+        today_str = datetime.now().strftime("%Y-%m-%d")
 
-        if action == "set":
+        if action in ["add", "set", "deposit"]:
             if "amount" not in args or args["amount"] is None:
-                raise Exception("'amount' is required when setting weekly allowance")
+                raise Exception("'amount' is required when depositing pocket money")
             amt = float(args["amount"])
+            start_date = (args.get("start_date") or args.get("date") or today_str).strip()
+            note = args.get("notes") or args.get("note") or "From Parent"
+
+            new_deposit = {
+                "user_id": user_id,
+                "user_email": user["email"],
+                "amount": amt,
+                "start_date": start_date,
+                "note": note,
+                "created_at": datetime.utcnow()
+            }
+            res = pm_col.insert_one(new_deposit)
+            new_deposit["_id"] = res.inserted_id
+
+            # Sync with Weekly Allowance in budgets for compatibility
             existing = budgets_col.find_one({"user_id": user_id, "category": "Weekly Allowance"})
-            notes = args.get("notes", "Pocket money from parent")
             if existing:
                 budgets_col.update_one(
                     {"_id": existing["_id"]},
-                    {"$set": {"amount": amt, "period": "weekly", "reset_day": "Monday", "notes": notes, "updated_at": datetime.utcnow()}}
+                    {"$set": {"amount": amt, "notes": note, "updated_at": datetime.utcnow()}}
                 )
             else:
                 budgets_col.insert_one({
@@ -702,54 +723,47 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
                     "amount": amt,
                     "period": "weekly",
                     "reset_day": "Monday",
-                    "notes": notes,
+                    "notes": note,
                     "created_at": datetime.utcnow()
                 })
 
-        # Calculate current week's spending
-        now = datetime.now()
-        monday = now - timedelta(days=now.weekday())
-        monday_str = monday.strftime("%Y-%m-%d")
-        today_str = now.strftime("%Y-%m-%d")
+        elif action == "delete":
+            dep_id = args.get("deposit_id") or args.get("id")
+            if not dep_id:
+                raise Exception("'deposit_id' is required for deleting a deposit")
+            try:
+                pm_col.delete_one({"_id": ObjectId(dep_id), "user_id": user_id})
+            except Exception:
+                pass
 
-        pipeline_week = [
-            {"$match": {
-                "user_id": user_id,
-                "date": {"$gte": monday_str, "$lte": today_str},
-                "category": {"$ne": "Rent"}
-            }},
-            {"$group": {"_id": None, "total": {"$sum": "$amount"}, "count": {"$sum": 1}}}
-        ]
-        res_w = list(expenses_col.aggregate(pipeline_week))
-        week_spent = res_w[0]["total"] if res_w else 0.0
-        expense_count = res_w[0]["count"] if res_w else 0
+        # Calculate live box summary
+        summary, deposits = compute_pocket_money_summary(user_id)
 
-        allowance_doc = budgets_col.find_one({"user_id": user_id, "category": "Weekly Allowance"})
-        allowance_amt = allowance_doc["amount"] if allowance_doc else 0.0
+        avail = summary["available_balance"]
+        act_dep = summary["total_active_deposited"]
+        wait_dep = summary["total_waiting_deposited"]
+        spent = summary["total_spent"]
+        is_over = summary["is_over_budget"]
 
-        remaining = allowance_amt - week_spent
-        days_left = max(1, 7 - now.weekday())
-        daily_safe = round(remaining / days_left, 2) if remaining > 0 else 0.0
+        status_msg = (
+            f"Pocket Money Box: ₹{avail:,.2f} available. "
+            f"Active deposits: ₹{act_dep:,.2f}, Spent: ₹{spent:,.2f}. "
+            + (f"Waiting / Upcoming deposits: ₹{wait_dep:,.2f}." if wait_dep > 0 else "")
+            if (act_dep > 0 or wait_dep > 0) else
+            "No pocket money deposits found. Add pocket money using action='add', amount=X, and start_date='YYYY-MM-DD'."
+        )
 
         return {
             "status": "success",
-            "weekly_allowance": allowance_amt,
-            "spent_this_week": week_spent,
-            "remaining_balance": remaining,
-            "is_over_budget": remaining < 0,
-            "over_by": abs(remaining) if remaining < 0 else 0.0,
-            "days_remaining_in_week": days_left,
-            "safe_daily_spend": daily_safe,
-            "week_period": f"{monday_str} to {(monday + timedelta(days=6)).strftime('%Y-%m-%d')}",
-            "expenses_logged_count": expense_count,
-            "message": (
-                f"Weekly Pocket Money: ₹{allowance_amt:,.2f}. "
-                f"Spent this week: ₹{week_spent:,.2f}. "
-                f"Remaining: ₹{remaining:,.2f} "
-                f"(Safe spend: ₹{daily_safe:,.2f}/day for {days_left} days left)."
-                if allowance_amt > 0 else
-                "No weekly allowance configured yet. Set it using action='set' and amount=X."
-            )
+            "available_balance": avail,
+            "total_active_deposited": act_dep,
+            "total_waiting_deposited": wait_dep,
+            "total_spent": spent,
+            "is_over_budget": is_over,
+            "active_deposits_count": summary["active_count"],
+            "waiting_deposits_count": summary["waiting_count"],
+            "deposits": serialize_docs(deposits),
+            "message": status_msg
         }
 
     # 9. list_savings_goals
