@@ -1,4 +1,6 @@
 import os
+import time
+import asyncio
 import logging
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse
@@ -36,6 +38,25 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+_last_reminder_check = 0.0
+
+@app.middleware("http")
+async def opportunistic_push_reminder_middleware(request: Request, call_next):
+    global _last_reminder_check
+    now = time.time()
+    # Check at most once every 120 seconds, non-blockingly in background
+    if now - _last_reminder_check > 120:
+        _last_reminder_check = now
+        from app.routers.push import check_and_dispatch_due_reminders
+        asyncio.create_task(asyncio.to_thread(check_and_dispatch_due_reminders))
+    return await call_next(request)
+
+@app.on_event("startup")
+async def on_startup():
+    # Run immediate check on server wake-up/boot
+    from app.routers.push import check_and_dispatch_due_reminders
+    asyncio.create_task(asyncio.to_thread(check_and_dispatch_due_reminders))
 
 def add_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
     origin = request.headers.get("origin")

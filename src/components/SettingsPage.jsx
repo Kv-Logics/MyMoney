@@ -98,7 +98,8 @@ export default function SettingsPage() {
                       p256dh: subscription.toJSON().keys.p256dh,
                       auth: subscription.toJSON().keys.auth
                     },
-                    reminder_time: reminderTime
+                    reminder_time: reminderTime,
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'Asia/Kolkata'
                   };
                   
                   const { API_BASE, fetchWithAuth } = await import('../api');
