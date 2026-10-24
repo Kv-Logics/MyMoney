@@ -37,6 +37,17 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+def add_cors_headers(request: Request, response: JSONResponse) -> JSONResponse:
+    origin = request.headers.get("origin")
+    if origin:
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+    else:
+        response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Methods"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "*"
+    return response
+
 # Exception Handlers
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
@@ -45,10 +56,7 @@ async def global_exception_handler(request: Request, exc: Exception):
         status_code=500,
         content={"detail": f"An unexpected error occurred: {str(exc)}"}
     )
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
+    return add_cors_headers(request, response)
 
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
@@ -56,10 +64,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
         status_code=exc.status_code,
         content={"detail": exc.detail}
     )
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    response.headers["Access-Control-Allow-Methods"] = "*"
-    response.headers["Access-Control-Allow-Headers"] = "*"
-    return response
+    return add_cors_headers(request, response)
 
 # Root & Health Endpoints
 @app.get("/")

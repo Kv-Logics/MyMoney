@@ -123,54 +123,74 @@ export function AppProvider({ children }) {
 
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
     
-    // Fetch all required data concurrently to eliminate the delay
+    // Fetch all required data concurrently with individual error safety
     const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes, catRes, pmRes] = await Promise.all([
       fetchWithAuth(`${API_BASE}/expenses`, { headers }),
       fetchWithAuth(`${API_BASE}/budgets`, { headers }),
-      fetchWithAuth(`${API_BASE}/profit`, { headers }),
-      fetchWithAuth(`${API_BASE}/profit/summary`, { headers }),
-      fetchWithAuth(`${API_BASE}/tasks`, { headers }),
-      fetchWithAuth(`${API_BASE}/audit-logs`, { headers }),
-      fetchWithAuth(`${API_BASE}/savings`, { headers }),
-      fetchWithAuth(`${API_BASE}/sharing/shared-with`, { headers }),
-      fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers }),
-      fetchWithAuth(`${API_BASE}/categories`, { headers }),
+      fetchWithAuth(`${API_BASE}/profit`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/profit/summary`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/tasks`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/audit-logs`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/savings`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/sharing/shared-with`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/categories`, { headers }).catch(() => ({ ok: false })),
       fetchWithAuth(`${API_BASE}/pocket-money`, { headers }).catch(() => ({ ok: false }))
     ]);
 
-    if (!expRes.ok) throw new Error(`Expenses API failed: ${expRes.status}`);
-    const expData = await expRes.json();
-    const _expenses = Array.isArray(expData) ? expData : [];
-    setExpenses(_expenses);
+    let _expenses = expenses;
+    if (expRes && expRes.ok) {
+      const expData = await expRes.json();
+      _expenses = Array.isArray(expData) ? expData : [];
+      setExpenses(_expenses);
+    } else if (expRes && expRes.status === 401) {
+      throw new Error('401 Unauthorized');
+    }
 
-    if (!budRes.ok) throw new Error(`Budgets API failed: ${budRes.status}`);
-    const _budgets = await budRes.json();
-    setBudgets(_budgets);
+    let _budgets = budgets;
+    if (budRes && budRes.ok) {
+      _budgets = await budRes.json();
+      setBudgets(_budgets);
+    } else if (budRes && budRes.status === 401) {
+      throw new Error('401 Unauthorized');
+    }
 
-    if (!profRes.ok) throw new Error(`Profit API failed: ${profRes.status}`);
-    const profData = await profRes.json();
-    const _dailyProfits = profData.records || [];
-    setDailyProfits(_dailyProfits);
+    let _dailyProfits = dailyProfits;
+    if (profRes && profRes.ok) {
+      try {
+        const profData = await profRes.json();
+        _dailyProfits = profData.records || [];
+        setDailyProfits(_dailyProfits);
+      } catch (e) {
+        console.warn('Profit parsing warning:', e);
+      }
+    }
 
-    if (!profSumRes.ok) throw new Error(`Profit Summary API failed: ${profSumRes.status}`);
-    const _profitSummary = await profSumRes.json();
-    setProfitSummary(_profitSummary);
+    let _profitSummary = profitSummary;
+    if (profSumRes && profSumRes.ok) {
+      try {
+        _profitSummary = await profSumRes.json();
+        setProfitSummary(_profitSummary);
+      } catch (e) {
+        console.warn('Profit summary parsing warning:', e);
+      }
+    }
     
     // Optional endpoints
-    const _tasks = tasksRes.ok ? await tasksRes.json() : [];
-    if (tasksRes.ok) setTasks(_tasks);
+    const _tasks = tasksRes && tasksRes.ok ? await tasksRes.json() : [];
+    if (tasksRes && tasksRes.ok) setTasks(_tasks);
 
-    const _auditLogs = auditRes.ok ? await auditRes.json() : [];
-    if (auditRes.ok) setAuditLogs(_auditLogs);
+    const _auditLogs = auditRes && auditRes.ok ? await auditRes.json() : [];
+    if (auditRes && auditRes.ok) setAuditLogs(_auditLogs);
 
-    const _savingsGoals = savRes.ok ? await savRes.json() : [];
-    if (savRes.ok) setSavingsGoals(_savingsGoals);
+    const _savingsGoals = savRes && savRes.ok ? await savRes.json() : [];
+    if (savRes && savRes.ok) setSavingsGoals(_savingsGoals);
 
-    const _sharingList = shareWithRes.ok ? await shareWithRes.json() : [];
-    if (shareWithRes.ok) setSharingList(_sharingList);
+    const _sharingList = shareWithRes && shareWithRes.ok ? await shareWithRes.json() : [];
+    if (shareWithRes && shareWithRes.ok) setSharingList(_sharingList);
 
-    const _sharedByList = shareByRes.ok ? await shareByRes.json() : [];
-    if (shareByRes.ok) setSharedByList(_sharedByList);
+    const _sharedByList = shareByRes && shareByRes.ok ? await shareByRes.json() : [];
+    if (shareByRes && shareByRes.ok) setSharedByList(_sharedByList);
 
     let _categories = categories;
     if (catRes && catRes.ok) {
@@ -210,7 +230,6 @@ export function AppProvider({ children }) {
   };
 
   const startBackendCheckAndInitialization = useCallback(async () => {
-    const isAwake = sessionStorage.getItem('isBackendAwake') === 'true';
     const hasCache = !!localStorage.getItem('mymoney_cache');
     const storedToken = localStorage.getItem('mymoney_token');
     
@@ -223,8 +242,12 @@ export function AppProvider({ children }) {
       return;
     }
 
+    // Check if backend was verified awake recently (within 5 minutes, since Render spins down after 15m)
+    const awakeTimestamp = parseInt(sessionStorage.getItem('backendAwakeTimestamp') || '0', 10);
+    const isRecentlyAwake = Date.now() - awakeTimestamp < 5 * 60 * 1000;
+
     setAppState(prev => {
-      if (prev === 'READY' && isAwake && hasCache) return 'READY';
+      if (prev === 'READY' && isRecentlyAwake && hasCache) return 'READY';
       return 'INITIALIZING';
     });
     setAppError(null);
@@ -239,15 +262,11 @@ export function AppProvider({ children }) {
 
     let isHealthy = false;
     let attempts = 0;
-    let adblockDetected = false;
-    
-    // Check if we recently verified the backend is awake to skip the health poll loop on refresh
-    const isRecentlyAwake = sessionStorage.getItem('isBackendAwake') === 'true';
 
     if (isRecentlyAwake) {
       isHealthy = true;
     } else {
-      // Retry checking until backend responds 200 OK or adblocker detected
+      // Retry checking until backend responds 200 OK
       while (!isHealthy && attempts < 25) {
         attempts++;
         const targetUrl = pingEndpoints[(attempts - 1) % pingEndpoints.length];
@@ -263,31 +282,22 @@ export function AppProvider({ children }) {
 
           if (res.ok) {
             isHealthy = true;
-            sessionStorage.setItem('isBackendAwake', 'true');
+            sessionStorage.setItem('backendAwakeTimestamp', Date.now().toString());
             break;
           }
         } catch (e) {
-          // If the request was immediately blocked (Adblocker error)
-          if (e.name !== 'AbortError' && attempts <= 3) {
-            // Check if user is offline or adblocker is intercepting
-            if (!navigator.onLine) {
-              setAppError('You appear to be offline. Please check your internet connection.');
-              setAppState('ERROR');
-              return;
-            }
+          if (!navigator.onLine) {
+            setAppError('You appear to be offline. Please check your internet connection.');
+            setAppState('ERROR');
+            return;
           }
         }
         await new Promise((resolve) => setTimeout(resolve, 1500));
       }
     }
 
-    // If pings failed but user has token, don't trap them forever; attempt data load directly
-    if (!isHealthy) {
-      console.warn('Backend pings timed out or were blocked by adblocker. Attempting direct data load.');
-    }
-
     setIsServerAwake(true);
-    sessionStorage.setItem('isBackendAwake', 'true');
+    sessionStorage.setItem('backendAwakeTimestamp', Date.now().toString());
 
     try {
       await loadAllDataInternal(storedToken);
@@ -303,7 +313,7 @@ export function AppProvider({ children }) {
       if (hasCache) {
         setAppState('READY');
       } else {
-        setAppError('Backend server connection timed out or is blocked by an adblocker. Please allow mymoney-jd0n.onrender.com or click Retry.');
+        setAppError('Backend server connection timed out or is warming up. Please check your connection or click Retry.');
       }
     }
   }, []);
@@ -333,7 +343,7 @@ export function AppProvider({ children }) {
     setToken(userToken);
     localStorage.setItem('mymoney_token', userToken);
     localStorage.setItem('mymoney_user', JSON.stringify(userData));
-    sessionStorage.setItem('isBackendAwake', 'true');
+    sessionStorage.setItem('backendAwakeTimestamp', Date.now().toString());
     setIsAuthModalOpen(false);
     setAppState('READY');
 
