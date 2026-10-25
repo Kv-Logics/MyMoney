@@ -24,6 +24,10 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
     showConfirm
   } = useApp();
 
+  const availablePaymentMethods = (paymentMethods && paymentMethods.length > 0)
+    ? paymentMethods
+    : ['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer', 'Wallet'];
+
   // Filter state
   const [search, setSearch] = useState('');
   const [selectedCat, setSelectedCat] = useState('');
@@ -206,7 +210,7 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
                 className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:border-emerald-500"
               >
                 <option value="">All Payments</option>
-                {paymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
+                {availablePaymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
               </select>
             </div>
 
@@ -408,10 +412,10 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
                       onChange={(e) => setPaymentMethod(e.target.value)}
                       className="flex-1 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none"
                     >
-                      {paymentMethod && !paymentMethods.some(p => (p || '').toLowerCase() === paymentMethod.toLowerCase()) && (
+                      {paymentMethod && !availablePaymentMethods.some(p => (p || '').toLowerCase() === paymentMethod.toLowerCase()) && (
                         <option key={paymentMethod} value={paymentMethod}>{paymentMethod}</option>
                       )}
-                      {paymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
+                      {availablePaymentMethods.map(p => <option key={p} value={p}>{p}</option>)}
                     </select>
                     <button type="button" className="px-2.5 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-600 font-bold">+</button>
                   </div>

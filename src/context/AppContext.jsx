@@ -49,7 +49,12 @@ export function AppProvider({ children }) {
     { name: 'Miscellaneous', color: '#6b7280' },
     { name: 'Other', color: '#64748b' }
   ]);
-  const [paymentMethods, setPaymentMethods] = useState(['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer']);
+  const DEFAULT_PAYMENT_METHODS = ['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer', 'Wallet'];
+  const [paymentMethods, setPaymentMethods] = useState(
+    cachedData.paymentMethods && cachedData.paymentMethods.length > 0
+      ? cachedData.paymentMethods
+      : DEFAULT_PAYMENT_METHODS
+  );
   const [budgets, setBudgets] = useState(cachedData.budgets || []);
   const [savingsGoals, setSavingsGoals] = useState(cachedData.savingsGoals || []);
   const [dailyProfits, setDailyProfits] = useState(cachedData.dailyProfits || []);
@@ -124,7 +129,7 @@ export function AppProvider({ children }) {
     const headers = authToken ? { Authorization: `Bearer ${authToken}` } : {};
     
     // Fetch all required data concurrently with individual error safety
-    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes, catRes, pmRes] = await Promise.all([
+    const [expRes, budRes, profRes, profSumRes, tasksRes, auditRes, savRes, shareWithRes, shareByRes, catRes, pmRes, paymRes] = await Promise.all([
       fetchWithAuth(`${API_BASE}/expenses`, { headers }),
       fetchWithAuth(`${API_BASE}/budgets`, { headers }),
       fetchWithAuth(`${API_BASE}/profit`, { headers }).catch(() => ({ ok: false })),
@@ -135,7 +140,8 @@ export function AppProvider({ children }) {
       fetchWithAuth(`${API_BASE}/sharing/shared-with`, { headers }).catch(() => ({ ok: false })),
       fetchWithAuth(`${API_BASE}/sharing/shared-by`, { headers }).catch(() => ({ ok: false })),
       fetchWithAuth(`${API_BASE}/categories`, { headers }).catch(() => ({ ok: false })),
-      fetchWithAuth(`${API_BASE}/pocket-money`, { headers }).catch(() => ({ ok: false }))
+      fetchWithAuth(`${API_BASE}/pocket-money`, { headers }).catch(() => ({ ok: false })),
+      fetchWithAuth(`${API_BASE}/payment-methods`, { headers }).catch(() => ({ ok: false }))
     ]);
 
     let _expenses = expenses;
@@ -201,6 +207,19 @@ export function AppProvider({ children }) {
       }
     }
 
+    let _paymentMethods = (paymentMethods && paymentMethods.length > 0) ? paymentMethods : DEFAULT_PAYMENT_METHODS;
+    if (paymRes && paymRes.ok) {
+      try {
+        const pmData = await paymRes.json();
+        if (Array.isArray(pmData) && pmData.length > 0) {
+          _paymentMethods = pmData;
+          setPaymentMethods(pmData);
+        }
+      } catch (e) {
+        console.warn('Payment methods parsing error:', e);
+      }
+    }
+
     let _pocketMoneyData = pocketMoneyData;
     if (pmRes && pmRes.ok) {
       try {
@@ -225,6 +244,7 @@ export function AppProvider({ children }) {
       sharingList: _sharingList,
       sharedByList: _sharedByList,
       categories: _categories,
+      paymentMethods: _paymentMethods,
       pocketMoneyData: _pocketMoneyData
     }));
   };
@@ -366,7 +386,7 @@ export function AppProvider({ children }) {
     
     setExpenses([]);
     setCategories([]);
-    setPaymentMethods([]);
+    setPaymentMethods(DEFAULT_PAYMENT_METHODS);
     setBudgets([]);
     setSavingsGoals([]);
     setDailyProfits([]);

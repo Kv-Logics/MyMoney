@@ -5,6 +5,9 @@ import { X, ScanLine, Plus } from 'lucide-react';
 
 export default function ExpenseModal({ isOpen, onClose, initialData = null }) {
   const { categories, paymentMethods, setExpenses } = useApp();
+  const availablePaymentMethods = (paymentMethods && paymentMethods.length > 0)
+    ? paymentMethods
+    : ['Cash', 'UPI', 'Credit Card', 'Debit Card', 'Bank Transfer', 'Wallet'];
 
   const [amount, setAmount] = useState('');
   const [title, setTitle] = useState('');
@@ -24,7 +27,7 @@ export default function ExpenseModal({ isOpen, onClose, initialData = null }) {
         setAmount(String(initialData.amount || ''));
         setTitle(initialData.title || '');
         setCategory(initialData.category || categories[0]?.name || 'Food');
-        setPaymentMethod(initialData.payment_method || paymentMethods[0] || 'Cash');
+        setPaymentMethod(initialData.payment_method || availablePaymentMethods[0] || 'Cash');
         setDate(initialData.date || new Date().toISOString().split('T')[0]);
         setTime(initialData.time || '09:00 AM');
         setLocation(initialData.location || '');
@@ -33,7 +36,7 @@ export default function ExpenseModal({ isOpen, onClose, initialData = null }) {
         setAmount('');
         setTitle('');
         setCategory(categories[0]?.name || 'Food');
-        setPaymentMethod(paymentMethods[0] || 'Cash');
+        setPaymentMethod(availablePaymentMethods[0] || 'Cash');
         setDate(new Date().toISOString().split('T')[0]);
         setTime('09:00 AM');
         setLocation('');
@@ -176,10 +179,10 @@ export default function ExpenseModal({ isOpen, onClose, initialData = null }) {
                 onChange={(e) => setPaymentMethod(e.target.value)}
                 className="w-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500"
               >
-                {paymentMethod && !paymentMethods.some((p) => (p || '').toLowerCase() === paymentMethod.toLowerCase()) && (
+                {paymentMethod && !availablePaymentMethods.some((p) => (p || '').toLowerCase() === paymentMethod.toLowerCase()) && (
                   <option key={paymentMethod} value={paymentMethod}>{paymentMethod}</option>
                 )}
-                {paymentMethods.map((p) => (
+                {availablePaymentMethods.map((p) => (
                   <option key={p} value={p}>{p}</option>
                 ))}
               </select>
