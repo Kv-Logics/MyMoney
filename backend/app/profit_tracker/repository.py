@@ -77,7 +77,7 @@ class DailyProfitRepository:
             if end_date:
                 query["date"]["$lte"] = end_date
 
-        docs = list(col.find(query).sort([("date", 1)]))
+        docs = list(col.find(query).sort([("date", -1)]))
         return serialize_docs(docs)
 
     def update_record(self, user_id: str, key: str, amount: Optional[float] = None, note: Optional[str] = None) -> Dict[str, Any]:

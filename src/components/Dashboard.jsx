@@ -46,6 +46,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [selectedDay, setSelectedDay] = useState(null);
   const [hoveredCategory, setHoveredCategory] = useState(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [catMonthOffset, setCatMonthOffset] = useState(0);
 
   // Pocket Money Box states
   const [isAllowanceModalOpen, setIsAllowanceModalOpen] = useState(false);
@@ -191,9 +192,22 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     }
   };
 
-  // Category Breakdown Math (Current Month)
+  // Category Breakdown Navigation Math (Navigable Month)
+  const targetCatDate = new Date(d.getFullYear(), d.getMonth() + catMonthOffset, 1);
+  const targetCatMonthStr = `${targetCatDate.getFullYear()}-${pad(targetCatDate.getMonth() + 1)}`;
+  const catMonthName = targetCatDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  const catMonthLabel = catMonthOffset === 0
+    ? `This Month (${catMonthName})`
+    : catMonthOffset === -1
+    ? `Last Month (${catMonthName})`
+    : catMonthName;
+
+  const breakdownExpenses = nonRentExpenses.filter(e => e.date && e.date.startsWith(targetCatMonthStr));
+  const breakdownTotal = breakdownExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+
+  // Category Breakdown Math
   const categoryTotals = {};
-  currentMonthExpenses.forEach(e => {
+  breakdownExpenses.forEach(e => {
     categoryTotals[e.category] = (categoryTotals[e.category] || 0) + e.amount;
   });
 
@@ -203,7 +217,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
     .map(([cat, amt], idx) => ({
       name: cat,
       amount: amt,
-      pct: Math.round((amt / (monthTotal || 1)) * 100),
+      pct: breakdownTotal > 0 ? Math.round((amt / breakdownTotal) * 100) : 0,
       color: CHART_COLORS[idx % CHART_COLORS.length]
     }));
 
@@ -551,10 +565,53 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Category Breakdown Donut */}
             <div className="app-card">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-6 flex items-center gap-2">
-                <PieChart className="w-4 h-4 text-emerald-500" />
-                <span>CATEGORY BREAKDOWN</span>
-              </h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <PieChart className="w-4 h-4 text-emerald-500" />
+                  <span>CATEGORY BREAKDOWN</span>
+                </h3>
+                <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-200">
+                  {settings.currency}{breakdownTotal.toLocaleString()}
+                </span>
+              </div>
+
+              {/* Category Month Navigation Switcher */}
+              <div className="flex items-center justify-between mb-4 bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setHoveredCategory(null);
+                    setCatMonthOffset((prev) => prev - 1);
+                  }}
+                  className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700/60 cursor-pointer"
+                  title="Previous month"
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                  {catMonthLabel}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (catMonthOffset < 0) {
+                      setHoveredCategory(null);
+                      setCatMonthOffset((prev) => Math.min(0, prev + 1));
+                    }
+                  }}
+                  disabled={catMonthOffset >= 0}
+                  className={`p-1 transition rounded-lg ${
+                    catMonthOffset >= 0
+                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                      : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60 cursor-pointer'
+                  }`}
+                  title={catMonthOffset >= 0 ? 'Current month' : 'Next month'}
+                  aria-label="Next month"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
 
               <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
                 <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
@@ -584,7 +641,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                           TOTAL SPENT
                         </span>
                         <span className="text-lg font-extrabold text-slate-800 dark:text-white leading-tight">
-                          {settings.currency}{monthTotal.toLocaleString()}
+                          {settings.currency}{breakdownTotal.toLocaleString()}
                         </span>
                         <span className="text-[10px] font-medium text-slate-400 mt-0.5">
                           {categoryBreakdown.length} {categoryBreakdown.length === 1 ? 'Category' : 'Categories'}
@@ -595,39 +652,46 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                 </div>
 
                 <div className="space-y-2 flex-1 min-w-[180px] max-w-[260px]">
-                  {categoryBreakdown.map(c => {
-                    const isHovered = hoveredCategory && hoveredCategory.name === c.name;
-                    return (
-                      <div
-                        key={c.name}
-                        onMouseEnter={() => setHoveredCategory(c)}
-                        onMouseLeave={() => setHoveredCategory(null)}
-                        className={`flex items-center justify-between text-xs p-1.5 rounded-xl transition-all cursor-pointer ${
-                          isHovered
-                            ? 'bg-slate-100 dark:bg-slate-800 scale-[1.02] shadow-sm'
-                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0 pr-2">
-                          <div
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
-                            style={{ backgroundColor: c.color }}
-                          ></div>
-                          <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
-                            {c.name}
-                          </span>
+                  {categoryBreakdown.length === 0 ? (
+                    <div className="text-center py-6 px-4 text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+                      <p className="font-semibold text-slate-500 dark:text-slate-400">No expenses this month</p>
+                      <p className="text-[11px] mt-1 text-slate-400">Click &larr; to view previous months.</p>
+                    </div>
+                  ) : (
+                    categoryBreakdown.map(c => {
+                      const isHovered = hoveredCategory && hoveredCategory.name === c.name;
+                      return (
+                        <div
+                          key={c.name}
+                          onMouseEnter={() => setHoveredCategory(c)}
+                          onMouseLeave={() => setHoveredCategory(null)}
+                          className={`flex items-center justify-between text-xs p-1.5 rounded-xl transition-all cursor-pointer ${
+                            isHovered
+                              ? 'bg-slate-100 dark:bg-slate-800 scale-[1.02] shadow-sm'
+                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            <div
+                              className="w-2.5 h-2.5 rounded-full shrink-0"
+                              style={{ backgroundColor: c.color }}
+                            ></div>
+                            <span className="font-semibold text-slate-700 dark:text-slate-300 truncate">
+                              {c.name}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-1.5 shrink-0 text-right">
+                            <span className="font-extrabold text-slate-800 dark:text-white">
+                              {settings.currency}{c.amount.toLocaleString()}
+                            </span>
+                            <span className="text-[10px] font-bold text-slate-400">
+                              ({c.pct}%)
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0 text-right">
-                          <span className="font-extrabold text-slate-800 dark:text-white">
-                            {settings.currency}{c.amount.toLocaleString()}
-                          </span>
-                          <span className="text-[10px] font-bold text-slate-400">
-                            ({c.pct}%)
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
+                      );
+                    })
+                  )}
                 </div>
               </div>
             </div>

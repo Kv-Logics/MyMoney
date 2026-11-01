@@ -799,9 +799,8 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
 
     # 12. list_daily_profits
     if name == "list_daily_profits":
-        now = datetime.utcnow()
-        start_date = args.get("start_date") or datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
-        end_date = args.get("end_date") or now.strftime("%Y-%m-%d")
+        start_date = args.get("start_date")
+        end_date = args.get("end_date")
         records = profit_service.list_profits(
             user_id=user_id,
             start_date=start_date,
@@ -811,9 +810,8 @@ def execute_mcp_tool(name: str, args: dict, user: dict) -> Any:
 
     # 13. get_profit_summary
     if name == "get_profit_summary":
-        now = datetime.utcnow()
-        start_date = args.get("start_date") or datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
-        end_date = args.get("end_date") or now.strftime("%Y-%m-%d")
+        start_date = args.get("start_date")
+        end_date = args.get("end_date")
         return profit_service.get_summary(
             user_id=user_id,
             start_date=start_date,

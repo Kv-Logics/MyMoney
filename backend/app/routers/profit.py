@@ -10,14 +10,20 @@ router = APIRouter(prefix="/api/profit", tags=["Daily Profit Tracker"])
 def list_daily_profits(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    month: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
     user_id = current_user["id"]
-    now = datetime.utcnow()
-    if not start_date:
-        start_date = datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
-    if not end_date:
-        end_date = now.strftime("%Y-%m-%d")
+    if month:
+        try:
+            parts = month.split("-")
+            y, m = int(parts[0]), int(parts[1])
+            import calendar
+            last_day = calendar.monthrange(y, m)[1]
+            start_date = f"{y:04d}-{m:02d}-01"
+            end_date = f"{y:04d}-{m:02d}-{last_day:02d}"
+        except Exception:
+            pass
 
     records = profit_service.list_profits(user_id=user_id, start_date=start_date, end_date=end_date)
     return {"records": records, "count": len(records), "start_date": start_date, "end_date": end_date}
@@ -26,14 +32,20 @@ def list_daily_profits(
 def get_profit_summary(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
+    month: Optional[str] = None,
     current_user: dict = Depends(get_current_user)
 ):
     user_id = current_user["id"]
-    now = datetime.utcnow()
-    if not start_date:
-        start_date = datetime(now.year, now.month, 1).strftime("%Y-%m-%d")
-    if not end_date:
-        end_date = now.strftime("%Y-%m-%d")
+    if month:
+        try:
+            parts = month.split("-")
+            y, m = int(parts[0]), int(parts[1])
+            import calendar
+            last_day = calendar.monthrange(y, m)[1]
+            start_date = f"{y:04d}-{m:02d}-01"
+            end_date = f"{y:04d}-{m:02d}-{last_day:02d}"
+        except Exception:
+            pass
 
     return profit_service.get_summary(user_id=user_id, start_date=start_date, end_date=end_date)
 
