@@ -33,8 +33,8 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
   const [selectedCat, setSelectedCat] = useState('');
   const [selectedPay, setSelectedPay] = useState('');
   const [sortBy, setSortBy] = useState('latest');
-  const [startDate, setStartDate] = useState('2026-10-01');
-  const [endDate, setEndDate] = useState('2026-10-31');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [minAmount, setMinAmount] = useState('');
   const [maxAmount, setMaxAmount] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
@@ -161,6 +161,37 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
 
   const totalFilteredSum = filteredExpenses.reduce((sum, e) => sum + (e.amount || 0), 0);
 
+  const handleExportCsv = () => {
+    if (!filteredExpenses || filteredExpenses.length === 0) {
+      alert('No expenses found matching the current filters to export.');
+      return;
+    }
+
+    const headers = ['Date', 'Time', 'Title', 'Category', 'Payment Method', 'Amount', 'Location', 'Notes/Description'];
+    const rows = filteredExpenses.map(e => [
+      `"${(e.date || '').replace(/"/g, '""')}"`,
+      `"${(e.time || '').replace(/"/g, '""')}"`,
+      `"${(e.title || '').replace(/"/g, '""')}"`,
+      `"${(e.category || '').replace(/"/g, '""')}"`,
+      `"${(e.payment_method || 'Cash').replace(/"/g, '""')}"`,
+      Number(e.amount || 0).toFixed(2),
+      `"${(e.location || '').replace(/"/g, '""')}"`,
+      `"${(e.description || e.notes || '').replace(/"/g, '""')}"`
+    ]);
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    const today = new Date().toISOString().split('T')[0];
+    link.href = url;
+    link.setAttribute('download', `mymoney_expenses_${today}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
       {/* Search & Filters Collapsible Panel */}
@@ -280,8 +311,14 @@ export default function Expenses({ onOpenExpenseModal, isModalOpen, setIsModalOp
             <span>TOTAL: ₹{totalFilteredSum.toLocaleString()}</span>
           </div>
 
-          <button className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-600 dark:text-slate-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition">
-            <Download className="w-3.5 h-3.5" /> CSV Export
+          <button 
+            type="button"
+            onClick={handleExportCsv}
+            className="px-3 py-1.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl flex items-center gap-1.5 transition cursor-pointer active:scale-95 shadow-sm"
+            title="Download filtered expenses as CSV"
+          >
+            <Download className="w-3.5 h-3.5" />
+            <span>CSV Export</span>
           </button>
         </div>
 
