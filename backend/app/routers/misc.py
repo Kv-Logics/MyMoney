@@ -118,7 +118,15 @@ def get_report(
     
     total_expense = sum(e["amount"] for e in expenses)
     count = len(expenses)
-    avg_expense = total_expense / count if count > 0 else 0.0
+    avg_per_txn = round(total_expense / count, 2) if count > 0 else 0.0
+
+    try:
+        d1 = datetime.strptime(start_date, "%Y-%m-%d").date()
+        d2 = datetime.strptime(end_date, "%Y-%m-%d").date()
+        diff_days = max(1, (d2 - d1).days + 1)
+    except Exception:
+        diff_days = 1
+    daily_avg = round(total_expense / diff_days, 2)
     
     cat_totals = {}
     for e in expenses:
@@ -131,8 +139,11 @@ def get_report(
     report_data = {
         "start_date": start_date,
         "end_date": end_date,
-        "total_expense": total_expense,
-        "average_expense": avg_expense,
+        "total_expense": round(total_expense, 2),
+        "average_expense": avg_per_txn,
+        "average_per_transaction": avg_per_txn,
+        "daily_average_expense": daily_avg,
+        "days_in_period": diff_days,
         "transaction_count": count,
         "highest_spending_category": highest_cat,
         "highest_spending_category_amount": cat_totals.get(highest_cat, 0.0),

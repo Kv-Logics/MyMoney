@@ -49,7 +49,8 @@ export default function ReportsPage() {
     const d1 = new Date(start);
     const d2 = new Date(end);
     const diffDays = Math.max(1, Math.round((d2 - d1) / (1000 * 60 * 60 * 24)) + 1);
-    const avg = count > 0 ? Math.round(total / diffDays) : 0;
+    const avgPerTxn = count > 0 ? Number((total / count).toFixed(2)) : 0;
+    const dailyAvg = Number((total / diffDays).toFixed(2));
 
     const catTotals = {};
     filtered.forEach(e => {
@@ -64,7 +65,10 @@ export default function ReportsPage() {
       start_date: start,
       end_date: end,
       total_expense: total,
-      average_expense: avg,
+      average_expense: avgPerTxn,
+      average_per_transaction: avgPerTxn,
+      daily_average_expense: dailyAvg,
+      days_in_period: diffDays,
       transaction_count: count,
       highest_spending_category: highestCat,
       highest_spending_category_amount: catTotals[highestCat] || 0,
@@ -119,7 +123,9 @@ export default function ReportsPage() {
 
   const reportExpenses = reportData?.expenses || [];
   const totalExpense = reportData?.total_expense ?? 0;
-  const avgExpense = reportData?.average_expense ?? 0;
+  const avgPerTxn = reportData?.average_per_transaction ?? reportData?.average_expense ?? 0;
+  const dailyAvg = reportData?.daily_average_expense ?? (totalExpense && reportData?.days_in_period ? Number((totalExpense / reportData.days_in_period).toFixed(2)) : 0);
+  const txnCount = reportData?.transaction_count ?? reportExpenses.length;
   const highestCat = reportData?.highest_spending_category || 'None';
   const highestAmount = reportData?.highest_spending_category_amount || 0;
   const lowestCat = reportData?.lowest_spending_category || 'None';
@@ -185,10 +191,13 @@ export default function ReportsPage() {
         </div>
 
         <div className="app-card">
-          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">DAILY AVERAGE EXPENSE</span>
+          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">AVERAGE TRANSACTION</span>
           <h4 className="text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
-            {settings.currency}{avgExpense.toLocaleString()}
+            {settings.currency}{Number(avgPerTxn).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
           </h4>
+          <span className="text-[10px] text-slate-400 font-medium block mt-1">
+            {dailyAvg > 0 ? `Daily avg: ${settings.currency}${Number(dailyAvg).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 2 })}/day` : `${txnCount} transactions`}
+          </span>
         </div>
 
         <div className="app-card">
