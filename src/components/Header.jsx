@@ -1,9 +1,9 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
-import { Sparkles, Moon, Sun, Bell, Bot, Plus, Menu } from 'lucide-react';
+import { Sparkles, Moon, Sun, Bell, Plus, Menu } from 'lucide-react';
 
 export default function Header({ onOpenExpenseModal, onOpenMcpGuide }) {
-  const { activeTab, setActiveTab, theme, toggleTheme, setIsVoiceModalOpen, setIsMobileMenuOpen } = useApp();
+  const { activeTab, setActiveTab, theme, toggleTheme, setIsMobileMenuOpen } = useApp();
 
   const titleMap = {
     dashboard: 'Dashboard',
@@ -59,17 +59,6 @@ export default function Header({ onOpenExpenseModal, onOpenMcpGuide }) {
           <Bell className="w-4 h-4" />
         </button>
 
-        {/* AI Mode Purple Button */}
-        <button
-          onClick={() => {
-            setActiveTab('ai-agent');
-            setIsVoiceModalOpen(true);
-          }}
-          className="px-3 md:px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-2 transition"
-        >
-          <Bot className="w-4 h-4" />
-          <span className="hidden md:inline">AI Mode</span>
-        </button>
 
         {/* Add Expense Green Button */}
         <button
