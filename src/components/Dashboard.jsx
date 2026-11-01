@@ -14,6 +14,7 @@ import {
   BarChart2,
   ChevronLeft,
   ChevronRight,
+  ArrowLeft,
   ArrowRight,
   Zap,
   PieChart,
@@ -45,6 +46,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
   const [dashboardView, setDashboardView] = useState('user'); // 'user' | 'admin'
   const [selectedDay, setSelectedDay] = useState(null);
   const [hoveredCategory, setHoveredCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [catMonthOffset, setCatMonthOffset] = useState(0);
 
@@ -221,11 +223,20 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
       color: CHART_COLORS[idx % CHART_COLORS.length]
     }));
 
+  // Selected Category Drilldown Math
+  const selectedCategoryExpenses = selectedCategory
+    ? breakdownExpenses
+        .filter(e => e.category === selectedCategory.name)
+        .sort((a, b) => (b.date || '').localeCompare(a.date || ''))
+    : [];
+  const selectedCategoryMax = selectedCategoryExpenses.reduce((max, e) => Math.max(max, e.amount || 0), 0);
+
   let currentAngle = 0;
   const dynamicCircles = categoryBreakdown.map(c => {
     const dashLength = (c.pct / 100) * 251.2;
     const isHovered = hoveredCategory && hoveredCategory.name === c.name;
-    const isAnyHovered = hoveredCategory !== null;
+    const isSelected = selectedCategory && selectedCategory.name === c.name;
+    const isAnyActive = hoveredCategory !== null || selectedCategory !== null;
 
     const circle = (
       <circle
@@ -233,16 +244,17 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
         cx="50" cy="50" r="40"
         fill="transparent"
         stroke={c.color}
-        strokeWidth={isHovered ? "13" : "10"}
+        strokeWidth={isHovered || isSelected ? "13" : "10"}
         strokeDasharray={`${dashLength} 251.2`}
         strokeDashoffset="0"
         transform={`rotate(${currentAngle} 50 50)`}
         onMouseEnter={() => setHoveredCategory(c)}
         onMouseLeave={() => setHoveredCategory(null)}
+        onClick={() => setSelectedCategory(selectedCategory?.name === c.name ? null : c)}
         className={`transition-all duration-300 ease-out cursor-pointer ${
-          isHovered
+          isHovered || isSelected
             ? 'opacity-100 drop-shadow-md'
-            : isAnyHovered
+            : isAnyActive
             ? 'opacity-40 hover:opacity-100'
             : 'opacity-100 hover:opacity-90'
         }`}
@@ -581,6 +593,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                   type="button"
                   onClick={() => {
                     setHoveredCategory(null);
+                    setSelectedCategory(null);
                     setCatMonthOffset((prev) => prev - 1);
                   }}
                   className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700/60 cursor-pointer"
@@ -597,6 +610,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                   onClick={() => {
                     if (catMonthOffset < 0) {
                       setHoveredCategory(null);
+                      setSelectedCategory(null);
                       setCatMonthOffset((prev) => Math.min(0, prev + 1));
                     }
                   }}
@@ -620,19 +634,19 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     {dynamicCircles}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2 transition-all duration-300">
-                    {hoveredCategory ? (
+                    {hoveredCategory || selectedCategory ? (
                       <>
                         <span
                           className="text-[10px] uppercase font-extrabold tracking-wider block transition-colors duration-200 truncate max-w-[100px]"
-                          style={{ color: hoveredCategory.color }}
+                          style={{ color: (hoveredCategory || selectedCategory).color }}
                         >
-                          {hoveredCategory.name}
+                          {(hoveredCategory || selectedCategory).name}
                         </span>
                         <span className="text-lg font-black text-slate-800 dark:text-white leading-tight">
-                          {settings.currency}{hoveredCategory.amount.toLocaleString()}
+                          {settings.currency}{(hoveredCategory || selectedCategory).amount.toLocaleString()}
                         </span>
                         <span className="text-[10px] font-bold text-slate-400 mt-0.5">
-                          {hoveredCategory.pct}% of total
+                          {(hoveredCategory || selectedCategory).pct}% of total
                         </span>
                       </>
                     ) : (
@@ -660,13 +674,17 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                   ) : (
                     categoryBreakdown.map(c => {
                       const isHovered = hoveredCategory && hoveredCategory.name === c.name;
+                      const isSelected = selectedCategory && selectedCategory.name === c.name;
                       return (
                         <div
                           key={c.name}
                           onMouseEnter={() => setHoveredCategory(c)}
                           onMouseLeave={() => setHoveredCategory(null)}
+                          onClick={() => setSelectedCategory(selectedCategory?.name === c.name ? null : c)}
                           className={`flex items-center justify-between text-xs p-1.5 rounded-xl transition-all cursor-pointer ${
-                            isHovered
+                            isSelected
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 ring-2 ring-emerald-500 scale-[1.02] shadow-sm'
+                              : isHovered
                               ? 'bg-slate-100 dark:bg-slate-800 scale-[1.02] shadow-sm'
                               : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
                           }`}
@@ -696,120 +714,248 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
               </div>
             </div>
 
-            {/* Daily Spending Trend Bar Chart */}
-            <div className="app-card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-emerald-500" />
-                  <span>DAILY SPENDING TREND</span>
-                </h3>
-                <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-200">
-                  ₹{weekTotal.toLocaleString()}
-                </span>
-              </div>
+            {/* Daily Spending Trend Bar Chart OR Selected Category Drilldown */}
+            {!selectedCategory ? (
+              <div className="app-card">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    <TrendingUp className="w-4 h-4 text-emerald-500" />
+                    <span>DAILY SPENDING TREND</span>
+                  </h3>
+                  <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-200">
+                    ₹{weekTotal.toLocaleString()}
+                  </span>
+                </div>
 
-              <div className="flex items-center justify-between mb-4 bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectedDay(null);
-                    setWeekOffset((prev) => prev - 1);
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700/60"
-                  title="Previous week"
-                  aria-label="Previous week"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  {weekLabel}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (weekOffset < 0) {
+                <div className="flex items-center justify-between mb-4 bg-slate-100 dark:bg-slate-800/60 px-3 py-1.5 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
                       setSelectedDay(null);
-                      setWeekOffset((prev) => Math.min(0, prev + 1));
-                    }
-                  }}
-                  disabled={weekOffset >= 0}
-                  className={`p-1 transition rounded-lg ${
-                    weekOffset >= 0
-                      ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
-                      : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60'
-                  }`}
-                  title={weekOffset >= 0 ? 'Current week' : 'Next week'}
-                  aria-label="Next week"
+                      setWeekOffset((prev) => prev - 1);
+                    }}
+                    className="p-1 text-slate-400 hover:text-slate-800 dark:hover:text-white transition rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700/60 cursor-pointer"
+                    title="Previous week"
+                    aria-label="Previous week"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    {weekLabel}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (weekOffset < 0) {
+                        setSelectedDay(null);
+                        setWeekOffset((prev) => Math.min(0, prev + 1));
+                      }
+                    }}
+                    disabled={weekOffset >= 0}
+                    className={`p-1 transition rounded-lg ${
+                      weekOffset >= 0
+                        ? 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                        : 'text-slate-400 hover:text-slate-800 dark:hover:text-white hover:bg-slate-200/60 dark:hover:bg-slate-700/60 cursor-pointer'
+                    }`}
+                    title={weekOffset >= 0 ? 'Current week' : 'Next week'}
+                    aria-label="Next week"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+                {/* Bar graph */}
+                <div className="h-44 flex items-end justify-between px-2 gap-3 pt-4">
+                  {chartData.map((item) => {
+                    const heightPct = maxDailyAmount === 0 ? 5 : Math.max(5, (item.sum / maxDailyAmount) * 100);
+                    const isSelected = selectedDay === item.dateStr;
+                    return (
+                      <div key={item.dateStr} className="flex-1 h-full flex flex-col items-center justify-end gap-2 group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : item.dateStr)}>
+                        <div 
+                          className={`relative w-full rounded-lg transition-all flex items-end justify-center ${isSelected ? 'bg-emerald-500' : 'bg-indigo-100 dark:bg-indigo-950/60 group-hover:bg-emerald-400'}`}
+                          style={{ height: `${heightPct}%` }}
+                        >
+                          <div className="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-lg">
+                            ₹{item.sum.toLocaleString()}
+                          </div>
+                        </div>
+                        <span className={`text-[10px] font-medium ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{item.dayName}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {selectedDay && (
+                  <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                    <h4 className="text-xs font-bold text-slate-800 dark:text-white mb-3">
+                      Expenses for {chartData.find(d => d.dateStr === selectedDay)?.dateStr}
+                    </h4>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
+                      {chartData.find(d => d.dateStr === selectedDay)?.expenses.length > 0 ? (
+                        chartData.find(d => d.dateStr === selectedDay).expenses.map(e => (
+                          <div key={e.id || e._id} className="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
+                            <div className="flex flex-col">
+                              <span className="font-semibold text-slate-700 dark:text-slate-300">{e.title}</span>
+                              <span className="text-[9px] text-slate-400">{e.category}</span>
+                            </div>
+                            <span className="font-bold text-slate-800 dark:text-white">₹{e.amount.toLocaleString()}</span>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-[10px] text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800/40 rounded-lg">No expenses recorded for this day.</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Comparison Badges */}
+                <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">MONTH AVG / DAY</span>
+                      <span className="font-extrabold text-slate-800 dark:text-white">
+                        ₹{Math.round(monthTotal / (new Date().getDate() || 1)).toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block">HIGHEST DAY</span>
+                      <span className="font-extrabold text-slate-800 dark:text-white">
+                        ₹{maxDailyAmount.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              /* Selected Category Drilldown Card */
+              <div className="app-card flex flex-col justify-between">
+                <div>
+                  {/* Category Header */}
+                  <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className="w-3.5 h-3.5 rounded-full shrink-0 shadow-sm"
+                        style={{ backgroundColor: selectedCategory.color }}
+                      ></div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-wider truncate">
+                          {selectedCategory.name}
+                        </h3>
+                        <span className="text-[10px] text-slate-400 font-semibold block">
+                          {catMonthLabel} &bull; {selectedCategory.pct}% of monthly spend
+                        </span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200 shrink-0">
+                        {settings.currency}{selectedCategory.amount.toLocaleString()}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setSelectedCategory(null)}
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                        title="Close and return to Daily Spending Trend"
+                        aria-label="Close"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Summary Metric Pills */}
+                  <div className="grid grid-cols-3 gap-2 mb-4">
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl text-center">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">Entries</span>
+                      <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                        {selectedCategoryExpenses.length}
+                      </span>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl text-center">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">Avg / Txn</span>
+                      <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                        {settings.currency}{Math.round(selectedCategory.amount / (selectedCategoryExpenses.length || 1)).toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-800/50 p-2.5 rounded-xl text-center">
+                      <span className="text-[9px] uppercase font-bold text-slate-400 block tracking-wider">Highest</span>
+                      <span className="text-sm font-extrabold text-slate-800 dark:text-white mt-0.5 block">
+                        {settings.currency}{selectedCategoryMax.toLocaleString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Expenses List for this category */}
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                        Expenses Log
+                      </h4>
+                      <span className="text-[10px] text-slate-400 font-medium">
+                        {selectedCategoryExpenses.length} {selectedCategoryExpenses.length === 1 ? 'item' : 'items'}
+                      </span>
+                    </div>
+                    <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+                      {selectedCategoryExpenses.length > 0 ? (
+                        selectedCategoryExpenses.map((e) => {
+                          const expDate = e.date ? new Date(e.date + 'T00:00:00') : null;
+                          const formattedDate = expDate
+                            ? expDate.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', weekday: 'short' })
+                            : e.date;
+                          return (
+                            <div
+                              key={e.id || e._id}
+                              className="flex items-center justify-between text-xs bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80 hover:bg-slate-100/70 dark:hover:bg-slate-800 transition"
+                            >
+                              <div className="min-w-0 pr-3">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-bold text-slate-800 dark:text-white truncate">
+                                    {e.title || 'Untitled Expense'}
+                                  </span>
+                                  {e.payment_method && (
+                                    <span className="text-[9px] px-1.5 py-0.5 bg-slate-200/70 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-semibold rounded shrink-0">
+                                      {e.payment_method}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                                  <span className="font-medium text-slate-500 dark:text-slate-400">{formattedDate}</span>
+                                  {e.description && (
+                                    <>
+                                      <span>&bull;</span>
+                                      <span className="truncate max-w-[150px] italic">{e.description}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="font-extrabold text-slate-800 dark:text-white shrink-0 text-sm">
+                                {settings.currency}{Number(e.amount || 0).toLocaleString()}
+                              </span>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <p className="text-xs text-slate-400 text-center py-6 bg-slate-50 dark:bg-slate-800/40 rounded-xl">
+                          No transactions found for this category in this month.
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Back button */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory(null)}
+                  className="w-full mt-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-white bg-slate-100 dark:bg-slate-800 hover:bg-slate-200/70 dark:hover:bg-slate-700/70 rounded-xl transition flex items-center justify-center gap-1.5 cursor-pointer shadow-sm"
                 >
-                  <ChevronRight className="w-4 h-4" />
+                  <ArrowLeft className="w-3.5 h-3.5" />
+                  <span>Back to Daily Spending Trend</span>
                 </button>
               </div>
-
-              {/* Bar graph */}
-              <div className="h-44 flex items-end justify-between px-2 gap-3 pt-4">
-                {chartData.map((item) => {
-                  const heightPct = maxDailyAmount === 0 ? 5 : Math.max(5, (item.sum / maxDailyAmount) * 100);
-                  const isSelected = selectedDay === item.dateStr;
-                  return (
-                    <div key={item.dateStr} className="flex-1 h-full flex flex-col items-center justify-end gap-2 group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : item.dateStr)}>
-                      <div 
-                        className={`relative w-full rounded-lg transition-all flex items-end justify-center ${isSelected ? 'bg-emerald-500' : 'bg-indigo-100 dark:bg-indigo-950/60 group-hover:bg-emerald-400'}`}
-                        style={{ height: `${heightPct}%` }}
-                      >
-                        <div className="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-lg">
-                          ₹{item.sum.toLocaleString()}
-                        </div>
-                      </div>
-                      <span className={`text-[10px] font-medium ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{item.dayName}</span>
-                    </div>
-                  );
-                })}
-              </div>
-
-              {selectedDay && (
-                <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <h4 className="text-xs font-bold text-slate-800 dark:text-white mb-3">
-                    Expenses for {chartData.find(d => d.dateStr === selectedDay)?.dateStr}
-                  </h4>
-                  <div className="space-y-2 max-h-40 overflow-y-auto pr-1">
-                    {chartData.find(d => d.dateStr === selectedDay)?.expenses.length > 0 ? (
-                      chartData.find(d => d.dateStr === selectedDay).expenses.map(e => (
-                        <div key={e.id || e._id} className="flex justify-between items-center text-xs bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-lg border border-slate-100 dark:border-slate-700">
-                          <div className="flex flex-col">
-                            <span className="font-semibold text-slate-700 dark:text-slate-300">{e.title}</span>
-                            <span className="text-[9px] text-slate-400">{e.category}</span>
-                          </div>
-                          <span className="font-bold text-slate-800 dark:text-white">₹{e.amount.toLocaleString()}</span>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-[10px] text-slate-400 text-center py-4 bg-slate-50 dark:bg-slate-800/40 rounded-lg">No expenses recorded for this day.</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Comparison Badges (Placeholder math for now) */}
-              <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">MONTH AVG / DAY</span>
-                    <span className="font-extrabold text-slate-800 dark:text-white">
-                      ₹{Math.round(monthTotal / (new Date().getDate() || 1)).toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="bg-slate-50 dark:bg-slate-800/40 p-2.5 rounded-xl flex items-center justify-between">
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">HIGHEST DAY</span>
-                    <span className="font-extrabold text-slate-800 dark:text-white">
-                      ₹{maxDailyAmount.toLocaleString()}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Bottom Row: Recent Transactions & Quick Actions */}
