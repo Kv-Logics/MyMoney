@@ -1,3 +1,4 @@
+import re
 import json
 import hashlib
 import secrets
@@ -91,7 +92,8 @@ def authenticate_mcp_request(request: Request) -> tuple[Optional[dict], Optional
         if sub:
             user = users_col.find_one({"_id": ObjectId(sub)})
         elif email:
-            user = users_col.find_one({"email": email})
+            clean_email = email.strip().lower()
+            user = users_col.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
         else:
             user = None
 

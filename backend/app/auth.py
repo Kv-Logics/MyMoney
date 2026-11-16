@@ -1,4 +1,5 @@
 import os
+import re
 import secrets
 import hashlib
 from datetime import datetime, timedelta
@@ -96,7 +97,8 @@ def get_current_user(token: str = Depends(oauth2_scheme)):
             email: str = payload.get("email")
             if email is None:
                 raise credentials_exception
-            user = users_collection.find_one({"email": email})
+            clean_email = email.strip().lower()
+            user = users_collection.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
         except jwt.PyJWTError:
             # Fallback: check if token matches an API key hash directly
             key_hash = hash_api_key(token)

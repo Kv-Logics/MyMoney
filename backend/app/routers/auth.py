@@ -101,7 +101,8 @@ def refresh(payload: RefreshTokenRequest):
         raise credentials_exception
         
     users_col = get_collection("users")
-    user = users_col.find_one({"email": email})
+    clean_email = email.strip().lower()
+    user = users_col.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
     if not user:
         raise credentials_exception
         
