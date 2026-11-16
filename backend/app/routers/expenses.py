@@ -122,11 +122,9 @@ async def voice_agent_narration(
     parses items, maps categories/methods, and returns structured drafts & AI reply.
     """
     from app.services.ai_access import check_can_use_ai, record_ai_usage
-    if not check_can_use_ai(current_user["id"], current_user["email"]):
-        raise HTTPException(
-            status_code=403,
-            detail="AI Voice Agent access requires approval from admin (keerthivasan.220722@gmail.com). Please request access from the Voice Agent screen."
-        )
+    custom_key = req.gemini_api_key.strip() if req.gemini_api_key and req.gemini_api_key.strip() else None
+    can_use_server = check_can_use_ai(current_user["id"], current_user["email"])
+    key_to_use = custom_key or (os.environ.get("GEMINI_API_KEY") if can_use_server else None)
 
     try:
         drafts_dict = [d.model_dump() if hasattr(d, "model_dump") else d for d in req.existing_drafts] if req.existing_drafts else []
@@ -137,16 +135,17 @@ async def voice_agent_narration(
             categories=req.categories,
             payment_methods=req.payment_methods,
             currency=req.currency,
-            custom_gemini_key=req.gemini_api_key
+            custom_gemini_key=key_to_use
         )
-        # Asynchronously log AI token usage without blocking the HTTP response
-        background_tasks.add_task(
-            record_ai_usage,
-            current_user["id"],
-            current_user["email"],
-            action="voice_narration",
-            estimated_tokens=350
-        )
+        if can_use_server and not custom_key:
+            # Asynchronously log AI token usage without blocking the HTTP response
+            background_tasks.add_task(
+                record_ai_usage,
+                current_user["id"],
+                current_user["email"],
+                action="voice_narration",
+                estimated_tokens=350
+            )
         return VoiceAgentResponse(**result)
     except HTTPException:
         raise

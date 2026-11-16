@@ -1,19 +1,106 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+import os
+from fastapi import APIRouter, Depends, HTTPException, status, BackgroundTasks
 from pydantic import BaseModel
-from typing import Optional, Literal
+from typing import Optional, Literal, List, Any
 from app.auth import get_current_user
 from app.services.ai_access import (
     get_user_ai_status,
     request_ai_access,
     set_user_ai_status,
     get_admin_ai_dashboard,
-    is_admin_user
+    is_admin_user,
+    check_can_use_ai,
+    record_ai_usage
 )
+from app.services.llm_extractor import process_voice_narration
 
 router = APIRouter(prefix="/api/ai", tags=["AI Access & Tokens"])
 
 class SetStatusRequest(BaseModel):
     status: Literal["approved", "revoked", "pending"]
+
+class ParseVoiceChatRequest(BaseModel):
+    narration: str
+    conversation_history: Optional[List[Any]] = []
+    gemini_api_key: Optional[str] = None
+    existing_drafts: Optional[List[Any]] = []
+    categories: Optional[List[Any]] = None
+    payment_methods: Optional[List[Any]] = None
+    currency: Optional[str] = "₹"
+
+@router.post("/parse-voice-chat")
+@router.post("/parse-voice")
+async def parse_voice_chat(
+    req: ParseVoiceChatRequest,
+    background_tasks: BackgroundTasks,
+    current_user: dict = Depends(get_current_user)
+):
+    """
+    Parses natural spoken voice narration or text chat messages from user.
+    Uses custom Gemini API Key if provided, or Gemini 2.0 Flash if approved,
+    or smart NLP rule-based extraction fallback so requests never fail.
+    """
+    custom_key = req.gemini_api_key.strip() if req.gemini_api_key and req.gemini_api_key.strip() else None
+    can_use_server_gemini = check_can_use_ai(current_user["id"], current_user.get("email", ""))
+    
+    key_to_use = custom_key if custom_key else (os.environ.get("GEMINI_API_KEY") if can_use_server_gemini else None)
+    
+    try:
+        drafts_dict = [d.model_dump() if hasattr(d, "model_dump") else d for d in (req.existing_drafts or [])]
+        result = await process_voice_narration(
+            narration=req.narration,
+            conversation_history=req.conversation_history or [],
+            existing_drafts=drafts_dict,
+            categories=req.categories,
+            payment_methods=req.payment_methods,
+            currency=req.currency or "₹",
+            custom_gemini_key=key_to_use
+        )
+        
+        if can_use_server_gemini and not custom_key:
+            background_tasks.add_task(
+                record_ai_usage,
+                current_user["id"],
+                current_user.get("email", ""),
+                action="voice_chat",
+                estimated_tokens=350
+            )
+
+        reply = result.get("reply_message", "Extracted expenses successfully.")
+        extracted = result.get("extracted_expenses", [])
+
+        return {
+            "message": reply,
+            "reply_message": reply,
+            "parsed": extracted,
+            "extracted_expenses": extracted,
+            "confidence": result.get("confidence", 0.95),
+            "requires_clarification": result.get("requires_clarification", False)
+        }
+    except Exception as e:
+        # Fallback to local rule-based parsing so user prompt never hard-fails
+        try:
+            result = await process_voice_narration(
+                narration=req.narration,
+                conversation_history=req.conversation_history or [],
+                existing_drafts=[],
+                categories=req.categories,
+                payment_methods=req.payment_methods,
+                currency=req.currency or "₹",
+                custom_gemini_key=None
+            )
+            reply = result.get("reply_message", "Extracted expenses successfully.")
+            extracted = result.get("extracted_expenses", [])
+            return {
+                "message": reply,
+                "reply_message": reply,
+                "parsed": extracted,
+                "extracted_expenses": extracted,
+                "confidence": 0.85,
+                "requires_clarification": len(extracted) == 0
+            }
+        except Exception as inner_err:
+            raise HTTPException(status_code=500, detail=f"Failed to parse narration: {str(inner_err)}")
 
 @router.get("/access/status")
 def check_status(current_user: dict = Depends(get_current_user)):

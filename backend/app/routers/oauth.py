@@ -21,6 +21,14 @@ router = APIRouter(tags=["OAuth 2.1 & Discovery"])
 
 ISSUER = "https://mymoney-jd0n.onrender.com"
 RESOURCE_URI = "https://mymoney-jd0n.onrender.com"
+ALLOWED_RESOURCES = [
+    RESOURCE_URI.rstrip("/"),
+    f"{RESOURCE_URI.rstrip('/')}/mcp",
+    "http://localhost:8000",
+    "http://localhost:8000/mcp",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8000/mcp"
+]
 ALLOWED_CLIENT_IDS = [
     "https://chatgpt.com/oauth/client.json",
     "chatgpt-client"
@@ -29,6 +37,11 @@ ALLOWED_REDIRECT_URIS = [
     "https://chatgpt.com/connector_platform_oauth_redirect",
     "https://oauth.pstmn.io/v1/callback"
 ]
+
+def is_valid_resource(res: Optional[str]) -> bool:
+    if not res:
+        return True
+    return res.rstrip("/") in ALLOWED_RESOURCES
 
 def verify_pkce(code_verifier: str, code_challenge: str, code_challenge_method: str = "S256") -> bool:
     if not code_challenge:
@@ -78,7 +91,7 @@ def get_oauth_authorization_server():
         "token_endpoint_auth_methods_supported": ["none"],
         "code_challenge_methods_supported": ["S256"],
         "response_types_supported": ["code"],
-        "grant_types_supported": ["authorization_code"],
+        "grant_types_supported": ["authorization_code", "refresh_token"],
         "scopes_supported": [
             "profile:read",
             "expenses:read",
@@ -91,6 +104,18 @@ def get_oauth_authorization_server():
         ],
         "resource_indicators_supported": True
     }
+
+# --- 2b. OpenID Connect Discovery Metadata ---
+@router.get("/.well-known/openid-configuration")
+def get_openid_configuration():
+    meta = get_oauth_authorization_server()
+    meta["userinfo_endpoint"] = f"{ISSUER}/api/auth/me"
+    meta["jwks_uri"] = f"{ISSUER}/.well-known/jwks.json"
+    return meta
+
+@router.get("/.well-known/jwks.json")
+def get_jwks():
+    return {"keys": []}
 
 DEFAULT_SCOPES = "profile:read expenses:read expenses:write budgets:read budgets:write savings:read profit:read profit:write"
 
@@ -107,7 +132,7 @@ def oauth_authorize_page(
     resource: Optional[str] = RESOURCE_URI
 ):
     # Validate resource if passed
-    if resource and resource.rstrip("/") != RESOURCE_URI.rstrip("/"):
+    if not is_valid_resource(resource):
         err_sep = "&" if "?" in redirect_uri else "?"
         error_url = f"{redirect_uri}{err_sep}error=invalid_target&error_description=Invalid+resource+indicator&iss={ISSUER}&state={state}"
         return RedirectResponse(url=error_url, status_code=302)
@@ -234,7 +259,7 @@ def handle_oauth_authorize(
     sep = "&" if "?" in redirect_uri else "?"
     
     # Validate resource
-    if resource and resource.rstrip("/") != RESOURCE_URI.rstrip("/"):
+    if not is_valid_resource(resource):
         error_url = f"{redirect_uri}{sep}error=invalid_target&error_description=Invalid+resource+indicator&iss={ISSUER}&state={state}"
         return RedirectResponse(url=error_url, status_code=302)
 
@@ -314,7 +339,7 @@ async def oauth_token_endpoint(request: Request):
             raise HTTPException(status_code=400, detail="Authorization code expired")
 
         # Validate resource indicator if present
-        if resource_req and resource_req.rstrip("/") != RESOURCE_URI.rstrip("/"):
+        if not is_valid_resource(resource_req):
             raise HTTPException(status_code=400, detail="Resource parameter mismatch")
 
         # Validate PKCE S256

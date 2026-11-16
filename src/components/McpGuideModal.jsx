@@ -28,7 +28,10 @@ export default function McpGuideModal({ isOpen, onClose }) {
     {
       mcpServers: {
         mymoney: {
-          url: "https://mymoney-jd0n.onrender.com/mcp"
+          url: "https://mymoney-jd0n.onrender.com/mcp",
+          headers: {
+            Authorization: "Bearer mm_live_YOUR_API_KEY"
+          }
         }
       }
     },
@@ -211,6 +214,9 @@ export default function McpGuideModal({ isOpen, onClose }) {
                 <span>{copiedJson ? 'Copied' : 'Copy JSON'}</span>
               </button>
             </div>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/40">
+              💡 Replace <code className="font-mono font-bold">mm_live_YOUR_API_KEY</code> with your personal API Key generated in Settings &gt; Developer API Keys.
+            </p>
           </div>
         )}
 
@@ -232,6 +238,9 @@ export default function McpGuideModal({ isOpen, onClose }) {
                 <span>{copiedJson ? 'Copied' : 'Copy JSON'}</span>
               </button>
             </div>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30 p-2.5 rounded-lg border border-amber-200 dark:border-amber-900/40">
+              💡 Replace <code className="font-mono font-bold">mm_live_YOUR_API_KEY</code> with your personal API Key generated in Settings &gt; Developer API Keys.
+            </p>
           </div>
         )}
 

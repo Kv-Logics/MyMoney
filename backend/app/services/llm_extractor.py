@@ -89,8 +89,12 @@ async def process_voice_narration(
     if conversation_history:
         formatted_chat = "Previous Conversation History (maintain context and memory):\n"
         for msg in conversation_history[-6:]:  # Keep recent context
-            role = "User" if msg.get("role") == "user" else "Assistant"
-            formatted_chat += f"{role}: {msg.get('content', '')}\n"
+            if not isinstance(msg, dict):
+                continue
+            is_user = msg.get("role") == "user" or msg.get("sender") == "user"
+            role = "User" if is_user else "Assistant"
+            content = msg.get("content") or msg.get("text") or ""
+            formatted_chat += f"{role}: {content}\n"
 
     # Try Gemini API if key is available in env or passed explicitly
     api_key = custom_gemini_key or os.environ.get("GEMINI_API_KEY")

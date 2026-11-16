@@ -1,9 +1,11 @@
 import json
 import hashlib
+import secrets
+import asyncio
 from datetime import datetime, timedelta
 from typing import Optional, Dict, Any, List
 from fastapi import APIRouter, Request, Response, HTTPException, status
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, StreamingResponse
 from bson import ObjectId
 import jwt
 
@@ -17,6 +19,14 @@ router = APIRouter(tags=["MCP Server"])
 
 ISSUER = "https://mymoney-jd0n.onrender.com"
 RESOURCE_URI = "https://mymoney-jd0n.onrender.com"
+ALLOWED_RESOURCES = [
+    RESOURCE_URI.rstrip("/"),
+    f"{RESOURCE_URI.rstrip('/')}/mcp",
+    "http://localhost:8000",
+    "http://localhost:8000/mcp",
+    "http://127.0.0.1:8000",
+    "http://127.0.0.1:8000/mcp"
+]
 PROTECTED_RESOURCE_URL = f"{ISSUER}/.well-known/oauth-protected-resource"
 WWW_AUTH_HEADER = f'Bearer resource_metadata="{PROTECTED_RESOURCE_URL}"'
 
@@ -72,7 +82,7 @@ def authenticate_mcp_request(request: Request) -> tuple[Optional[dict], Optional
         aud = payload.get("aud")
         if iss and iss.rstrip("/") != ISSUER.rstrip("/"):
             return None, "Invalid token issuer"
-        if aud and aud.rstrip("/") != RESOURCE_URI.rstrip("/"):
+        if aud and aud.rstrip("/") not in ALLOWED_RESOURCES:
             return None, "Invalid token audience/resource"
 
         sub = payload.get("sub")
@@ -446,8 +456,33 @@ async def handle_mcp_post(request: Request):
         content={"jsonrpc": "2.0", "error": {"code": -32601, "message": f"Method '{method}' not found"}, "id": req_id}
     )
 
+@router.get("/sse")
 @router.get("/mcp")
-def handle_mcp_get():
+async def handle_mcp_get(request: Request):
+    accept = request.headers.get("accept", "")
+    if "text/event-stream" in accept or request.url.path.endswith("/sse"):
+        session_id = secrets.token_hex(16)
+        endpoint_uri = f"/mcp?sessionId={session_id}"
+        
+        async def event_generator():
+            yield f"event: endpoint\r\ndata: {endpoint_uri}\r\n\r\n"
+            try:
+                while True:
+                    await asyncio.sleep(25)
+                    yield ": keepalive\r\n\r\n"
+            except asyncio.CancelledError:
+                pass
+                
+        return StreamingResponse(
+            event_generator(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+
     return {
         "status": "ok",
         "server": "mymoney-mcp",

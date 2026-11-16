@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Key, Shield, Bell, Send } from 'lucide-react';
+import { Key, Shield, Bell, Send, Copy, Check, Trash2, Sparkles, Terminal } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, setUser, settings, setSettings } = useApp();
@@ -14,6 +14,61 @@ export default function SettingsPage() {
   const [adminStatus, setAdminStatus] = useState(null);
   const [testNotifStatus, setTestNotifStatus] = useState(null);
   const [isTestingNotif, setIsTestingNotif] = useState(false);
+
+  const [apiKeyInfo, setApiKeyInfo] = useState(null);
+  const [newGeneratedKey, setNewGeneratedKey] = useState('');
+  const [copiedKey, setCopiedKey] = useState(false);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+
+  useEffect(() => {
+    loadApiKeyInfo();
+  }, []);
+
+  const loadApiKeyInfo = async () => {
+    try {
+      const { API_BASE, fetchWithAuth } = await import('../api');
+      const res = await fetchWithAuth(`${API_BASE}/auth/api-key`);
+      if (res.ok) {
+        setApiKeyInfo(await res.json());
+      }
+    } catch (e) {
+      console.error('Failed to load API key info:', e);
+    }
+  };
+
+  const handleGenerateKey = async () => {
+    setApiKeyLoading(true);
+    try {
+      const { API_BASE, fetchWithAuth } = await import('../api');
+      const res = await fetchWithAuth(`${API_BASE}/auth/api-key/generate`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setNewGeneratedKey(data.api_key);
+        loadApiKeyInfo();
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
+
+  const handleRevokeKey = async () => {
+    if (!confirm('Are you sure you want to revoke this API key? Existing MCP connections using this key will immediately stop working.')) return;
+    setApiKeyLoading(true);
+    try {
+      const { API_BASE, fetchWithAuth } = await import('../api');
+      const res = await fetchWithAuth(`${API_BASE}/auth/api-key`, { method: 'DELETE' });
+      if (res.ok) {
+        setApiKeyInfo(null);
+        setNewGeneratedKey('');
+      }
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setApiKeyLoading(false);
+    }
+  };
 
   const isAdmin = ['keerthivasan.220722@gmail.com', 'a.keerthivasan7676@gmail.com'].includes(user?.email?.trim().toLowerCase());
 
@@ -47,6 +102,81 @@ export default function SettingsPage() {
               </select>
             </div>
           </div>
+        </div>
+
+        {/* Developer & MCP API Keys */}
+        <div className="app-card space-y-4 border border-indigo-100 dark:border-indigo-900/40">
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-xs font-bold text-slate-800 dark:text-white flex items-center gap-1.5">
+                <Terminal className="w-4 h-4 text-indigo-600 dark:text-indigo-400" /> DEVELOPER & MCP API KEYS
+              </h4>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                Authenticate Claude Desktop, Cursor, and custom scripts with your MCP key.
+              </p>
+            </div>
+            <span className="text-[9px] bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold px-2 py-0.5 rounded-full uppercase">
+              MCP Live
+            </span>
+          </div>
+
+          {newGeneratedKey && (
+            <div className="p-3 bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-xl space-y-1.5">
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                <Sparkles className="w-3.5 h-3.5" /> New Key Generated (Copy now, shown once)
+              </span>
+              <div className="flex items-center justify-between bg-slate-900 text-slate-100 p-2 rounded-lg font-mono text-[11px]">
+                <span className="truncate pr-2">{newGeneratedKey}</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    navigator.clipboard.writeText(newGeneratedKey);
+                    setCopiedKey(true);
+                    setTimeout(() => setCopiedKey(false), 2000);
+                  }}
+                  className="px-2 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-[10px] font-bold flex items-center gap-1 shrink-0"
+                >
+                  {copiedKey ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+                  <span>{copiedKey ? 'Copied' : 'Copy'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {apiKeyInfo?.is_active ? (
+            <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 text-xs space-y-2">
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="font-mono text-[11px] font-bold text-slate-800 dark:text-white">{apiKeyInfo.prefix}••••••••</span>
+                  <span className="ml-2 text-[10px] bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 px-1.5 py-0.5 rounded-full font-bold">ACTIVE</span>
+                </div>
+                <button
+                  type="button"
+                  disabled={apiKeyLoading}
+                  onClick={handleRevokeKey}
+                  className="text-rose-500 hover:text-rose-700 text-[11px] font-bold flex items-center gap-1"
+                >
+                  <Trash2 className="w-3.5 h-3.5" /> Revoke
+                </button>
+              </div>
+              <div className="text-[10px] text-slate-400 space-y-0.5">
+                <p>Created: {new Date(apiKeyInfo.created_at).toLocaleDateString()}</p>
+                <p>Expires: {new Date(apiKeyInfo.expires_at).toLocaleDateString()} (1 year)</p>
+                {apiKeyInfo.last_used && <p>Last Used: {new Date(apiKeyInfo.last_used).toLocaleString()}</p>}
+              </div>
+            </div>
+          ) : (
+            <p className="text-[11px] text-slate-400 italic">No active API key. Generate one to connect MCP clients.</p>
+          )}
+
+          <button
+            type="button"
+            disabled={apiKeyLoading}
+            onClick={handleGenerateKey}
+            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl shadow transition disabled:opacity-50 flex items-center justify-center gap-1.5"
+          >
+            <Key className="w-3.5 h-3.5" /> {apiKeyInfo?.is_active ? 'Rotate / Re-generate API Key' : 'Generate New MCP API Key'}
+          </button>
         </div>
 
         <div className="app-card space-y-4">
