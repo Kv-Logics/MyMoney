@@ -3,7 +3,7 @@ import { useApp } from '../context/AppContext';
 import { Key, Shield, Bell, Send, Copy, Check, Trash2, Sparkles, Terminal } from 'lucide-react';
 
 export default function SettingsPage() {
-  const { user, setUser, settings, setSettings } = useApp();
+  const { user, setUser, settings, setSettings, logout } = useApp();
   const [userEmail, setUserEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   
@@ -19,6 +19,13 @@ export default function SettingsPage() {
   const [newGeneratedKey, setNewGeneratedKey] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
+
+  // Delete Account State
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleteStatus, setDeleteStatus] = useState(null);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     loadApiKeyInfo();
@@ -70,10 +77,47 @@ export default function SettingsPage() {
     }
   };
 
+  const handleDeleteAccount = async (e) => {
+    e.preventDefault();
+    if (!deletePassword) return;
+    if (deleteConfirmText.trim().toUpperCase() !== 'DELETE') {
+      setDeleteStatus({ type: 'error', message: 'Please type DELETE to confirm account deletion.' });
+      return;
+    }
+
+    setIsDeletingAccount(true);
+    setDeleteStatus(null);
+    try {
+      const { API_BASE, fetchWithAuth } = await import('../api');
+      const res = await fetchWithAuth(`${API_BASE}/auth/delete-account`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: deletePassword })
+      });
+      const data = await res.json().catch(() => ({}));
+
+      if (res.ok) {
+        setDeleteStatus({ type: 'success', message: 'Account permanently deleted. Logging out...' });
+        setTimeout(() => {
+          logout();
+          window.location.href = '/';
+        }, 1200);
+      } else {
+        setDeleteStatus({ type: 'error', message: data.detail || 'Failed to delete account. Please verify your password.' });
+      }
+    } catch (err) {
+      console.error('Delete account error:', err);
+      setDeleteStatus({ type: 'error', message: 'Network error occurred while deleting account.' });
+    } finally {
+      setIsDeletingAccount(false);
+    }
+  };
+
   const isAdmin = ['keerthivasan.220722@gmail.com', 'a.keerthivasan7676@gmail.com'].includes(user?.email?.trim().toLowerCase());
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       
       {/* Left Column */}
       <div className="space-y-6">
@@ -527,6 +571,111 @@ export default function SettingsPage() {
               </form>
             </div>
           </>
+        )}
+      </div>
+    </div>
+
+      {/* Danger Zone: Delete Account */}
+      <div className="app-card border border-rose-300 dark:border-rose-900/60 bg-gradient-to-br from-rose-50/40 via-transparent to-red-50/20 dark:from-rose-950/20 dark:to-slate-900/40 rounded-2xl p-6 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500/10 border border-rose-500/20 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0">
+              <Trash2 className="w-5 h-5" />
+            </div>
+            <div>
+              <h4 className="text-xs font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2 uppercase tracking-wider">
+                Danger Zone — Delete Account
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-xl">
+                Permanently delete your account and all associated financial records (expenses, monthly budgets, savings goals, profit tracker entries, custom categories, and personal preferences). This action is immediate and cannot be undone.
+              </p>
+            </div>
+          </div>
+          {isAdmin ? (
+            <span className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 whitespace-nowrap">
+              Admin accounts cannot be deleted
+            </span>
+          ) : !showDeleteConfirm ? (
+            <button
+              type="button"
+              onClick={() => {
+                setShowDeleteConfirm(true);
+                setDeleteStatus(null);
+              }}
+              className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 shrink-0"
+            >
+              <Trash2 className="w-4 h-4" /> Delete My Account...
+            </button>
+          ) : null}
+        </div>
+
+        {!isAdmin && showDeleteConfirm && (
+          <div className="mt-4 pt-4 border-t border-rose-200 dark:border-rose-900/50 space-y-3">
+            {deleteStatus && (
+              <div className={`p-3 rounded-xl text-xs font-bold flex items-center gap-2 ${
+                deleteStatus.type === 'success' 
+                  ? 'bg-emerald-50 text-emerald-600 border border-emerald-200 dark:bg-emerald-950/40 dark:border-emerald-800' 
+                  : 'bg-rose-50 text-rose-600 border border-rose-200 dark:bg-rose-950/40 dark:border-rose-800'
+              }`}>
+                <span>{deleteStatus.message}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleDeleteAccount} className="space-y-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                    ENTER YOUR PASSWORD TO CONFIRM
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="Your current password"
+                    value={deletePassword}
+                    onChange={(e) => setDeletePassword(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-800/80 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">
+                    TYPE <span className="text-rose-600 font-mono">DELETE</span> TO VERIFY
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="DELETE"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    className="w-full bg-white dark:bg-slate-800 border border-rose-300 dark:border-rose-800/80 rounded-xl px-3 py-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isDeletingAccount || !deletePassword || deleteConfirmText.trim().toUpperCase() !== 'DELETE'}
+                  className="py-2.5 px-5 bg-rose-600 hover:bg-rose-700 active:scale-95 disabled:opacity-50 text-white font-bold text-xs rounded-xl shadow-lg transition flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  <span>{isDeletingAccount ? 'Permanently Purging Data...' : 'Permanently Delete My Account'}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingAccount}
+                  onClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDeletePassword('');
+                    setDeleteConfirmText('');
+                    setDeleteStatus(null);
+                  }}
+                  className="py-2.5 px-4 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs rounded-xl transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
         )}
       </div>
     </div>

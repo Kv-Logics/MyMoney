@@ -16,7 +16,8 @@ import {
   DollarSign, 
   FileText,
   CheckCircle2,
-  Sparkles
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 
 const ADMIN_EMAILS = ['keerthivasan.220722@gmail.com', 'a.keerthivasan7676@gmail.com'];
@@ -34,6 +35,10 @@ export default function SuperAdminPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
   const [resetStatus, setResetStatus] = useState(null);
+
+  // Delete user state
+  const [deletingUserId, setDeletingUserId] = useState(null);
+  const [deleteStatus, setDeleteStatus] = useState(null);
 
   // Admin login form state (if not logged in as admin)
   const [adminEmail, setAdminEmail] = useState('keerthivasan.220722@gmail.com');
@@ -134,6 +139,48 @@ export default function SuperAdminPage() {
       });
     } finally {
       setIsResetting(false);
+    }
+  };
+
+  const handleAdminDeleteUser = async (targetUser) => {
+    const isTargetAdmin = ADMIN_EMAILS.includes(targetUser.email?.trim().toLowerCase());
+    if (isTargetAdmin) {
+      alert("Cannot delete a system administrator account.");
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `⚠️ PERMANENT ACCOUNT DELETION\n\nAre you sure you want to delete user "${targetUser.email}"?\n\nThis will permanently erase all their expenses, budgets, savings goals, profit records, settings, and personal data.\n\nThis action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    setDeletingUserId(targetUser.id);
+    setDeleteStatus(null);
+    try {
+      const res = await fetchWithAuth(`${API_BASE}/auth/admin/users/${targetUser.id}`, {
+        method: 'DELETE'
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setDeleteStatus({
+          type: 'success',
+          message: data.message || `User ${targetUser.email} has been permanently deleted.`
+        });
+        loadAdminData();
+      } else {
+        setDeleteStatus({
+          type: 'error',
+          message: data.detail || `Failed to delete user ${targetUser.email}.`
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      setDeleteStatus({
+        type: 'error',
+        message: 'Network error occurred while deleting user.'
+      });
+    } finally {
+      setDeletingUserId(null);
     }
   };
 
@@ -385,6 +432,25 @@ export default function SuperAdminPage() {
         </div>
 
         {/* Registered Users Table */}
+        {deleteStatus && (
+          <div className={`p-4 rounded-2xl text-xs font-bold flex items-center justify-between gap-2 shadow-lg ${
+            deleteStatus.type === 'success' 
+              ? 'bg-emerald-950/70 text-emerald-300 border border-emerald-800' 
+              : 'bg-rose-950/70 text-rose-300 border border-rose-800'
+          }`}>
+            <div className="flex items-center gap-2">
+              {deleteStatus.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" /> : <AlertCircle className="w-4 h-4 text-rose-400 shrink-0" />}
+              <span>{deleteStatus.message}</span>
+            </div>
+            <button 
+              onClick={() => setDeleteStatus(null)}
+              className="text-[11px] underline opacity-80 hover:opacity-100"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
         <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
           <div className="p-4 sm:p-5 border-b border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
@@ -392,7 +458,7 @@ export default function SuperAdminPage() {
                 <Users className="w-4 h-4 text-emerald-400" /> All Platform Users ({filteredUsers.length})
               </h3>
               <p className="text-[11px] text-slate-400 mt-0.5">
-                Click "Reset Password" next to any user to quickly prefill and override their credentials.
+                Manage accounts, reset credentials, or permanently delete user profiles.
               </p>
             </div>
 
@@ -470,16 +536,29 @@ export default function SuperAdminPage() {
                           {u.created_at ? new Date(u.created_at).toLocaleDateString() : '—'}
                         </td>
                         <td className="px-4 py-3 text-right">
-                          <button
-                            onClick={() => {
-                              setTargetEmail(u.email);
-                              const el = document.getElementById('reset-form');
-                              if (el) el.scrollIntoView({ behavior: 'smooth' });
-                            }}
-                            className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-[10px] font-bold border border-indigo-500/30 transition"
-                          >
-                            Reset Password
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                setTargetEmail(u.email);
+                                const el = document.getElementById('reset-form');
+                                if (el) el.scrollIntoView({ behavior: 'smooth' });
+                              }}
+                              className="px-2.5 py-1 bg-indigo-600/30 hover:bg-indigo-600 text-indigo-300 hover:text-white rounded-lg text-[10px] font-bold border border-indigo-500/30 transition whitespace-nowrap"
+                            >
+                              Reset Password
+                            </button>
+                            {!isUserAdmin && (
+                              <button
+                                onClick={() => handleAdminDeleteUser(u)}
+                                disabled={deletingUserId === u.id}
+                                className="px-2.5 py-1 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white rounded-lg text-[10px] font-bold border border-rose-500/30 transition flex items-center gap-1 disabled:opacity-50 whitespace-nowrap"
+                                title={`Permanently delete user ${u.email} and all their records`}
+                              >
+                                <Trash2 className="w-3 h-3" />
+                                <span>{deletingUserId === u.id ? 'Deleting...' : 'Delete'}</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

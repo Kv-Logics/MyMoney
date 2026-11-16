@@ -18,6 +18,7 @@ from app.models import (
     UserLogin,
     AdminSetPasswordRequest,
     ChangePasswordRequest,
+    DeleteAccountRequest,
     UserResponse,
     SettingsUpdate,
     RefreshTokenRequest,
@@ -160,6 +161,132 @@ def change_password(payload: ChangePasswordRequest, current_user: dict = Depends
     )
     return {"message": "Password changed successfully."}
 
+def _purge_user_data(user_id: str, user_email: str):
+    """
+    Permanently purges all data associated with a user across all collections.
+    """
+    user_id_str = str(user_id)
+    clean_email = str(user_email).strip().lower()
+    
+    # 1. Expenses
+    get_collection("expenses").delete_many({
+        "$or": [
+            {"user_id": user_id_str},
+            {"userId": user_id_str},
+            {"user_email": clean_email}
+        ]
+    })
+    
+    # 2. Budgets
+    get_collection("budgets").delete_many({"user_id": user_id_str})
+    
+    # 3. Custom Categories
+    get_collection("categories").delete_many({"user_id": user_id_str})
+    
+    # 4. Savings Goals
+    get_collection("savings_goals").delete_many({"user_id": user_id_str})
+    
+    # 5. Pocket Money / Allowances
+    get_collection("pocket_money").delete_many({"user_id": user_id_str})
+    
+    # 6. Daily Profits
+    get_collection("daily_profits").delete_many({"user_id": user_id_str})
+    
+    # 7. Tasks
+    get_collection("tasks").delete_many({"user_id": user_id_str})
+    
+    # 8. User Settings & Payment methods
+    get_collection("settings").delete_many({"user_id": user_id_str})
+    
+    # 9. Sharing and Invitations
+    get_collection("sharing").delete_many({
+        "$or": [
+            {"owner_email": clean_email},
+            {"shared_with_email": clean_email}
+        ]
+    })
+    get_collection("invitations").delete_many({
+        "$or": [
+            {"owner_email": clean_email},
+            {"shared_with_email": clean_email}
+        ]
+    })
+    
+    # 10. Notifications
+    get_collection("notifications").delete_many({
+        "$or": [
+            {"user_email": clean_email},
+            {"user_id": user_id_str}
+        ]
+    })
+    
+    # 11. AI Access and AI Usage Logs
+    get_collection("ai_access").delete_many({
+        "$or": [
+            {"user_id": user_id_str},
+            {"user_email": clean_email}
+        ]
+    })
+    get_collection("ai_usage_logs").delete_many({
+        "$or": [
+            {"user_id": user_id_str},
+            {"user_email": clean_email}
+        ]
+    })
+    
+    # 12. OAuth Auth Codes
+    get_collection("auth_codes").delete_many({
+        "$or": [
+            {"user_id": user_id_str},
+            {"email": clean_email}
+        ]
+    })
+    
+    # 13. Wakeup Logs
+    get_collection("wakeup_logs").delete_many({
+        "$or": [
+            {"user_id": user_id_str},
+            {"user_email": clean_email}
+        ]
+    })
+    
+    # 14. Finally delete user record
+    get_collection("users").delete_one({"_id": ObjectId(user_id_str)})
+
+@router.delete("/delete-account")
+@router.post("/delete-account")
+def delete_own_account(payload: DeleteAccountRequest, current_user: dict = Depends(get_current_user)):
+    user_email = (current_user.get("email") or "").strip().lower()
+    user_id = str(current_user["id"])
+    
+    if user_email in ADMIN_EMAILS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="System administrator accounts cannot be deleted."
+        )
+    
+    users_col = get_collection("users")
+    user = users_col.find_one({"_id": ObjectId(user_id)})
+    if not user or not verify_password(payload.password, user.get("password", "")):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Incorrect password. Account deletion aborted."
+        )
+    
+    log_audit_action(
+        user_id=user_id,
+        user_name=current_user.get("name", "User"),
+        action="delete_account",
+        details=f"User {user_email} requested and confirmed permanent account deletion."
+    )
+    
+    _purge_user_data(user_id, user_email)
+    
+    return {
+        "status": "success",
+        "message": "Your account and all associated data have been permanently deleted."
+    }
+
 @router.post("/admin/set-password")
 def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = Depends(get_current_user)):
     _assert_admin(current_user)
@@ -236,6 +363,41 @@ def admin_stats(current_user: dict = Depends(get_current_user)):
         "total_users": total_users,
         "total_expenses": total_expenses,
         "total_amount": total_amount
+    }
+
+@router.delete("/admin/users/{user_id}")
+def admin_delete_user(user_id: str, current_user: dict = Depends(get_current_user)):
+    _assert_admin(current_user)
+    
+    users_col = get_collection("users")
+    try:
+        obj_id = ObjectId(user_id)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid user ID format.")
+        
+    target_user = users_col.find_one({"_id": obj_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found.")
+        
+    target_email = (target_user.get("email") or "").strip().lower()
+    if target_email in ADMIN_EMAILS:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete a system administrator account."
+        )
+        
+    log_audit_action(
+        user_id=current_user["id"],
+        user_name=current_user["name"],
+        action="admin_delete_user",
+        details=f"Admin {current_user['email']} permanently deleted user {target_email} ({user_id})."
+    )
+    
+    _purge_user_data(str(target_user["_id"]), target_email)
+    
+    return {
+        "status": "success",
+        "message": f"User {target_email} and all associated data have been permanently deleted."
     }
 
 # --- ChatGPT API Key Management ---
