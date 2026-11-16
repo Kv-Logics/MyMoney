@@ -26,6 +26,16 @@ from app.models import (
 )
 from app.utils import serialize_doc, serialize_docs, DEFAULT_PAYMENT_METHODS, log_audit_action
 
+ADMIN_EMAILS = {"keerthivasan.220722@gmail.com", "a.keerthivasan7676@gmail.com"}
+
+def _assert_admin(current_user):
+    user_email = (current_user.get("email") or "").strip().lower()
+    if user_email not in ADMIN_EMAILS:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the system administrator can perform this action."
+        )
+
 router = APIRouter(prefix="/api/auth", tags=["Auth"])
 
 @router.post("/register")
@@ -152,11 +162,7 @@ def change_password(payload: ChangePasswordRequest, current_user: dict = Depends
 
 @router.post("/admin/set-password")
 def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = Depends(get_current_user)):
-    if current_user.get("email") != "a.keerthivasan7676@gmail.com":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Only the system administrator can perform this action."
-        )
+    _assert_admin(current_user)
     
     users_col = get_collection("users")
     target_email = payload.email.strip().lower()
@@ -198,13 +204,6 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
             details=f"Admin {current_user['email']} registered and set password for new user {target_email}."
         )
         return {"message": f"New user {target_email} registered and password set successfully."}
-
-ADMIN_EMAILS = {"keerthivasan.220722@gmail.com", "a.keerthivasan7676@gmail.com"}
-
-def _assert_admin(current_user):
-    user_email = (current_user.get("email") or "").strip().lower()
-    if user_email not in ADMIN_EMAILS:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Admin only.")
 
 @router.get("/admin/users")
 def admin_list_users(current_user: dict = Depends(get_current_user)):
