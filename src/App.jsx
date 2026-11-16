@@ -19,6 +19,7 @@ import ProfitModal from './components/ProfitModal';
 import McpGuideModal from './components/McpGuideModal';
 import ExpenseModal from './components/ExpenseModal';
 import ResetPasswordStandalone from './components/ResetPasswordStandalone';
+import SuperAdminPage from './components/SuperAdminPage';
 
 function MainContent() {
   const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
@@ -120,11 +121,21 @@ function MainContent() {
 }
 
 export default function App() {
-  if (window.location.pathname === '/reset-pass') {
+  const path = window.location.pathname.toLowerCase();
+
+  if (path === '/reset-pass') {
     return (
       <AppProvider>
         <ResetPasswordStandalone />
         <AuthModal />
+      </AppProvider>
+    );
+  }
+
+  if (path === '/sadmin' || path === '/admin') {
+    return (
+      <AppProvider>
+        <SuperAdminPage />
       </AppProvider>
     );
   }

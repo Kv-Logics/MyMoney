@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -32,7 +33,7 @@ def register(user_data: UserRegister):
     users_col = get_collection("users")
     clean_email = str(user_data.email).strip().lower()
     clean_name = str(user_data.name).strip()
-    if users_col.find_one({"email": clean_email}):
+    if users_col.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}}):
         raise HTTPException(status_code=400, detail="Email already registered")
     
     hashed = hash_password(user_data.password)
@@ -68,8 +69,8 @@ def register(user_data: UserRegister):
 def login(credentials: UserLogin):
     users_col = get_collection("users")
     clean_email = str(credentials.email).strip().lower()
-    user = users_col.find_one({"email": clean_email})
-    if not user or not verify_password(credentials.password, user["password"]):
+    user = users_col.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
+    if not user or not verify_password(credentials.password, user.get("password", "")):
         raise HTTPException(status_code=400, detail="Invalid email or password")
     
     access_token = create_access_token({"email": user["email"]})
@@ -160,9 +161,9 @@ def admin_set_password(payload: AdminSetPasswordRequest, current_user: dict = De
     target_email = payload.email.strip().lower()
     hashed = hash_password(payload.password)
     
-    existing_user = users_col.find_one({"email": target_email})
+    existing_user = users_col.find_one({"email": {"$regex": f"^{re.escape(target_email)}$", "$options": "i"}})
     if existing_user:
-        users_col.update_one({"_id": existing_user["_id"]}, {"$set": {"password": hashed}})
+        users_col.update_one({"_id": existing_user["_id"]}, {"$set": {"password": hashed, "email": target_email}})
         log_audit_action(
             user_id=current_user["id"],
             user_name=current_user["name"],
@@ -208,7 +209,14 @@ def _assert_admin(current_user):
 def admin_list_users(current_user: dict = Depends(get_current_user)):
     _assert_admin(current_user)
     users_col = get_collection("users")
+    expenses_col = get_collection("expenses")
     users = list(users_col.find({}, {"password": 0, "api_key_hash": 0}).sort("created_at", -1))
+    
+    for u in users:
+        u_id = str(u["_id"])
+        u["expense_count"] = expenses_col.count_documents({"$or": [{"user_id": u_id}, {"userId": u_id}]})
+        u["is_admin"] = (u.get("email") or "").strip().lower() in ADMIN_EMAILS
+
     return serialize_docs(users)
 
 @router.get("/admin/stats")

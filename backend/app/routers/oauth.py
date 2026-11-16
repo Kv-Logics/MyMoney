@@ -1,3 +1,4 @@
+import re
 import hashlib
 import base64
 import secrets
@@ -56,6 +57,7 @@ def verify_pkce(code_verifier: str, code_challenge: str, code_challenge_method: 
     return False
 
 # --- 1. RFC 9728 Protected Resource Metadata ---
+@router.get("/mcp/.well-known/oauth-protected-resource")
 @router.get("/.well-known/oauth-protected-resource")
 def get_oauth_protected_resource():
     return {
@@ -264,7 +266,8 @@ def handle_oauth_authorize(
         return RedirectResponse(url=error_url, status_code=302)
 
     users_col = get_collection("users")
-    user = users_col.find_one({"email": email})
+    clean_email = email.strip().lower()
+    user = users_col.find_one({"email": {"$regex": f"^{re.escape(clean_email)}$", "$options": "i"}})
     if not user or not verify_password(password, user.get("password", "")):
         error_url = f"{redirect_uri}{sep}error=access_denied&error_description=Invalid+credentials&iss={ISSUER}&state={state}"
         return RedirectResponse(url=error_url, status_code=302)

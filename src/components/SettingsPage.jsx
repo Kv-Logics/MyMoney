@@ -450,11 +450,19 @@ export default function SettingsPage() {
 
             {/* Admin User Management */}
             <div className="app-card space-y-4">
-              <div>
-                <h4 className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
-                  <Shield className="w-4 h-4" /> ADMIN USER MANAGEMENT
-                </h4>
-                <p className="text-[10px] text-slate-400 mt-0.5">Set or override passwords for existing or new users.</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
+                    <Shield className="w-4 h-4" /> ADMIN USER MANAGEMENT
+                  </h4>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Set or override passwords for existing or new users.</p>
+                </div>
+                <a
+                  href="/sadmin"
+                  className="px-3 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold text-[11px] rounded-lg shadow transition flex items-center gap-1"
+                >
+                  Open /sadmin Portal &rarr;
+                </a>
               </div>
               
               {adminStatus && (

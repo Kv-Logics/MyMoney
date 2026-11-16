@@ -13,7 +13,8 @@ import {
   Settings,
   LogOut,
   Wallet,
-  X
+  X,
+  Shield
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -152,6 +153,15 @@ export default function Sidebar() {
             </div>
           ) : (
             <span className="text-[10px] text-slate-400 italic block mb-2">No shared trackers</span>
+          )}
+          {['keerthivasan.220722@gmail.com', 'a.keerthivasan7676@gmail.com'].includes(user?.email?.trim().toLowerCase()) && (
+            <a
+              href="/sadmin"
+              className="w-full flex items-center gap-2 px-2 py-1.5 mb-1.5 text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-lg font-bold border border-emerald-200 dark:border-emerald-800 transition"
+            >
+              <Shield className="w-4 h-4" />
+              <span>Super Admin Portal</span>
+            </a>
           )}
           <button
             onClick={logout}
