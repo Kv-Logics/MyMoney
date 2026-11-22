@@ -297,279 +297,102 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   return (
     <div className="space-y-6">
-      {/* Frontpage Header & Quick Actions Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
-        <div>
-          <h2 className="text-lg font-extrabold text-slate-800 dark:text-white">
-            Overview & Quick Actions
-          </h2>
-          <p className="text-xs text-slate-400">
-            Track spending, monitor budgets, and log transactions
-          </p>
+      {/* Admin Switcher Bar (if admin) */}
+      {isAdmin && (
+        <div className="flex items-center justify-between bg-slate-900 border border-slate-800 text-white rounded-2xl p-3 px-4 shadow-sm">
+          <span className="text-xs font-bold text-slate-300">View Mode</span>
+          <div className="flex items-center gap-1 bg-slate-800 p-1 rounded-xl border border-slate-700">
+            <button
+              onClick={() => setDashboardView('user')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
+                dashboardView === 'user' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Personal
+            </button>
+            <button
+              onClick={() => setDashboardView('admin')}
+              className={`px-3 py-1 text-xs font-bold rounded-lg transition ${
+                dashboardView === 'admin' ? 'bg-emerald-500 text-white shadow-sm' : 'text-slate-400 hover:text-white'
+              }`}
+            >
+              Admin
+            </button>
+          </div>
         </div>
-
-        <div className="flex items-center gap-2.5 flex-wrap">
-          {isAdmin && (
-            <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl mr-1">
-              <button
-                onClick={() => setDashboardView('user')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                  dashboardView === 'user'
-                    ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                Personal
-              </button>
-              <button
-                onClick={() => setDashboardView('admin')}
-                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition ${
-                  dashboardView === 'admin'
-                    ? 'bg-emerald-500 text-white shadow-sm'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
-                }`}
-              >
-                Admin Stats
-              </button>
-            </div>
-          )}
-
-          <button
-            onClick={onOpenExpenseModal}
-            className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition active:scale-95"
-            title="Add a new expense"
-          >
-            <Plus className="w-4 h-4" />
-            <span>Add Expense</span>
-          </button>
-
-          <button
-            onClick={onOpenProfitModal}
-            className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md flex items-center gap-1.5 transition active:scale-95"
-            title="Record today's profit"
-          >
-            <TrendingUp className="w-4 h-4" />
-            <span>Record Profit</span>
-          </button>
-        </div>
-      </div>
+      )}
 
       {(!isAdmin || dashboardView === 'user') ? (
         <>
-          {/* Top 5 Stat Cards Grid */}
-          <div className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-${overallBudget ? '5' : '4'} gap-5`}>
-            {/* Month Spending */}
-            <div className="app-card">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">MONTH SPENDING</span>
-              <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
+          {/* Executive Stat Cards: Month, Week, Daywise, Budget Remaining */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
+            {/* 1. Month Spending */}
+            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">MONTH SPEND</span>
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                  <Calendar className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
                 {settings.currency} {monthTotal.toLocaleString()}
               </h3>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
-                <Calendar className="w-3.5 h-3.5 text-emerald-500" />
-                <span>Current Month</span>
-              </div>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {new Date().toLocaleString('default', { month: 'short', year: 'numeric' })}
+              </p>
             </div>
 
-            {/* Today Spending */}
-            <div className="app-card">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">TODAY SPENDING</span>
-              <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
+            {/* 2. Week Spending */}
+            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">WEEK SPEND</span>
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
+                  <TrendingUp className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
+                {settings.currency} {currentWeekSpent.toLocaleString()}
+              </h3>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Current week
+              </p>
+            </div>
+
+            {/* 3. Daywise (Today's Spending) */}
+            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">TODAY'S SPEND</span>
+                <div className="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500">
+                  <Info className="w-3.5 h-3.5" />
+                </div>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
                 {settings.currency} {todayTotal.toLocaleString()}
               </h3>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
-                <Info className="w-3.5 h-3.5 text-rose-500" />
-                <span>Updated just now</span>
-              </div>
+              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                Daywise Live
+              </p>
             </div>
 
-            {/* Monthly Rent */}
-            <div className="app-card">
-              <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">MONTHLY RENT</span>
-              <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {rentTotal.toLocaleString()}
-              </h3>
-              <div className="flex items-center gap-1.5 text-xs text-slate-400 mt-2">
-                <Home className="w-3.5 h-3.5 text-violet-500" />
-                <span>Dedicated Rent Tracker</span>
-              </div>
-            </div>
-
-            {/* Remaining Budget (Only show if set) */}
-            {overallBudget && (
-              <div className="app-card">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">REMAINING BUDGET</span>
-                  {isOverBudget ? (
-                    <span className="text-[9px] bg-rose-100 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 font-bold px-1.5 py-0.5 rounded-full uppercase">
-                      OVER LIMIT
-                    </span>
-                  ) : (
-                    <span className="text-[9px] bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold px-1.5 py-0.5 rounded-full uppercase">
-                      ON TRACK
-                    </span>
-                  )}
-                </div>
-                <h3 className={`text-3xl font-extrabold mt-2 ${isOverBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>
-                  {isOverBudget 
-                    ? `- ${settings.currency} ${Math.abs(remainingBudget).toLocaleString()}` 
-                    : `${settings.currency} ${remainingBudget.toLocaleString()}`}
-                </h3>
-                <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 mt-3 overflow-hidden">
-                  <div 
-                    className={`h-full rounded-full transition-all duration-300 ${isOverBudget ? 'bg-rose-500' : budgetUsedPct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`} 
-                    style={{ width: `${Math.min(100, budgetUsedPct)}%` }}
-                  ></div>
-                </div>
-                <p className={`text-[10px] font-semibold mt-1 ${isOverBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-400'}`}>
-                  {budgetUsedPct}% used ({settings.currency}{totalAllMonthSpent.toLocaleString()} of {settings.currency}{budgetAmount.toLocaleString()})
-                </p>
-              </div>
-            )}
-
-            {/* Monthly Profit Card */}
-            <div className="app-card border border-amber-200 dark:border-amber-800/40 bg-gradient-to-br from-amber-500/5 via-transparent to-emerald-500/5">
+            {/* 4. Budget Remaining / Monthly Rent */}
+            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">MONTHLY PROFIT</span>
-                <span className="text-[9px] bg-amber-100 dark:bg-amber-950/40 border border-amber-300 text-amber-700 dark:text-amber-400 font-bold px-2 py-0.5 rounded-full uppercase">
-                  ISOLATED
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  {overallBudget ? 'BUDGET REMAINING' : 'MONTHLY RENT'}
                 </span>
+                <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-500">
+                  {overallBudget ? <Target className="w-3.5 h-3.5" /> : <Home className="w-3.5 h-3.5" />}
+                </div>
               </div>
-              <h3 className="text-3xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {(profitSummary?.total_profit || 0).toLocaleString()}
+              <h3 className={`text-xl sm:text-2xl font-extrabold mt-2 ${overallBudget && isOverBudget ? 'text-rose-600' : 'text-slate-800 dark:text-white'}`}>
+                {overallBudget 
+                  ? (isOverBudget ? `-${settings.currency}${Math.abs(remainingBudget).toLocaleString()}` : `${settings.currency}${remainingBudget.toLocaleString()}`)
+                  : `${settings.currency}${rentTotal.toLocaleString()}`}
               </h3>
-              <div className="flex items-center justify-between text-xs text-slate-400 mt-2">
-                <div className="flex items-center gap-1">
-                  <TrendingUp className="w-3.5 h-3.5 text-amber-500" />
-                  <span>{todayProfit > 0 ? `+${settings.currency}${todayProfit.toLocaleString()} today` : "Keep going!"}</span>
-                </div>
-                <button
-                  onClick={() => setActiveTab('profit')}
-                  className="text-amber-600 dark:text-amber-400 font-bold text-xs hover:underline flex items-center gap-0.5"
-                >
-                  Tracker →
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Daily Profit Bar Banner */}
-          <div className="app-card border border-amber-200 dark:border-amber-800/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-amber-100 dark:bg-amber-950/40 border border-amber-200 flex items-center justify-center shrink-0">
-                <TrendingUp className="w-6 h-6 text-amber-600 dark:text-amber-400" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h4 className="text-base font-bold text-slate-800 dark:text-white">Daily Profit Tracker</h4>
-                  <span className="text-[9px] bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-400 font-bold px-2 py-0.5 rounded-full">
-                    Separate Module
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Track isolated business profits & daily revenues without mixing with expense categories.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3 shrink-0">
-              <button
-                onClick={onOpenProfitModal}
-                className="px-4 py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs rounded-xl shadow-md transition"
-              >
-                + Record Today's Profit
-              </button>
-              <button
-                onClick={() => setActiveTab('profit')}
-                className="px-4 py-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-200 font-semibold text-xs rounded-xl transition"
-              >
-                View History
-              </button>
-            </div>
-          </div>
-
-          {/* Pocket Money Box Card */}
-          <div className="app-card border border-indigo-200/70 dark:border-indigo-800/50 bg-gradient-to-r from-indigo-50/60 via-purple-50/30 to-white dark:from-slate-900 dark:via-slate-900 dark:to-slate-800/80 p-5 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-sm relative overflow-hidden">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-                <Gift className="w-6 h-6 text-indigo-600 dark:text-indigo-400" />
-              </div>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h4 className="text-base font-extrabold text-slate-800 dark:text-white tracking-tight flex items-center gap-1.5">
-                    <span>Pocket Money Box</span>
-                  </h4>
-                  <span className="text-[10px] bg-indigo-100 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold px-2.5 py-0.5 rounded-full border border-indigo-200 dark:border-indigo-800">
-                    Parent Allowance
-                  </span>
-                  {waitingAllowanceAmount > 0 && (
-                    <span className="text-[10px] bg-amber-500/15 text-amber-700 dark:text-amber-300 font-bold px-2.5 py-0.5 rounded-full border border-amber-500/30 flex items-center gap-1">
-                      <Clock className="w-3 h-3" />
-                      +{settings.currency}{waitingAllowanceAmount.toLocaleString()} Waiting
-                    </span>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400">
-                  Multiple family deposits. Deducts expenses automatically from your chosen utilization date.
-                </p>
-
-                {(hasBoxData || weeklyAllowanceBudget) ? (
-                  <div className="flex flex-wrap items-center gap-4 mt-3 text-xs pt-1">
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Active Deposits</span>
-                      <span className="font-extrabold text-slate-800 dark:text-white">
-                        {settings.currency} {activeAllowanceAmount.toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Spent</span>
-                      <span className="font-extrabold text-slate-700 dark:text-slate-300">
-                        {settings.currency} {activeSpentAmount.toLocaleString()}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block">Available in Box</span>
-                      <span className={`font-black text-sm ${isAllowanceOver ? 'text-rose-600' : 'text-emerald-600'}`}>
-                        {isAllowanceOver ? `- ${settings.currency}${Math.abs(remainingAllowance).toLocaleString()}` : `${settings.currency}${remainingAllowance.toLocaleString()}`}
-                      </span>
-                    </div>
-                    {waitingAllowanceAmount > 0 && (
-                      <div>
-                        <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold uppercase block">Waiting / Scheduled</span>
-                        <span className="font-bold text-amber-600 dark:text-amber-400">
-                          +{settings.currency}{waitingAllowanceAmount.toLocaleString()} ({pmSummary.waiting_count} upcoming)
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                ) : (
-                  <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-2">
-                    Did your family give you pocket money? Click below to deposit into your Pocket Money Box!
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-              {pmDeposits.length > 0 && (
-                <button
-                  onClick={() => setIsBoxHistoryOpen(true)}
-                  className="px-3.5 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 font-bold text-xs rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow-sm"
-                >
-                  <Inbox className="w-4 h-4 text-indigo-500" />
-                  <span>Box History ({pmDeposits.length})</span>
-                </button>
-              )}
-              <button
-                onClick={() => {
-                  setAllowanceInput('');
-                  setAllowanceStartDate(new Date().toISOString().split('T')[0]);
-                  setAllowanceNote('From Dad');
-                  setIsAllowanceModalOpen(true);
-                }}
-                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-xs rounded-xl shadow-md transition active:scale-95 flex items-center gap-1.5 cursor-pointer"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Add Pocket Money</span>
-              </button>
+              <p className="text-[10px] text-slate-400 mt-1">
+                {overallBudget ? `${Math.round(budgetUsedPct)}% used` : 'Fixed monthly rent'}
+              </p>
             </div>
           </div>
 
@@ -958,98 +781,6 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
             )}
           </div>
 
-          {/* Bottom Row: Recent Transactions & Quick Actions */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            {/* Recent Transactions */}
-            <div className="app-card">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                  RECENT TRANSACTIONS
-                </h3>
-                <button onClick={() => setActiveTab('expenses')} className="text-xs text-emerald-600 font-bold hover:underline">
-                  View All →
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 font-bold">
-                      <th className="pb-3">Title/Category</th>
-                      <th className="pb-3">Date</th>
-                      <th className="pb-3">Payment</th>
-                      <th className="pb-3 text-right">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {nonRentExpenses.slice(0, 5).map(e => (
-                      <tr key={e.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                        <td className="py-3">
-                          <p className="font-bold text-slate-800 dark:text-white">{e.title}</p>
-                          <span className="text-[10px] text-slate-400">{e.category}</span>
-                        </td>
-                        <td className="py-3 text-slate-500">{e.date}</td>
-                        <td className="py-3 text-slate-500">{e.payment_method || 'Cash'}</td>
-                        <td className="py-3 text-right font-extrabold text-slate-800 dark:text-white">
-                          ₹{e.amount.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="app-card">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider mb-4 flex items-center gap-2">
-                <Zap className="w-4 h-4 text-emerald-500" />
-                <span>QUICK ACTIONS</span>
-              </h3>
-
-              <div className="grid grid-cols-2 gap-4">
-                <button
-                  onClick={onOpenExpenseModal}
-                  className="flex flex-col items-center justify-center p-5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-2xl transition group min-h-[120px]"
-                >
-                  <div className="w-10 h-10 bg-emerald-500 rounded-full flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform">
-                    <Plus className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-emerald-700">Add Expense</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('budgets')}
-                  className="flex flex-col items-center justify-center p-5 bg-teal-50 hover:bg-teal-100 border border-teal-200 rounded-2xl transition group min-h-[120px]"
-                >
-                  <div className="w-10 h-10 bg-teal-500 rounded-full flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform">
-                    <Target className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-teal-700">Set Budget</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('tasks')}
-                  className="flex flex-col items-center justify-center p-5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 rounded-2xl transition group min-h-[120px]"
-                >
-                  <div className="w-10 h-10 bg-indigo-500 rounded-full flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform">
-                    <CheckSquare className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-indigo-700">New Task</span>
-                </button>
-
-                <button
-                  onClick={() => setActiveTab('reports')}
-                  className="flex flex-col items-center justify-center p-5 bg-purple-50 hover:bg-purple-100 border border-purple-200 rounded-2xl transition group min-h-[120px]"
-                >
-                  <div className="w-10 h-10 bg-purple-500 rounded-full flex items-center justify-center mb-3 shadow-md group-hover:scale-110 transition-transform">
-                    <BarChart2 className="w-5 h-5 text-white" />
-                  </div>
-                  <span className="text-xs font-bold text-purple-700">View Reports</span>
-                </button>
-              </div>
-            </div>
-          </div>
         </>
       ) : (
         /* System Admin View */

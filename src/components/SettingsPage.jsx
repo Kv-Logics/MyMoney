@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Key, Shield, Bell, Send, Copy, Check, Trash2, Sparkles, Terminal } from 'lucide-react';
+import { Key, Shield, Bell, Send, Copy, Check, Trash2, Sparkles, Terminal, ArrowUpCircle, Download, RefreshCw, ExternalLink } from 'lucide-react';
 
 export default function SettingsPage() {
   const { user, setUser, settings, setSettings, logout } = useApp();
@@ -19,6 +19,54 @@ export default function SettingsPage() {
   const [newGeneratedKey, setNewGeneratedKey] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
+
+  // Auto-Update & GitHub Releases State
+  const [updateStatus, setUpdateStatus] = useState(null);
+  const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+  const checkGitHubUpdates = async () => {
+    setCheckingUpdate(true);
+    setUpdateStatus(null);
+    try {
+      const res = await fetch('https://api.github.com/repos/Kv-Logics/MyMoney/releases/latest');
+      if (!res.ok) {
+        throw new Error('Could not reach GitHub Releases API');
+      }
+      const data = await res.json();
+      const latestTag = data.tag_name || '';
+      const cleanLatest = latestTag.replace(/^v/, '');
+      const cleanCurrent = '1.0.0';
+      
+      const apkAsset = data.assets?.find(a => a.name?.endsWith('.apk'));
+      
+      if (cleanLatest !== cleanCurrent) {
+        setUpdateStatus({
+          type: 'update-available',
+          tag: latestTag,
+          title: data.name || latestTag,
+          downloadUrl: apkAsset?.browser_download_url || data.html_url,
+          releaseUrl: data.html_url,
+          body: data.body || '',
+          apkName: apkAsset?.name,
+          size: apkAsset ? `${(apkAsset.size / (1024 * 1024)).toFixed(1)} MB` : null
+        });
+      } else {
+        setUpdateStatus({
+          type: 'up-to-date',
+          tag: latestTag || 'v1.0.0',
+          message: 'MyMoney is up to date! You are running the latest version.'
+        });
+      }
+    } catch (err) {
+      console.error('Update check failed:', err);
+      setUpdateStatus({
+        type: 'error',
+        message: 'Failed to check GitHub releases: ' + err.message
+      });
+    } finally {
+      setCheckingUpdate(false);
+    }
+  };
 
   // Delete Account State
   const [deletePassword, setDeletePassword] = useState('');
@@ -574,6 +622,73 @@ export default function SettingsPage() {
         )}
       </div>
     </div>
+
+      {/* App Version & GitHub Releases Auto-Update */}
+      <div className="app-card border border-emerald-200 dark:border-emerald-800/40 bg-gradient-to-br from-emerald-500/5 via-transparent to-teal-500/5 rounded-2xl p-5 shadow-sm space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0">
+              <ArrowUpCircle className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h4 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                  App Updates & Releases
+                </h4>
+                <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/20">
+                  v1.0.0
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Connected to GitHub Releases (<span className="font-mono text-emerald-600 dark:text-emerald-400">Kv-Logics/MyMoney</span>). Auto-checks and downloads latest APK.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            disabled={checkingUpdate}
+            onClick={checkGitHubUpdates}
+            className="py-2.5 px-4 bg-emerald-500 hover:bg-emerald-600 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 ${checkingUpdate ? 'animate-spin' : ''}`} />
+            <span>{checkingUpdate ? 'Checking Releases...' : 'Check for Updates'}</span>
+          </button>
+        </div>
+
+        {updateStatus && (
+          <div className={`p-4 rounded-xl text-xs space-y-2.5 ${
+            updateStatus.type === 'update-available'
+              ? 'bg-emerald-500/10 border border-emerald-500/30 text-emerald-900 dark:text-emerald-200'
+              : updateStatus.type === 'up-to-date'
+              ? 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300'
+              : 'bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400'
+          }`}>
+            <div className="flex items-center justify-between">
+              <span className="font-bold">
+                {updateStatus.type === 'update-available' && `🚀 New Version Available: ${updateStatus.tag}`}
+                {updateStatus.type === 'up-to-date' && `✓ ${updateStatus.message}`}
+                {updateStatus.type === 'error' && updateStatus.message}
+              </span>
+              {updateStatus.type === 'update-available' && (
+                <a
+                  href={updateStatus.downloadUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow transition flex items-center gap-1.5"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download APK {updateStatus.size ? `(${updateStatus.size})` : ''}</span>
+                </a>
+              )}
+            </div>
+            {updateStatus.type === 'update-available' && updateStatus.body && (
+              <p className="text-[11px] text-slate-600 dark:text-slate-400 whitespace-pre-line border-t border-emerald-500/20 pt-2">
+                {updateStatus.body}
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Danger Zone: Delete Account */}
       <div className="app-card border border-rose-300 dark:border-rose-900/60 bg-gradient-to-br from-rose-50/40 via-transparent to-red-50/20 dark:from-rose-950/20 dark:to-slate-900/40 rounded-2xl p-6 shadow-sm space-y-4">

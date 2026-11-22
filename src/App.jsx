@@ -19,6 +19,9 @@ import AuthModal from './components/AuthModal';
 import ProfitModal from './components/ProfitModal';
 import McpGuideModal from './components/McpGuideModal';
 import ExpenseModal from './components/ExpenseModal';
+import QuickActionModal from './components/QuickActionModal';
+import PocketMoneyModal from './components/PocketMoneyModal';
+import AutoUpdateChecker from './components/AutoUpdateChecker';
 import ResetPasswordStandalone from './components/ResetPasswordStandalone';
 import SuperAdminPage from './components/SuperAdminPage';
 import { initCapacitor, updateNativeStatusBar } from './native/capacitor';
@@ -30,11 +33,21 @@ function MainContent() {
   const [isProfitModalOpen, setIsProfitModalOpen] = useState(false);
   const [profitModalData, setProfitModalData] = useState(null);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
+  const [isQuickActionOpen, setIsQuickActionOpen] = useState(false);
+  const [isPocketMoneyModalOpen, setIsPocketMoneyModalOpen] = useState(false);
 
   useEffect(() => {
     initCapacitor({
       theme,
       onBackPress: () => {
+        if (isQuickActionOpen) {
+          setIsQuickActionOpen(false);
+          return true;
+        }
+        if (isPocketMoneyModalOpen) {
+          setIsPocketMoneyModalOpen(false);
+          return true;
+        }
         if (isExpenseModalOpen) {
           setIsExpenseModalOpen(false);
           return true;
@@ -58,7 +71,7 @@ function MainContent() {
         return false;
       }
     });
-  }, [theme, isExpenseModalOpen, isProfitModalOpen, isMcpModalOpen, isMobileMenuOpen, activeTab]);
+  }, [theme, isQuickActionOpen, isPocketMoneyModalOpen, isExpenseModalOpen, isProfitModalOpen, isMcpModalOpen, isMobileMenuOpen, activeTab]);
 
   useEffect(() => {
     updateNativeStatusBar(theme);
@@ -74,10 +87,23 @@ function MainContent() {
     setIsProfitModalOpen(true);
   };
 
+  const handleSelectQuickAction = (actionId) => {
+    if (actionId === 'expense') {
+      handleOpenExpenseModal(null);
+    } else if (actionId === 'profit') {
+      handleOpenProfitModal(null);
+    } else if (actionId === 'pocket-money') {
+      setIsPocketMoneyModalOpen(true);
+    }
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-slate-50 dark:bg-slate-950 transition-colors duration-200">
       {/* Server Wakeup Particle Loading Animation */}
       <ServerWakeupOverlay />
+
+      {/* Auto Update Checker From GitHub Releases */}
+      <AutoUpdateChecker />
 
       {/* Mobile Sidebar Backdrop */}
       {isMobileMenuOpen && (
@@ -94,6 +120,7 @@ function MainContent() {
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header 
           onOpenExpenseModal={() => handleOpenExpenseModal(null)}
+          onOpenQuickActions={() => setIsQuickActionOpen(true)}
           onOpenMcpGuide={() => setIsMcpModalOpen(true)}
         />
 
@@ -102,6 +129,8 @@ function MainContent() {
             <Dashboard
               onOpenExpenseModal={() => handleOpenExpenseModal(null)}
               onOpenProfitModal={() => handleOpenProfitModal(null)}
+              onOpenPocketMoneyModal={() => setIsPocketMoneyModalOpen(true)}
+              onOpenQuickActions={() => setIsQuickActionOpen(true)}
             />
           )}
 
@@ -127,9 +156,22 @@ function MainContent() {
           {activeTab === 'settings' && <SettingsPage />}
         </main>
 
-        {/* Clean Mobile Bottom Navigation Bar */}
+        {/* Clean Mobile Bottom Navigation Bar with authentic ChatGPT button */}
         <MobileBottomNav />
       </div>
+
+      {/* Quick Action Sheet Modal (1. Add Expense, 2. Record Profit, 3. Pocket Money) */}
+      <QuickActionModal
+        isOpen={isQuickActionOpen}
+        onClose={() => setIsQuickActionOpen(false)}
+        onSelectAction={handleSelectQuickAction}
+      />
+
+      {/* Pocket Money Modal */}
+      <PocketMoneyModal
+        isOpen={isPocketMoneyModalOpen}
+        onClose={() => setIsPocketMoneyModalOpen(false)}
+      />
 
       {/* Custom Confirmation & Reusable Dialog Modals */}
       <ConfirmModal />

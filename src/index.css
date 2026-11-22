@@ -16,7 +16,7 @@
 
 /* Original Clean Light Card Styling */
 .app-card {
-  @apply bg-white border border-slate-200/80 shadow-sm rounded-2xl p-6 transition-all duration-200;
+  @apply bg-white border border-slate-200/80 shadow-sm rounded-2xl p-4 sm:p-5 md:p-6 transition-all duration-200;
 }
 
 .dark .app-card {
