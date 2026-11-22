@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AppProvider, useApp } from './context/AppContext';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import MobileBottomNav from './components/MobileBottomNav';
 import Dashboard from './components/Dashboard';
 import VoiceAgentPage from './components/VoiceAgentPage';
 import Expenses from './components/Expenses';
@@ -20,14 +21,48 @@ import McpGuideModal from './components/McpGuideModal';
 import ExpenseModal from './components/ExpenseModal';
 import ResetPasswordStandalone from './components/ResetPasswordStandalone';
 import SuperAdminPage from './components/SuperAdminPage';
+import { initCapacitor, updateNativeStatusBar } from './native/capacitor';
 
 function MainContent() {
-  const { activeTab, isMobileMenuOpen, setIsMobileMenuOpen } = useApp();
+  const { activeTab, setActiveTab, isMobileMenuOpen, setIsMobileMenuOpen, theme } = useApp();
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
   const [expenseModalData, setExpenseModalData] = useState(null);
   const [isProfitModalOpen, setIsProfitModalOpen] = useState(false);
   const [profitModalData, setProfitModalData] = useState(null);
   const [isMcpModalOpen, setIsMcpModalOpen] = useState(false);
+
+  useEffect(() => {
+    initCapacitor({
+      theme,
+      onBackPress: () => {
+        if (isExpenseModalOpen) {
+          setIsExpenseModalOpen(false);
+          return true;
+        }
+        if (isProfitModalOpen) {
+          setIsProfitModalOpen(false);
+          return true;
+        }
+        if (isMcpModalOpen) {
+          setIsMcpModalOpen(false);
+          return true;
+        }
+        if (isMobileMenuOpen) {
+          setIsMobileMenuOpen(false);
+          return true;
+        }
+        if (activeTab !== 'dashboard') {
+          setActiveTab('dashboard');
+          return true;
+        }
+        return false;
+      }
+    });
+  }, [theme, isExpenseModalOpen, isProfitModalOpen, isMcpModalOpen, isMobileMenuOpen, activeTab]);
+
+  useEffect(() => {
+    updateNativeStatusBar(theme);
+  }, [theme]);
 
   const handleOpenExpenseModal = (data = null) => {
     setExpenseModalData(data);
@@ -91,6 +126,9 @@ function MainContent() {
           {activeTab === 'audit-log' && <AuditLogPage />}
           {activeTab === 'settings' && <SettingsPage />}
         </main>
+
+        {/* Clean Mobile Bottom Navigation Bar */}
+        <MobileBottomNav />
       </div>
 
       {/* Custom Confirmation & Reusable Dialog Modals */}

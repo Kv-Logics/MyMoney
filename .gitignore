@@ -38,3 +38,12 @@ Thumbs.db
 *.ntvs*
 *.njsproj
 *.sln
+
+# Android build caches
+android/.gradle/
+android/build/
+android/app/build/
+android/local.properties
+android/capacitor-cordova-android-plugins/build/
+android/capacitor-cordova-android-plugins/.gradle/
+

@@ -1,8 +1,16 @@
-const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+const isNativeApp = typeof window !== 'undefined' && (
+  window.Capacitor?.isNativePlatform?.() ||
+  window.location.protocol === 'capacitor:' ||
+  window.location.origin.includes('capacitor://')
+);
+
+// If running inside native Android/iOS app or on production web, route to Render backend.
+// Only use local port 8000 if explicitly developing in desktop browser at localhost.
+const API_BASE = !isNativeApp && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
   ? 'http://localhost:8000/api'
   : 'https://mymoney-jd0n.onrender.com/api';
 
-export { API_BASE };
+export { API_BASE, isNativeApp };
 
 export async function fetchWithAuth(url, options = {}, retries = 2) {
   const token = localStorage.getItem('mymoney_token');
