@@ -223,18 +223,29 @@ def export_all_assets():
         print(f"  ✓ {folder}/ic_launcher.png & round ({px}x{px})")
 
     # --- 3. Web & Store 512x512 Master Logo ---
-    print("\n📦 Generating Master 512x512 Logos & Splash...")
+    print("\n📦 Generating Master 512x512 Logos & Splash Icon...")
     web_512 = master_full.resize((512, 512), Image.Resampling.LANCZOS)
     os.makedirs("public", exist_ok=True)
     web_512.save("public/app-icon-512.png", "PNG", optimize=True)
-    web_512.save(os.path.join(base_res, "drawable/splash.png"), "PNG", optimize=True)
+    web_512.save(os.path.join(base_res, "drawable/splash_icon.png"), "PNG", optimize=True)
     print("  ✓ public/app-icon-512.png (512x512)")
-    print("  ✓ android/.../drawable/splash.png (512x512)")
+    print("  ✓ android/.../drawable/splash_icon.png (512x512)")
+
+    # Clean up any conflicting or distorted splash drawables
+    for obsolete in [
+        os.path.join(base_res, "drawable-v24/splash.png"),
+        os.path.join(base_res, "drawable/splash.png")
+    ]:
+        if os.path.exists(obsolete):
+            os.remove(obsolete)
+            print(f"  ✓ Removed obsolete {obsolete}")
 
     # --- 4. Splash Screens across densities ---
     print("\n📦 Generating Crystal Clear Splash Screens...")
     for d in os.listdir(base_res):
         if d.startswith("drawable-") and os.path.isdir(os.path.join(base_res, d)):
+            if d == "drawable-v24":
+                continue # Never put bitmap splash in v24 folder
             splash_path = os.path.join(base_res, d, "splash.png")
             w, h = (480, 800) if "port" in d else (800, 480)
             if "xxxhdpi" in d: w, h = (w * 3, h * 3)

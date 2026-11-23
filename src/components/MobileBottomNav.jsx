@@ -1,12 +1,44 @@
 import React from 'react';
 import { useApp } from '../context/AppContext';
 import { LayoutDashboard, DollarSign, TrendingUp, Menu, Sparkles, ExternalLink } from 'lucide-react';
+import { AppLauncher } from '@capacitor/app-launcher';
 
 export default function MobileBottomNav() {
   const { activeTab, setActiveTab, setIsMobileMenuOpen } = useApp();
 
-  const handleOpenChatGPT = () => {
-    // Open official ChatGPT web app / native app
+  const handleOpenChatGPT = async () => {
+    // Prioritize launching the official native ChatGPT Android App over web
+    try {
+      // 1. Try opening official ChatGPT Android package
+      const canOpenPackage = await AppLauncher.canOpenUrl({ url: 'com.openai.chatgpt' });
+      if (canOpenPackage?.value) {
+        await AppLauncher.openUrl({ url: 'com.openai.chatgpt' });
+        return;
+      }
+    } catch (err) {
+      console.debug('ChatGPT package check:', err);
+    }
+
+    try {
+      // 2. Try opening via chatgpt:// native URL scheme
+      const canOpenScheme = await AppLauncher.canOpenUrl({ url: 'chatgpt://' });
+      if (canOpenScheme?.value) {
+        await AppLauncher.openUrl({ url: 'chatgpt://' });
+        return;
+      }
+    } catch (err) {
+      console.debug('ChatGPT scheme check:', err);
+    }
+
+    // 3. Attempt direct native launch before falling back
+    try {
+      await AppLauncher.openUrl({ url: 'chatgpt://' });
+      return;
+    } catch (err) {
+      console.debug('Direct scheme launch failed, falling back:', err);
+    }
+
+    // 4. Fallback if ChatGPT native app is not installed on this device
     window.open('https://chatgpt.com', '_blank', 'noopener,noreferrer');
   };
 
