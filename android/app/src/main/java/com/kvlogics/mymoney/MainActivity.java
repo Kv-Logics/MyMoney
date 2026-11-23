@@ -4,13 +4,23 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.webkit.DownloadListener;
+import androidx.core.graphics.Insets;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowInsetsCompat;
 import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        
+
+        // Prevent app header from merging into status bar, notch, or notification panel
+        ViewCompat.setOnApplyWindowInsetsListener(findViewById(android.R.id.content), (view, windowInsets) -> {
+            Insets insets = windowInsets.getInsets(WindowInsetsCompat.Type.systemBars());
+            view.setPadding(insets.left, insets.top, insets.right, 0);
+            return windowInsets;
+        });
+
         // Handle in-app downloads & APK updates via native Android download manager / browser
         if (this.bridge != null && this.bridge.getWebView() != null) {
             this.bridge.getWebView().setDownloadListener(new DownloadListener() {
@@ -29,3 +39,4 @@ public class MainActivity extends BridgeActivity {
         }
     }
 }
+

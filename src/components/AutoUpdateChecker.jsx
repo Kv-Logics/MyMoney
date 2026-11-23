@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Sparkles, X, ArrowUpCircle, ExternalLink, RefreshCw } from 'lucide-react';
 import { App } from '@capacitor/app';
+import { AppLauncher } from '@capacitor/app-launcher';
 import { Browser } from '@capacitor/browser';
 
 const GITHUB_REPO = 'Kv-Logics/MyMoney';
-export const DEFAULT_FALLBACK_VERSION = '1.0.3';
+export const DEFAULT_FALLBACK_VERSION = '1.0.4';
 
 // Compare two semver strings (e.g., "1.0.2" vs "1.0.1")
 function isNewerVersion(remote, local) {
@@ -100,11 +101,14 @@ export default function AutoUpdateChecker() {
   const handleInstall = async () => {
     setIsDownloading(true);
     try {
-      // Use Capacitor Browser to trigger native Android download & Package Installer
-      await Browser.open({ url: updateInfo.downloadUrl });
+      // Trigger external system browser / native download manager to avoid in-app download pending queue
+      await AppLauncher.openUrl({ url: updateInfo.downloadUrl });
     } catch (err) {
-      console.warn('Capacitor browser open failed, falling back to window.open:', err);
-      window.open(updateInfo.downloadUrl, '_system');
+      try {
+        await Browser.open({ url: updateInfo.downloadUrl, windowName: '_system' });
+      } catch (e) {
+        window.open(updateInfo.downloadUrl, '_system');
+      }
     } finally {
       setIsDownloading(false);
     }
