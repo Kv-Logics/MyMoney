@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { Key, Shield, Bell, Send, Copy, Check, Trash2, Sparkles, Terminal, ArrowUpCircle, Download, RefreshCw, ExternalLink } from 'lucide-react';
+import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 
 export default function SettingsPage() {
   const { user, setUser, settings, setSettings, logout } = useApp();
@@ -21,8 +23,29 @@ export default function SettingsPage() {
   const [apiKeyLoading, setApiKeyLoading] = useState(false);
 
   // Auto-Update & GitHub Releases State
+  const [installedVersion, setInstalledVersion] = useState('1.0.1');
   const [updateStatus, setUpdateStatus] = useState(null);
   const [checkingUpdate, setCheckingUpdate] = useState(false);
+
+  useEffect(() => {
+    async function loadVersion() {
+      try {
+        const info = await App.getInfo();
+        if (info?.version) setInstalledVersion(info.version);
+      } catch (e) {
+        setInstalledVersion('1.0.1');
+      }
+    }
+    loadVersion();
+  }, []);
+
+  const handleDownloadApk = async (url) => {
+    try {
+      await Browser.open({ url });
+    } catch (e) {
+      window.open(url, '_system');
+    }
+  };
 
   const checkGitHubUpdates = async () => {
     setCheckingUpdate(true);
@@ -34,8 +57,8 @@ export default function SettingsPage() {
       }
       const data = await res.json();
       const latestTag = data.tag_name || '';
-      const cleanLatest = latestTag.replace(/^v/, '');
-      const cleanCurrent = '1.0.0';
+      const cleanLatest = latestTag.replace(/^v/, '').trim();
+      const cleanCurrent = installedVersion.replace(/^v/, '').trim();
       
       const apkAsset = data.assets?.find(a => a.name?.endsWith('.apk'));
       
@@ -53,8 +76,8 @@ export default function SettingsPage() {
       } else {
         setUpdateStatus({
           type: 'up-to-date',
-          tag: latestTag || 'v1.0.0',
-          message: 'MyMoney is up to date! You are running the latest version.'
+          tag: latestTag || `v${installedVersion}`,
+          message: `MyMoney is up to date (v${installedVersion})! You are running the latest version.`
         });
       }
     } catch (err) {
@@ -636,7 +659,7 @@ export default function SettingsPage() {
                   App Updates & Releases
                 </h4>
                 <span className="text-[10px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 font-extrabold px-2 py-0.5 rounded-full border border-emerald-500/20">
-                  v1.0.0
+                  v{installedVersion}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -670,15 +693,14 @@ export default function SettingsPage() {
                 {updateStatus.type === 'error' && updateStatus.message}
               </span>
               {updateStatus.type === 'update-available' && (
-                <a
-                  href={updateStatus.downloadUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-xs rounded-lg shadow transition flex items-center gap-1.5"
+                <button
+                  type="button"
+                  onClick={() => handleDownloadApk(updateStatus.downloadUrl)}
+                  className="py-1.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-extrabold text-xs rounded-lg shadow transition flex items-center gap-1.5 cursor-pointer"
                 >
                   <Download className="w-3.5 h-3.5" />
                   <span>Download APK {updateStatus.size ? `(${updateStatus.size})` : ''}</span>
-                </a>
+                </button>
               )}
             </div>
             {updateStatus.type === 'update-available' && updateStatus.body && (

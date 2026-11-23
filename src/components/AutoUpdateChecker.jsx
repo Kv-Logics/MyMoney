@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Download, Sparkles, X, ArrowUpCircle, ExternalLink, RefreshCw } from 'lucide-react';
+import { App } from '@capacitor/app';
+import { Browser } from '@capacitor/browser';
 
-export const CURRENT_APP_VERSION = '1.0.0';
 const GITHUB_REPO = 'Kv-Logics/MyMoney';
+export const DEFAULT_FALLBACK_VERSION = '1.0.1';
 
-// Compare two semver strings (e.g., "1.0.1" vs "1.0.0")
+// Compare two semver strings (e.g., "1.0.2" vs "1.0.1")
 function isNewerVersion(remote, local) {
-  const cleanRemote = remote.replace(/^v/, '').trim();
-  const cleanLocal = local.replace(/^v/, '').trim();
+  const cleanRemote = (remote || '').replace(/^v/, '').trim();
+  const cleanLocal = (local || '').replace(/^v/, '').trim();
   
   const rParts = cleanRemote.split('.').map(Number);
   const lParts = cleanLocal.split('.').map(Number);
@@ -22,13 +24,38 @@ function isNewerVersion(remote, local) {
 }
 
 export default function AutoUpdateChecker() {
+  const [currentVersion, setCurrentVersion] = useState(DEFAULT_FALLBACK_VERSION);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [isDismissed, setIsDismissed] = useState(false);
   const [isChecking, setIsChecking] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  // Load native installed app version
+  useEffect(() => {
+    async function loadVersion() {
+      try {
+        const info = await App.getInfo();
+        if (info && info.version) {
+          setCurrentVersion(info.version);
+        }
+      } catch (err) {
+        // In browser web environment, default to fallback
+        setCurrentVersion(DEFAULT_FALLBACK_VERSION);
+      }
+    }
+    loadVersion();
+  }, []);
 
   const checkForUpdates = async () => {
     setIsChecking(true);
     try {
+      // Get current version first
+      let localVer = currentVersion;
+      try {
+        const info = await App.getInfo();
+        if (info?.version) localVer = info.version;
+      } catch (e) {}
+
       const res = await fetch(`https://api.github.com/repos/${GITHUB_REPO}/releases/latest`, {
         headers: { Accept: 'application/vnd.github.v3+json' },
       });
@@ -36,7 +63,7 @@ export default function AutoUpdateChecker() {
       const release = await res.json();
       const tagName = release.tag_name || '';
 
-      if (tagName && isNewerVersion(tagName, CURRENT_APP_VERSION)) {
+      if (tagName && isNewerVersion(tagName, localVer)) {
         // Find APK asset in release
         const apkAsset = release.assets?.find(a => a.name?.endsWith('.apk'));
         setUpdateInfo({
@@ -49,6 +76,8 @@ export default function AutoUpdateChecker() {
           size: apkAsset ? `${(apkAsset.size / (1024 * 1024)).toFixed(1)} MB` : null,
         });
         setIsDismissed(false);
+      } else {
+        setUpdateInfo(null);
       }
     } catch (err) {
       console.warn('Auto update check skipped:', err);
@@ -58,19 +87,27 @@ export default function AutoUpdateChecker() {
   };
 
   useEffect(() => {
-    // Initial check on launch
+    // Initial check after loading version
     checkForUpdates();
 
-    // Check periodically every 2 hours
-    const interval = setInterval(checkForUpdates, 2 * 60 * 60 * 1000);
+    // Check periodically every hour
+    const interval = setInterval(checkForUpdates, 60 * 60 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [currentVersion]);
 
   if (!updateInfo || isDismissed) return null;
 
-  const handleInstall = () => {
-    // Opens direct APK download or browser install
-    window.open(updateInfo.downloadUrl, '_system');
+  const handleInstall = async () => {
+    setIsDownloading(true);
+    try {
+      // Use Capacitor Browser to trigger native Android download & Package Installer
+      await Browser.open({ url: updateInfo.downloadUrl });
+    } catch (err) {
+      console.warn('Capacitor browser open failed, falling back to window.open:', err);
+      window.open(updateInfo.downloadUrl, '_system');
+    } finally {
+      setIsDownloading(false);
+    }
   };
 
   return (
@@ -89,7 +126,7 @@ export default function AutoUpdateChecker() {
                 </span>
               </div>
               <p className="text-[11px] text-emerald-100 line-clamp-1">
-                Version {updateInfo.tag} released on GitHub.
+                Version {updateInfo.tag} is available (Current: v{currentVersion})
               </p>
             </div>
           </div>
@@ -105,10 +142,11 @@ export default function AutoUpdateChecker() {
         <div className="flex items-center gap-2 pt-1">
           <button
             onClick={handleInstall}
-            className="flex-1 py-2 px-3 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5"
+            disabled={isDownloading}
+            className="flex-1 py-2 px-3 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Download & Install APK {updateInfo.size ? `(${updateInfo.size})` : ''}</span>
+            <span>{isDownloading ? 'Opening Download...' : `Download & Install APK ${updateInfo.size ? `(${updateInfo.size})` : ''}`}</span>
           </button>
           <a
             href={updateInfo.releaseUrl}
@@ -124,4 +162,3 @@ export default function AutoUpdateChecker() {
     </div>
   );
 }
-
