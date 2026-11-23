@@ -47,3 +47,7 @@ android/local.properties
 android/capacitor-cordova-android-plugins/build/
 android/capacitor-cordova-android-plugins/.gradle/
 
+
+# Android Keystore Secrets
+keystore.properties
+*.keystore

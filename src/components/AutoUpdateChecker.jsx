@@ -4,7 +4,7 @@ import { App } from '@capacitor/app';
 import { Browser } from '@capacitor/browser';
 
 const GITHUB_REPO = 'Kv-Logics/MyMoney';
-export const DEFAULT_FALLBACK_VERSION = '1.0.1';
+export const DEFAULT_FALLBACK_VERSION = '1.0.2';
 
 // Compare two semver strings (e.g., "1.0.2" vs "1.0.1")
 function isNewerVersion(remote, local) {

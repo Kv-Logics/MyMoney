@@ -1,5 +1,9 @@
 apply plugin: 'com.android.application'
 
+def keystoreProps = new Properties()
+def kpFile = rootProject.file('keystore.properties')
+if (kpFile.exists()) kpFile.withInputStream { keystoreProps.load(it) }
+
 android {
     namespace = "com.kvlogics.mymoney"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -7,8 +11,8 @@ android {
         applicationId "com.kvlogics.mymoney"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 2
-        versionName "1.0.1"
+        versionCode 3
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -18,10 +22,12 @@ android {
     }
     signingConfigs {
         release {
-            storeFile file('release.keystore')
-            storePassword 'mymoney2026'
-            keyAlias 'mymoney'
-            keyPassword 'mymoney2026'
+            storeFile file(keystoreProps['storeFile'] ?: 'release.keystore')
+            storePassword keystoreProps['storePassword'] ?: 'mymoney2026'
+            keyAlias keystoreProps['keyAlias'] ?: 'mymoney'
+            keyPassword keystoreProps['keyPassword'] ?: 'mymoney2026'
+            v1SigningEnabled true
+            v2SigningEnabled true
         }
     }
     buildTypes {

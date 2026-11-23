@@ -2,8 +2,8 @@
   <defs>
     <!-- Background Gradient -->
     <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#0F172A" />
-      <stop offset="100%" stop-color="#020617" />
+      <stop offset="0%" stop-color="#0A0F1D" />
+      <stop offset="100%" stop-color="#030712" />
     </linearGradient>
 
     <!-- Electric Emerald Ribbon -->
@@ -13,44 +13,55 @@
       <stop offset="100%" stop-color="#059669" />
     </linearGradient>
 
-    <!-- Cyber Indigo/Cyan Ribbon -->
+    <!-- Cyber Cyan/Indigo Ribbon -->
     <linearGradient id="indigo-grad" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" stop-color="#38BDF8" />
       <stop offset="50%" stop-color="#6366F1" />
       <stop offset="100%" stop-color="#4F46E5" />
     </linearGradient>
 
-    <!-- Center Nexus Glow -->
-    <radialGradient id="nexus-glow" cx="50%" cy="50%" r="50%">
-      <stop offset="0%" stop-color="#22D3EE" stop-opacity="1" />
+    <!-- Center Nexus Halo -->
+    <radialGradient id="nexus-halo" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#22D3EE" stop-opacity="0.8" />
       <stop offset="100%" stop-color="#06B6D4" stop-opacity="0" />
     </radialGradient>
+
+    <!-- Gold Wealth Token -->
+    <linearGradient id="gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FDE047" />
+      <stop offset="100%" stop-color="#D97706" />
+    </linearGradient>
   </defs>
 
-  <!-- Squircle Base with subtle stroke -->
-  <rect width="512" height="512" rx="128" fill="url(#bg-grad)" />
-  <rect x="2" y="2" width="508" height="508" rx="126" fill="none" stroke="#334155" stroke-width="3" opacity="0.4" />
+  <!-- Squircle Base with subtle border -->
+  <rect width="512" height="512" rx="120" fill="url(#bg-grad)" />
+  <rect x="2" y="2" width="508" height="508" rx="118" fill="none" stroke="#334155" stroke-width="3" opacity="0.5" />
 
-  <!-- Background radial subtle glow -->
-  <circle cx="256" cy="200" r="180" fill="#10B981" opacity="0.12" filter="blur(40px)" />
+  <!-- Ambient emerald glow -->
+  <circle cx="256" cy="180" r="160" fill="#10B981" opacity="0.16" filter="blur(35px)" />
 
   <!-- Left Pillar (Emerald) -->
-  <rect x="110" y="130" width="56" height="252" rx="28" fill="url(#emerald-grad)" />
+  <rect x="110" y="132" width="54" height="248" rx="27" fill="url(#emerald-grad)" />
+  <!-- Pillar Specular Highlight -->
+  <rect x="115" y="137" width="44" height="18" rx="9" fill="#A7F3D0" opacity="0.75" />
 
   <!-- Right Pillar (Cyber Indigo) -->
-  <rect x="346" y="130" width="56" height="252" rx="28" fill="url(#indigo-grad)" />
+  <rect x="348" y="132" width="54" height="248" rx="27" fill="url(#indigo-grad)" />
+  <!-- Pillar Specular Highlight -->
+  <rect x="353" y="137" width="44" height="18" rx="9" fill="#C7D2FE" opacity="0.75" />
 
-  <!-- Left Diagonal Fold (Emerald to Center) -->
-  <path d="M110 160 L166 130 L275 300 L220 330 Z" fill="url(#emerald-grad)" opacity="0.95" />
+  <!-- Left Diagonal Fold (Emerald to Nexus) -->
+  <path d="M110 142 L164 132 L266 312 L234 332 Z" fill="url(#emerald-grad)" />
 
-  <!-- Right Diagonal Fold (Indigo to Center) -->
-  <path d="M402 160 L346 130 L237 300 L292 330 Z" fill="url(#indigo-grad)" opacity="0.95" />
+  <!-- Right Diagonal Fold (Indigo to Nexus) -->
+  <path d="M402 142 L348 132 L246 312 L278 332 Z" fill="url(#indigo-grad)" />
 
-  <!-- Glowing Interlocking Nexus -->
-  <circle cx="256" cy="305" r="32" fill="#06B6D4" opacity="0.9" />
-  <circle cx="256" cy="305" r="44" fill="url(#nexus-glow)" opacity="0.6" />
+  <!-- Nexus Halo -->
+  <circle cx="256" cy="320" r="48" fill="url(#nexus-halo)" />
+  <!-- Nexus Cyan Core -->
+  <circle cx="256" cy="320" r="30" fill="#06B6D4" />
 
-  <!-- Wealth Gold Dot Accent -->
-  <circle cx="256" cy="305" r="14" fill="#FBBF24" />
-  <circle cx="253" cy="302" r="4" fill="#FEF3C7" />
+  <!-- Wealth Gold Token Core -->
+  <circle cx="256" cy="320" r="15" fill="url(#gold-grad)" />
+  <circle cx="252" cy="316" r="4" fill="#FEF3C7" />
 </svg>
