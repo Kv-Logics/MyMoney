@@ -34,3 +34,17 @@
   - `docs/05-GEMINI-API-KEY-SETUP-GUIDE.md`
   - `docs/06-AI-APPROVALS-AND-TOKEN-MONITORING.md`
   - `docs/07-FUTURE-AGENT-DEVELOPMENT-AND-TROUBLESHOOTING.md`
+
+## 5. Mobile App & Mandatory Version Bumping Rule (CRITICAL)
+- **Rule**: Every single update or APK release hereafter MUST increment the version number.
+- **Why**: In-app GitHub release auto-updater (`AutoUpdateChecker.jsx`) and Settings compare the installed version against GitHub Releases (`/repos/Kv-Logics/MyMoney/releases/latest`). If the version is not bumped, existing users' devices will not recognize or download the update.
+- **Required Version Steps for Every Update**:
+  1. Increment version in `package.json` (e.g. `1.0.1` -> `1.0.2`).
+  2. Increment `versionCode` (e.g. `2` -> `3`) and update `versionName` in `android/app/build.gradle`.
+  3. Update `DEFAULT_FALLBACK_VERSION` in `src/components/AutoUpdateChecker.jsx`.
+  4. Build & sync: `npm run build && npx cap sync android`.
+  5. Compile release APK: `cd android && JAVA_HOME=/home/kv/jdk-21 ANDROID_HOME=/home/kv/Android/Sdk ./gradlew assembleRelease`.
+  6. Copy APK to `release/MyMoney-v<VERSION>.apk`.
+  7. Commit, push to `main`, and publish matching GitHub Release tag `v<VERSION>` with the APK asset.
+  *(Or execute `python3 scripts/bump_version.py` which automates steps 1-3).*
+
