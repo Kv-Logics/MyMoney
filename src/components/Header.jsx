@@ -70,7 +70,7 @@ export default function Header({ onOpenExpenseModal, onOpenQuickActions, onOpenM
         {/* Primary Action Button */}
         <button
           onClick={handleActionClick}
-          className="px-3 md:px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/20 flex items-center gap-1.5 transition active:scale-95"
+          className="px-3 md:px-4 py-2 bg-gradient-to-br from-emerald-400 to-emerald-600 hover:from-emerald-500 hover:to-emerald-700 text-white font-bold text-xs rounded-xl shadow-md shadow-emerald-500/30 flex items-center gap-1.5 transition active:scale-95"
         >
           <Plus className="w-4 h-4 stroke-[3]" />
           <span className="hidden sm:inline">Quick Action</span>

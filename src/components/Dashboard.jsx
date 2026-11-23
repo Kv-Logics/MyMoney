@@ -327,72 +327,86 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
           {/* Executive Stat Cards: Month, Week, Daywise, Budget Remaining */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-4">
             {/* 1. Month Spending */}
-            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+            <div className="app-card stat-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <span className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-emerald-400 to-emerald-600"></span>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">MONTH SPEND</span>
-                <div className="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center text-emerald-500">
-                  <Calendar className="w-3.5 h-3.5" />
+                <div className="icon-chip w-8 h-8 bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-sm shadow-emerald-500/30">
+                  <Calendar className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {monthTotal.toLocaleString()}
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2 tracking-tight">
+                {settings.currency}{monthTotal.toLocaleString()}
               </h3>
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-[10px] text-slate-400 mt-1 font-medium">
                 {new Date().toLocaleString('default', { month: 'short', year: 'numeric' })}
               </p>
             </div>
 
             {/* 2. Week Spending */}
-            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+            <div className="app-card stat-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <span className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-indigo-400 to-indigo-600"></span>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">WEEK SPEND</span>
-                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 flex items-center justify-center text-indigo-500">
-                  <TrendingUp className="w-3.5 h-3.5" />
+                <div className="icon-chip w-8 h-8 bg-gradient-to-br from-indigo-400 to-indigo-600 text-white shadow-sm shadow-indigo-500/30">
+                  <TrendingUp className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {currentWeekSpent.toLocaleString()}
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2 tracking-tight">
+                {settings.currency}{currentWeekSpent.toLocaleString()}
               </h3>
-              <p className="text-[10px] text-slate-400 mt-1">
+              <p className="text-[10px] text-slate-400 mt-1 font-medium">
                 Current week
               </p>
             </div>
 
             {/* 3. Daywise (Today's Spending) */}
-            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+            <div className="app-card stat-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <span className="absolute top-0 left-0 h-full w-1 bg-gradient-to-b from-rose-400 to-rose-600"></span>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">TODAY'S SPEND</span>
-                <div className="w-7 h-7 rounded-lg bg-rose-500/10 flex items-center justify-center text-rose-500">
-                  <Info className="w-3.5 h-3.5" />
+                <div className="icon-chip w-8 h-8 bg-gradient-to-br from-rose-400 to-rose-600 text-white shadow-sm shadow-rose-500/30">
+                  <Info className="w-4 h-4" />
                 </div>
               </div>
-              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2">
-                {settings.currency} {todayTotal.toLocaleString()}
+              <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 dark:text-white mt-2 tracking-tight">
+                {settings.currency}{todayTotal.toLocaleString()}
               </h3>
-              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+              <p className="text-[10px] text-slate-400 mt-1 flex items-center gap-1 font-medium">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                 Daywise Live
               </p>
             </div>
 
             {/* 4. Budget Remaining / Monthly Rent */}
-            <div className="app-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+            <div className="app-card stat-card !p-3.5 sm:!p-5 flex flex-col justify-between">
+              <span className={`absolute top-0 left-0 h-full w-1 bg-gradient-to-b ${overallBudget && isOverBudget ? 'from-rose-400 to-rose-600' : 'from-violet-400 to-violet-600'}`}></span>
               <div className="flex items-center justify-between">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   {overallBudget ? 'BUDGET REMAINING' : 'MONTHLY RENT'}
                 </span>
-                <div className="w-7 h-7 rounded-lg bg-violet-500/10 flex items-center justify-center text-violet-500">
-                  {overallBudget ? <Target className="w-3.5 h-3.5" /> : <Home className="w-3.5 h-3.5" />}
+                <div className={`icon-chip w-8 h-8 text-white shadow-sm ${overallBudget && isOverBudget ? 'bg-gradient-to-br from-rose-400 to-rose-600 shadow-rose-500/30' : 'bg-gradient-to-br from-violet-400 to-violet-600 shadow-violet-500/30'}`}>
+                  {overallBudget ? <Target className="w-4 h-4" /> : <Home className="w-4 h-4" />}
                 </div>
               </div>
-              <h3 className={`text-xl sm:text-2xl font-extrabold mt-2 ${overallBudget && isOverBudget ? 'text-rose-600' : 'text-slate-800 dark:text-white'}`}>
-                {overallBudget 
+              <h3 className={`text-xl sm:text-2xl font-extrabold mt-2 tracking-tight ${overallBudget && isOverBudget ? 'text-rose-600 dark:text-rose-400' : 'text-slate-800 dark:text-white'}`}>
+                {overallBudget
                   ? (isOverBudget ? `-${settings.currency}${Math.abs(remainingBudget).toLocaleString()}` : `${settings.currency}${remainingBudget.toLocaleString()}`)
                   : `${settings.currency}${rentTotal.toLocaleString()}`}
               </h3>
-              <p className="text-[10px] text-slate-400 mt-1">
-                {overallBudget ? `${Math.round(budgetUsedPct)}% used` : 'Fixed monthly rent'}
-              </p>
+              {overallBudget ? (
+                <div className="mt-1.5">
+                  <div className="h-1.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${isOverBudget ? 'bg-rose-500' : budgetUsedPct > 80 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                      style={{ width: `${Math.min(100, budgetUsedPct)}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1 font-medium">{Math.round(budgetUsedPct)}% used</p>
+                </div>
+              ) : (
+                <p className="text-[10px] text-slate-400 mt-1 font-medium">Fixed monthly rent</p>
+              )}
             </div>
           </div>
 
@@ -405,7 +419,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                   <PieChart className="w-4 h-4 text-emerald-500" />
                   <span>CATEGORY BREAKDOWN</span>
                 </h3>
-                <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-200">
+                <span className="text-xs px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-lg border border-emerald-200 dark:border-emerald-800/60">
                   {settings.currency}{breakdownTotal.toLocaleString()}
                 </span>
               </div>
@@ -453,7 +467,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
               <div className="flex flex-col sm:flex-row items-center justify-around gap-6">
                 <div className="relative w-44 h-44 shrink-0 flex items-center justify-center">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="#e2e8f0" strokeWidth="10" />
+                    <circle cx="50" cy="50" r="40" fill="transparent" className="stroke-slate-200 dark:stroke-slate-800" strokeWidth="10" />
                     {dynamicCircles}
                   </svg>
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-2 transition-all duration-300">
@@ -545,8 +559,8 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     <TrendingUp className="w-4 h-4 text-emerald-500" />
                     <span>DAILY SPENDING TREND</span>
                   </h3>
-                  <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-bold rounded-lg border border-emerald-200">
-                    ₹{weekTotal.toLocaleString()}
+                  <span className="text-xs px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-bold rounded-lg border border-emerald-200 dark:border-emerald-800/60">
+                    {settings.currency}{weekTotal.toLocaleString()}
                   </span>
                 </div>
 
@@ -594,15 +608,15 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     const isSelected = selectedDay === item.dateStr;
                     return (
                       <div key={item.dateStr} className="flex-1 h-full flex flex-col items-center justify-end gap-2 group cursor-pointer" onClick={() => setSelectedDay(isSelected ? null : item.dateStr)}>
-                        <div 
-                          className={`relative w-full rounded-lg transition-all flex items-end justify-center ${isSelected ? 'bg-emerald-500' : 'bg-indigo-100 dark:bg-indigo-950/60 group-hover:bg-emerald-400'}`}
+                        <div
+                          className={`relative w-full rounded-lg transition-all flex items-end justify-center ${isSelected ? 'bg-gradient-to-t from-emerald-600 to-emerald-400 shadow-sm shadow-emerald-500/30' : 'bg-gradient-to-t from-indigo-300 to-indigo-200 dark:from-indigo-900/80 dark:to-indigo-800/60 group-hover:from-emerald-500 group-hover:to-emerald-400'}`}
                           style={{ height: `${heightPct}%` }}
                         >
-                          <div className="absolute -top-8 bg-slate-800 text-white text-[10px] font-bold px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-lg">
-                            ₹{item.sum.toLocaleString()}
+                          <div className="absolute -top-8 bg-slate-900 dark:bg-slate-700 text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-10 shadow-lg">
+                            {settings.currency}{item.sum.toLocaleString()}
                           </div>
                         </div>
-                        <span className={`text-[10px] font-medium ${isSelected ? 'text-emerald-600 font-bold' : 'text-slate-400'}`}>{item.dayName}</span>
+                        <span className={`text-[10px] font-medium ${isSelected ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400'}`}>{item.dayName}</span>
                       </div>
                     );
                   })}
@@ -621,7 +635,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                               <span className="font-semibold text-slate-700 dark:text-slate-300">{e.title}</span>
                               <span className="text-[9px] text-slate-400">{e.category}</span>
                             </div>
-                            <span className="font-bold text-slate-800 dark:text-white">₹{e.amount.toLocaleString()}</span>
+                            <span className="font-bold text-slate-800 dark:text-white">{settings.currency}{e.amount.toLocaleString()}</span>
                           </div>
                         ))
                       ) : (
@@ -637,7 +651,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase block">MONTH AVG / DAY</span>
                       <span className="font-extrabold text-slate-800 dark:text-white">
-                        ₹{Math.round(monthTotal / (new Date().getDate() || 1)).toLocaleString()}
+                        {settings.currency}{Math.round(monthTotal / (new Date().getDate() || 1)).toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -646,7 +660,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                     <div>
                       <span className="text-[10px] text-slate-400 font-bold uppercase block">HIGHEST DAY</span>
                       <span className="font-extrabold text-slate-800 dark:text-white">
-                        ₹{maxDailyAmount.toLocaleString()}
+                        {settings.currency}{maxDailyAmount.toLocaleString()}
                       </span>
                     </div>
                   </div>
@@ -673,7 +687,7 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs px-2.5 py-1 bg-emerald-50 text-emerald-600 font-extrabold rounded-lg border border-emerald-200 shrink-0">
+                      <span className="text-xs px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 font-extrabold rounded-lg border border-emerald-200 dark:border-emerald-800/60 shrink-0">
                         {settings.currency}{selectedCategory.amount.toLocaleString()}
                       </span>
                       <button
