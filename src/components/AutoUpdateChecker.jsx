@@ -147,7 +147,7 @@ export default function AutoUpdateChecker() {
           <button
             onClick={handleInstall}
             disabled={isDownloading}
-            className="flex-1 py-2 px-3 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
+            className="cta-shine relative overflow-hidden flex-1 py-2 px-3 bg-white text-emerald-800 hover:bg-emerald-50 active:scale-95 font-extrabold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 disabled:opacity-50"
           >
             <Download className="w-3.5 h-3.5 text-emerald-700" />
             <span>{isDownloading ? 'Opening Download...' : `Download & Install APK ${updateInfo.size ? `(${updateInfo.size})` : ''}`}</span>

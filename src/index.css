@@ -122,3 +122,32 @@
 .login-loading-fadein {
   animation: loginFadeIn 0.5s ease-out forwards;
 }
+
+/* Update / Download banner slide-in (used by AutoUpdateChecker & AppDownloadBanner) */
+@keyframes slide-in {
+  from { opacity: 0; transform: translateY(-16px) scale(0.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.animate-slide-in {
+  animation: slide-in 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Soft shine sweep for the Android download CTA */
+@keyframes ctaShine {
+  0%   { transform: translateX(-120%); }
+  60%, 100% { transform: translateX(220%); }
+}
+
+.cta-shine::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.45), transparent);
+  transform: translateX(-120%);
+  animation: ctaShine 3.2s ease-in-out infinite;
+  pointer-events: none;
+}

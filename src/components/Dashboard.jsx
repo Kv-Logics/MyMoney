@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
 import { API_BASE, fetchWithAuth } from '../api';
+import AppDownloadBanner from './AppDownloadBanner';
 import {
   Calendar,
   Info,
@@ -297,6 +298,9 @@ export default function Dashboard({ onOpenExpenseModal, onOpenProfitModal }) {
 
   return (
     <div className="space-y-6">
+      {/* Web-only: surface the latest Android APK release for download */}
+      <AppDownloadBanner />
+
       {/* Admin Switcher Bar (if admin) */}
       {isAdmin && (
         <div className="flex items-center justify-between bg-slate-900 border border-slate-800 text-white rounded-2xl p-3 px-4 shadow-sm">
